@@ -11,7 +11,7 @@ import View
 init : Flags -> ( Model, Cmd Msg )
 init flags =
   let model = Model Nothing flags.websocketHost
-  in  model ! [Api.send "foobar"]
+  in  model ! [Api.send model "foo bar"]
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )

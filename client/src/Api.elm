@@ -7,16 +7,14 @@ import Types
 
 websocket : Types.Model -> Sub Types.Msg
 websocket model =
-  WebSocket.listen wsAddress Types.ApiResponse
+  let ws = model.websocketHost
+  in  WebSocket.listen ws Types.ApiResponse
 
 
-send : String -> Cmd Types.Msg
-send msg =
-  WebSocket.send wsAddress msg
-
-
-wsAddress : String
-wsAddress = "ws://localhost:8000/.ws"
+send : Types.Model -> String -> Cmd Types.Msg
+send model msg =
+  let ws = model.websocketHost
+  in  WebSocket.send ws msg
 
 
 -- vim: et sw=2 sts=2
