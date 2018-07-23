@@ -2,7 +2,7 @@
 
 require('./index.html');
 
-var Elm = require('./Main.elm');
-var app = Elm.Main.fullscreen();
-
-/* in here you might register ports and such */
+/* build websocket target host based on current location */
+var wsHost = ((window.location.protocol === "https:") ? "wss://" : "ws://") + window.location.host + "/.ws"
+var elm = require('./Main.elm');
+var app = elm.Main.fullscreen({websocketHost: wsHost});

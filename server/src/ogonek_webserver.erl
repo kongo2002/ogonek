@@ -80,7 +80,7 @@ websocket_info(_Req, Message, State) ->
 websocket_handle(_Req, Message, State) ->
     lager:debug("ws_handle: ~p", [Message]),
     %%  default behaviour.
-    {ok, State}.
+    {reply, Message, State}.
 
 %%
 %% ELLI EVENT CALLBACKS

@@ -1,38 +1,38 @@
 module Main exposing ( main )
 
-import Html exposing (..)
+import Debug
+import Html
+
+import Api
+import Types exposing (..)
+import View
 
 
-type Msg
-  = NoOp
+init : Flags -> ( Model, Cmd Msg )
+init flags =
+  let model = Model Nothing flags.websocketHost
+  in  model ! [Api.send "foobar"]
 
 
-type alias Model =
-  { state : List String
-  }
-
-
-model : Model
-model = Model []
-
-
-view : Model -> Html Msg
-view model =
-  p [] [ text "hi, from elm!" ]
-
-
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
   case msg of
-    NoOp -> model
+    NoOp ->
+      model ! []
+    ApiRequest msg ->
+      model ! []
+    ApiResponse msg ->
+      Debug.log msg (model ! [])
 
 
-main : Program Never Model Msg
+main : Program Flags Model Msg
 main =
-  Html.beginnerProgram
-    { model = model
-    , view = view
+  Html.programWithFlags
+    { init = init
+    , view = View.view
     , update = update
+    , subscriptions = Api.websocket
     }
+
 
 -- vim: et sw=2 sts=2
