@@ -11,7 +11,7 @@ import View
 init : Flags -> ( Model, Cmd Msg )
 init flags =
   let model = Model Nothing flags.websocketHost
-  in  model ! [Api.send model "foo bar"]
+  in  model ! [Api.send model "init"]
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -21,8 +21,12 @@ update msg model =
       model ! []
     ApiRequest msg ->
       model ! []
-    ApiResponse msg ->
-      Debug.log msg (model ! [])
+    ApiResponseError error ->
+      let _ = Debug.log "error with API response" error
+      in  model ! []
+    ApiResponse cnt ->
+      let _ = Debug.log "api content received" cnt
+      in  model ! []
 
 
 main : Program Flags Model Msg

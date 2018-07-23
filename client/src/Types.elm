@@ -3,8 +3,19 @@ module Types exposing (..)
 
 type Msg
   = NoOp
-  | ApiResponse String
+  | ApiResponseError String
+  | ApiResponse ApiContent
   | ApiRequest String
+
+
+type ApiContent
+  = Auth AuthInformation
+
+
+type alias AuthInformation =
+  { provider : String
+  , loginUrl : String
+  }
 
 
 type alias Login =
