@@ -1,0 +1,19 @@
+{application, ogonek,
+ [{description, "ogonek server"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {mod, { ogonek_app, []}},
+  {applications,
+   [kernel,
+    crypto,
+    lager,
+    jiffy,
+    elli,
+    stdlib
+   ]},
+  {env,[]},
+  {modules, []},
+  {maintainers, []},
+  {licenses, []},
+  {links, []}
+ ]}.

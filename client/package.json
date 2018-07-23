@@ -1,0 +1,21 @@
+{
+  "name": "ogonek-client",
+  "version": "1.0.0",
+  "description": "ogonek frontend",
+  "author": "Gregor Uhlenheuer",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "elm-webpack-loader": "^4.5.0",
+    "file-loader": "^1.1.11"
+  },
+  "devDependencies": {
+    "webpack": "^4.16.1",
+    "webpack-cli": "^3.1.0",
+    "webpack-dev-server": "^3.1.4"
+  },
+  "scripts": {
+    "build": "webpack --mode production",
+    "dev": "webpack --mode development",
+    "client": "webpack-dev-server --port 3000 --mode development"
+  }
+}
