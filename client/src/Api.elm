@@ -21,6 +21,9 @@ send model msg =
 parseWsJson : String -> Types.Msg
 parseWsJson payload =
   case JD.decodeString payloadDecoder payload of
+    -- for now we will map the error content into the
+    -- generic error response type
+    Ok (Types.Error err) -> Types.ApiResponseError err.message
     Ok content -> Types.ApiResponse content
     Err error -> Types.ApiResponseError error
 
@@ -32,6 +35,7 @@ payloadDecoder =
   |> JD.andThen (\t ->
     case t of
       "auth" -> JD.map Types.Auth authDecoder
+      "error" -> JD.map Types.Error errorDecoder
       _ -> JD.fail ("unexpected message " ++ t))
 
 
@@ -40,6 +44,13 @@ authDecoder =
   JD.map2 Types.AuthInformation
     (JD.field "provider" JD.string)
     (JD.field "loginUrl" JD.string)
+
+
+errorDecoder : JD.Decoder Types.ApiError
+errorDecoder =
+  JD.map2 Types.ApiError
+    (JD.field "error" JD.bool)
+    (JD.field "message" JD.string)
 
 
 -- vim: et sw=2 sts=2

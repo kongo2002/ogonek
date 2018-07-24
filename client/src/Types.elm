@@ -10,11 +10,18 @@ type Msg
 
 type ApiContent
   = Auth AuthInformation
+  | Error ApiError
 
 
 type alias AuthInformation =
   { provider : String
   , loginUrl : String
+  }
+
+
+type alias ApiError =
+  { error : Bool
+  , message: String
   }
 
 

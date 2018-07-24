@@ -69,18 +69,15 @@ handle(_, _Path, _Req, _Args) ->
 %%
 
 websocket_init(Req, Opts) ->
-    lager:debug("ws_init: ~p, ~p", [Req, Opts]),
-    State = undefined,
-    {ok, [], State}.
+    ogonek_websocket_api:init(Req, Opts).
 
-websocket_info(_Req, Message, State) ->
-    lager:debug("ws_info: ~p", [Message]),
-    {ok, State}.
 
-websocket_handle(_Req, Message, State) ->
-    lager:debug("ws_handle: ~p", [Message]),
-    %%  default behaviour.
-    {reply, Message, State}.
+websocket_info(Req, Message, State) ->
+    ogonek_websocket_api:info(Req, Message, State).
+
+
+websocket_handle(Req, Message, State) ->
+    ogonek_websocket_api:request(Req, Message, State).
 
 %%
 %% ELLI EVENT CALLBACKS
