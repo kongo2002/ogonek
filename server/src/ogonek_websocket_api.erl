@@ -10,11 +10,18 @@
 
 init(Request, Opts) ->
     lager:debug("initialize websocket channel: ~p ~p [~p]", [Request, Opts, self()]),
-    {ok, [], #state{}}.
 
+    send_auth_info(self(), 1000),
+    AdditionalHeaders = [],
+
+    {ok, AdditionalHeaders, #state{}}.
+
+
+info(Request, {json, Json}, State) ->
+    {reply, json(Json), State};
 
 info(Request, Message, State) ->
-    lager:debug("websocket info: ~p ~p [~p]", [Request, Message, self()]),
+    lager:warning("websocket unhandled info: ~p ~p [~p]", [Request, Message, self()]),
     {ok, State}.
 
 
@@ -35,6 +42,17 @@ request(Request, Message, State) ->
 %%
 %% PRIVATE FUNCTIONS
 %%
+
+send_auth_info(Target, Delay) ->
+    erlang:spawn(fun() ->
+                         timer:sleep(Delay),
+                         Target ! {json, {[{<<"_t">>, <<"auth">>},
+                                           {<<"provider">>, <<"twitch">>},
+                                           {<<"loginUrl">>, <<"https://twitch.tv/">>}
+                                          ]}}
+                 end),
+    ok.
+
 
 handle_request(_Request, _Json, State) ->
     {reply, error_json(<<"unhandled request">>), State}.
