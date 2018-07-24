@@ -11,6 +11,7 @@
 init(Request, Opts) ->
     lager:debug("initialize websocket channel: ~p ~p [~p]", [Request, Opts, self()]),
 
+    % TODO: not sure about this delayed send at all
     send_auth_info(self(), 1000),
     AdditionalHeaders = [],
 
