@@ -13,7 +13,7 @@
          terminate/2,
          code_change/3]).
 
--record(state, {host, headers, options}).
+-record(state, {host, headers, options, status}).
 
 %%%===================================================================
 %%% API
@@ -59,7 +59,8 @@ init([]) ->
 
     {ok, #state{host=Host,
                 headers=DefaultHeaders,
-                options=DefaultOptions}}.
+                options=DefaultOptions,
+                status=init}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -95,7 +96,7 @@ handle_cast(prepare, State) ->
     true = check_status(State),
     lager:debug("database connection is up and running"),
 
-    {noreply, State};
+    {noreply, State#state{status=ready}};
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
