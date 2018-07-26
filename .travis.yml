@@ -13,4 +13,4 @@ otp_release:
   - 19.1
 
 script:
-  - cd server && ./rebar3 compile
+  - ./rebar3 compile
