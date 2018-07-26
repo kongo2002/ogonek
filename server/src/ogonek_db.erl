@@ -13,7 +13,10 @@
          terminate/2,
          code_change/3]).
 
+-define(OGONEK_DB_NAME, <<"ogonek">>).
+
 -record(state, {host, headers, options, status}).
+
 
 %%%===================================================================
 %%% API
@@ -53,7 +56,7 @@ init([]) ->
                       {<<"Content-Type">>, Json}
                      ],
 
-    DefaultOptions = [{pool, default}, with_body],
+    DefaultOptions = [{pool, default}, with_body] ++ get_auth(),
 
     gen_server:cast(self(), prepare),
 
@@ -95,6 +98,8 @@ handle_cast(prepare, State) ->
 
     true = check_status(State),
     lager:debug("database connection is up and running"),
+
+    ok = db_create_if_not_exists(?OGONEK_DB_NAME, State),
 
     {noreply, State#state{status=ready}};
 
@@ -143,12 +148,65 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
-check_status(#state{host=Host, headers=Headers, options=Options}) ->
-    Target = <<Host/binary, "/_up">>,
+get_auth() ->
+    case {os:getenv("COUCH_USER"), os:getenv("COUCH_PW")} of
+        {false, _} -> [];
+        {_, false} -> [];
+        {User, Pw} -> [{basic_auth, {list_to_binary(User), list_to_binary(Pw)}}]
+    end.
 
-    {ok, Code, Hs, Body} = hackney:get(Target, Headers, [], Options),
-    lager:debug("~p ~p ~p", [Code, Hs, Body]),
 
+get_(Path, #state{host=Host, headers=Headers, options=Options}) ->
+    Target = <<Host/binary, Path/binary>>,
+    Result = hackney:get(Target, Headers, [], Options),
+
+    lager:debug("GET: ~p", [Result]),
+    Result.
+
+
+head_(Path, #state{host=Host, options=Options}) ->
+    Target = <<Host/binary, Path/binary>>,
+    Result = hackney:head(Target, [], [], Options),
+
+    lager:debug("HEAD: ~p", [Result]),
+    Result.
+
+
+put_(Path, State) ->
+    put_(Path, [], State).
+
+put_(Path, Payload, #state{host=Host, headers=Headers, options=Options}) ->
+    Target = <<Host/binary, Path/binary>>,
+    Result = hackney:put(Target, Headers, Payload, Options),
+
+    lager:debug("PUT: ~p", [Result]),
+    Result.
+
+
+check_status(State) ->
+    {ok, Code, _Hs, _Body} = get_(<<"/_up">>, State),
     Code == 200.
 
 
+db_exists(Db, State) ->
+    {ok, Code, _Hs} = head_(<<"/", Db/binary>>, State),
+    Code == 200.
+
+
+db_create(Db, State) ->
+    {ok, Code, _Hs, Body} = put_(<<"/", Db/binary>>, State),
+    case Code of
+        201 ->
+            lager:info("successfully created database '~s'", [Db]),
+            ok;
+        Error ->
+            lager:error("failed to create database '~s' [~p]: ~p", [Db, Error, Body]),
+            {error, Error}
+    end.
+
+
+db_create_if_not_exists(Db, State) ->
+    case db_exists(Db, State) of
+        true -> ok;
+        false -> db_create(Db, State)
+    end.
