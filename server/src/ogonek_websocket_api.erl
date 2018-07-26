@@ -13,7 +13,15 @@ init(Request, Opts) ->
 
     % TODO: not sure about this delayed send at all
     send_auth_info(self(), 1000),
-    AdditionalHeaders = [],
+
+    % TODO: look into cookie for an already existing session
+    RemoteIp = elli_request:peer(Request),
+    Headers = elli_request:headers(Request),
+    lager:debug("~p ~p", [RemoteIp, Headers]),
+    {ok, Id, _Rev} = ogonek_db:new_session(RemoteIp, Headers),
+
+    AdditionalHeaders = [{<<"Set-Cookie">>,
+                          <<"ogonekSession=", Id/binary, "; Max-Age=604800; HttpOnly">>}],
 
     {ok, AdditionalHeaders, #state{}}.
 
@@ -28,11 +36,11 @@ info(Request, Message, State) ->
 
 request(Request, {text, Msg}, State) ->
     lager:debug("websocket channel: ~p ~p [~p]", [Request, Msg, self()]),
-    case parse_json(Msg) of
+    case ogonek_util:parse_json(Msg) of
         {ok, Payload} ->
             handle_request(Request, Payload, State);
-        {error, Error} ->
-            {reply, error_json(Error), State}
+        {error, malformed_json} ->
+            {reply, error_json(<<"malformed JSON">>), State}
     end;
 
 request(Request, Message, State) ->
@@ -69,12 +77,3 @@ error_json(Error) ->
 json(Payload) ->
     Encoded = jiffy:encode(Payload),
     {text, Encoded}.
-
-
-parse_json(Body) ->
-    try
-        Json = jiffy:decode(Body),
-        {ok, Json}
-    catch
-        _Error -> {error, <<"malformed JSON">>}
-    end.

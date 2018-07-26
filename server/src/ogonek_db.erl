@@ -5,6 +5,9 @@
 %% API
 -export([start_link/0]).
 
+%% DB API
+-export([new_session/2]).
+
 %% gen_server callbacks
 -export([init/1,
          handle_call/3,
@@ -31,6 +34,19 @@
 %%--------------------------------------------------------------------
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+
+new_session(RemoteIP, Headers) ->
+    Headers0 = prepare_headers(Headers),
+
+    % TODO: add timestamp
+    Doc = doc(<<"session">>,
+              [{<<"headers">>, {Headers0}},
+               {<<"ip">>, RemoteIP}
+              ]),
+
+    gen_server:call(?MODULE, {new_session, Doc}).
+
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -79,6 +95,12 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_call({new_session, Doc}, _From, State) ->
+    lager:debug("creating new session: ~p", [Doc]),
+
+    Response = insert(Doc, State),
+    {reply, Response, State};
+
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
@@ -183,6 +205,15 @@ put_(Path, Payload, #state{host=Host, headers=Headers, options=Options}) ->
     Result.
 
 
+post_(Path, Payload, #state{host=Host, headers=Headers, options=Options}) ->
+    Target = <<Host/binary, Path/binary>>,
+    Json = jiffy:encode(Payload),
+    Result = hackney:post(Target, Headers, Json, Options),
+
+    lager:debug("POST: ~p", [Result]),
+    Result.
+
+
 check_status(State) ->
     {ok, Code, _Hs, _Body} = get_(<<"/_up">>, State),
     Code == 200.
@@ -210,3 +241,48 @@ db_create_if_not_exists(Db, State) ->
         true -> ok;
         false -> db_create(Db, State)
     end.
+
+
+insert(Doc, State) ->
+    insert(?OGONEK_DB_NAME, Doc, State).
+
+insert(Db, Doc, State) ->
+    case post_(<<"/", Db/binary>>, Doc, State) of
+        % created or accepted
+        {ok, Code, _Hs, Body} when Code == 201 orelse Code == 202 ->
+            parse_id_rev(Body);
+        {ok, Code, _Hs, Body} ->
+            lager:error("insert [POST] of document ~p failed [~p]: ~p", [Doc, Code, Body]),
+            {error, {status, Code}};
+        Unexpected ->
+            lager:error("insert [POST] of document ~p failed unexpectedly: ~p", [Doc, Unexpected]),
+            {error, unexpected}
+    end.
+
+
+prepare_headers(Headers) ->
+    % TODO: filter out 'interesting' headers only?
+    lists:foldl(fun({H, V}, Hs) ->
+                    [{ogonek_util:lowercase(H), V} | Hs]
+                end, [], Headers).
+
+
+parse_id_rev(Body) ->
+    case ogonek_util:parse_json(Body) of
+        {ok, {Json}} ->
+            Id = proplists:get_value(<<"id">>, Json),
+            Rev = proplists:get_value(<<"rev">>, Json),
+            case {Id, Rev} of
+                {undefined, _} -> {error, missing_id};
+                {_, undefined} -> {error, missing_rev};
+                _ -> {ok, Id, Rev}
+            end;
+        Error -> Error
+    end.
+
+
+doc(DocType, {Vs}) ->
+    doc(DocType, Vs);
+
+doc(DocType, Values) when is_list(Values) ->
+    {[{<<"t">>, DocType} | Values]}.
