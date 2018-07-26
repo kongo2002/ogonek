@@ -13,7 +13,7 @@
          terminate/2,
          code_change/3]).
 
--record(state, {host}).
+-record(state, {host, headers, options}).
 
 %%%===================================================================
 %%% API
@@ -48,9 +48,18 @@ init([]) ->
     % TODO: configuration
     Host = <<"http://localhost:5984">>,
 
+    Json = <<"application/json">>,
+    DefaultHeaders = [{<<"Accept">>, Json},
+                      {<<"Content-Type">>, Json}
+                     ],
+
+    DefaultOptions = [{pool, default}, with_body],
+
     gen_server:cast(self(), prepare),
 
-    {ok, #state{host=Host}}.
+    {ok, #state{host=Host,
+                headers=DefaultHeaders,
+                options=DefaultOptions}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -83,7 +92,7 @@ handle_call(_Request, _From, State) ->
 handle_cast(prepare, State) ->
     lager:info("initializing database at ~s [~p]", [State#state.host, self()]),
 
-    true = check_status(State#state.host),
+    true = check_status(State),
     lager:debug("database connection is up and running"),
 
     {noreply, State};
@@ -133,11 +142,8 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
-check_status(Host) ->
-    Json = <<"application/json">>,
+check_status(#state{host=Host, headers=Headers, options=Options}) ->
     Target = <<Host/binary, "/_up">>,
-    Headers = [{<<"Accept">>, Json}],
-    Options = [{pool, default}, with_body],
 
     {ok, Code, Hs, Body} = hackney:get(Target, Headers, [], Options),
     lager:debug("~p ~p ~p", [Code, Hs, Body]),
