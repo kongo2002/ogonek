@@ -1,0 +1,16 @@
+language: erlang
+
+install:
+  - cd server && wget https://s3.amazonaws.com/rebar3/rebar3 && chmod +x rebar3
+
+otp_release:
+  - 21.0
+  - 20.2
+  - 20.1
+  - 20.0
+  - 19.3
+  - 19.2
+  - 19.1
+
+script:
+  - cd server && ./rebar3 compile
