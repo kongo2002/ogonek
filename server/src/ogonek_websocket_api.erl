@@ -14,14 +14,20 @@ init(Request, Opts) ->
     % TODO: not sure about this delayed send at all
     send_auth_info(self(), 1000),
 
-    % TODO: look into cookie for an already existing session
-    RemoteIp = elli_request:peer(Request),
-    Headers = elli_request:headers(Request),
-    lager:debug("~p ~p", [RemoteIp, Headers]),
-    {ok, Id, _Rev} = ogonek_db:new_session(RemoteIp, Headers),
+    Session = case get_cookie_session(Request) of
+                  undefined ->
+                      RemoteIp = elli_request:peer(Request),
+                      Headers = elli_request:headers(Request),
+                      lager:debug("~p ~p", [RemoteIp, Headers]),
+                      {ok, Id, _Rev} = ogonek_db:new_session(RemoteIp, Headers),
+                      Id;
+                  CookieSession ->
+                      % TODO: check session
+                      CookieSession
+              end,
 
     AdditionalHeaders = [{<<"Set-Cookie">>,
-                          <<"ogonekSession=", Id/binary, "; Max-Age=604800; HttpOnly">>}],
+                          <<"ogonekSession=", Session/binary, "; Max-Age=604800; HttpOnly">>}],
 
     {ok, AdditionalHeaders, #state{}}.
 
@@ -51,6 +57,25 @@ request(Request, Message, State) ->
 %%
 %% PRIVATE FUNCTIONS
 %%
+
+get_cookie_session(Request) ->
+    % XXX: does this work with lowercase 'cookie' as well?
+    case elli_request:get_header(<<"Cookie">>, Request) of
+        undefined -> undefined;
+        Cookie ->
+            % TODO: improve cookie parsing
+            Values = binary:split(Cookie, <<";">>),
+            KVs = lists:foldl(fun(V, Cs) ->
+                                      case binary:split(V, <<"=">>) of
+                                          [Key, Value] ->
+                                              [{string:trim(Key), string:trim(Value)} | Cs];
+                                          _ -> Cs
+                                      end
+                              end, [], Values),
+
+            proplists:get_value(<<"ogonekSession">>, KVs)
+    end.
+
 
 send_auth_info(Target, Delay) ->
     erlang:spawn(fun() ->
