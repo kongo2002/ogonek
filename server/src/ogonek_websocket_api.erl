@@ -18,7 +18,7 @@ init(Request, Opts) ->
     {ok, AdditionalHeaders, #state{}}.
 
 
-info(Request, {json, Json}, State) ->
+info(_Request, {json, Json}, State) ->
     {reply, json(Json), State};
 
 info(Request, Message, State) ->

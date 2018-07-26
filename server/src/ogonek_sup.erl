@@ -39,7 +39,8 @@ init([]) ->
                       {elli_websocket, []}]}],
     Children = [?WORKER(webserver, elli, [[{callback, elli_middleware},
                                            {callback_args, CbArgs},
-                                           {port, WebserverPort}]])
+                                           {port, WebserverPort}]]),
+                ?WORKER(db, ogonek_db, [])
                ],
     {ok, {{one_for_all, 5, 10}, Children}}.
 

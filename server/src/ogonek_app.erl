@@ -19,6 +19,7 @@ start(_StartType, _StartArgs) ->
     lager:start(),
 
     ok = application:ensure_started(crypto),
+    ok = application:ensure_started(hackney),
 
     ogonek_sup:start_link().
 
