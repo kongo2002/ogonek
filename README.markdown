@@ -20,3 +20,6 @@ $ rebar3 compile
 $ cd client
 $ yarn build
 ```
+
+
+[travis]: https://travis-ci.org/kongo2002/ogonek/
