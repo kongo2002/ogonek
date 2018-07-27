@@ -45,7 +45,8 @@ new_session(RemoteIP, Headers) ->
     Doc = doc(<<"session">>,
               [{<<"headers">>, {Headers0}},
                {<<"ip">>, RemoteIP},
-               {<<"timestamp">>, Timestamp}
+               {<<"created">>, Timestamp},
+               {<<"updated">>, Timestamp}
               ]),
 
     gen_server:call(?MODULE, {new_session, Doc}).
@@ -113,8 +114,8 @@ handle_call({new_session, Doc}, _From, State) ->
     {reply, Response, State};
 
 handle_call({get_session, Session}, _From, State) ->
-    Response = case get_(<<"/ogonek/", Session/binary>>, State) of
-                   {ok, Code, _Hs, Body} -> ok;
+    Response = case head_(<<"/ogonek/", Session/binary>>, State) of
+                   {ok, Code, _Hs} when Code == 200 -> ok;
                    _Error -> {error, not_found}
                end,
 
@@ -147,7 +148,7 @@ handle_cast(prepare, State) ->
 handle_cast({refresh_session, Session}, State) ->
     Now = iso8601:format(calendar:universal_time()),
     Update = fun(_Code, {S}) ->
-                     Ts = <<"timestamp">>,
+                     Ts = <<"updated">>,
                      Updated = lists:keyreplace(Ts, 1, S, {Ts, Now}),
                      {Updated}
              end,
