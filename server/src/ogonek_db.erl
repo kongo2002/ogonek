@@ -6,7 +6,9 @@
 -export([start_link/0]).
 
 %% DB API
--export([new_session/2]).
+-export([new_session/2,
+         refresh_session/1,
+         get_session/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -39,13 +41,22 @@ start_link() ->
 new_session(RemoteIP, Headers) ->
     Headers0 = prepare_headers(Headers),
 
-    % TODO: add timestamp
+    Timestamp = iso8601:format(calendar:universal_time()),
     Doc = doc(<<"session">>,
               [{<<"headers">>, {Headers0}},
-               {<<"ip">>, RemoteIP}
+               {<<"ip">>, RemoteIP},
+               {<<"timestamp">>, Timestamp}
               ]),
 
     gen_server:call(?MODULE, {new_session, Doc}).
+
+
+get_session(Session) ->
+    gen_server:call(?MODULE, {get_session, Session}).
+
+
+refresh_session(Session) ->
+    gen_server:cast(?MODULE, {refresh_session, Session}).
 
 
 %%%===================================================================
@@ -101,6 +112,14 @@ handle_call({new_session, Doc}, _From, State) ->
     Response = insert(Doc, State),
     {reply, Response, State};
 
+handle_call({get_session, Session}, _From, State) ->
+    Response = case get_(<<"/ogonek/", Session/binary>>, State) of
+                   {ok, Code, _Hs, Body} -> ok;
+                   _Error -> {error, not_found}
+               end,
+
+    {reply, Response, State};
+
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
@@ -124,6 +143,26 @@ handle_cast(prepare, State) ->
     ok = db_create_if_not_exists(?OGONEK_DB_NAME, State),
 
     {noreply, State#state{status=ready}};
+
+handle_cast({refresh_session, Session}, State) ->
+    Now = iso8601:format(calendar:universal_time()),
+    Update = fun(_Code, {S}) ->
+                     Ts = <<"timestamp">>,
+                     Updated = lists:keyreplace(Ts, 1, S, {Ts, Now}),
+                     {Updated}
+             end,
+
+    case update(Session, Update, State) of
+        {ok, Code, _Hs, _Body} when Code == 200 orelse Code == 201 -> ok;
+        {ok, Code, _Hs, Body} ->
+            lager:error("refresh_session failed [~p]: ~p", [Code, Body]),
+            error;
+        Error ->
+            lager:error("refresh_session failed: ~p", [Error]),
+            error
+    end,
+
+    {noreply, State};
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -180,7 +219,15 @@ get_auth() ->
 
 get_(Path, #state{host=Host, headers=Headers, options=Options}) ->
     Target = <<Host/binary, Path/binary>>,
-    Result = hackney:get(Target, Headers, [], Options),
+
+    Result = case hackney:get(Target, Headers, [], Options) of
+                 {ok, Code, Hs, Body} = Res ->
+                     case ogonek_util:parse_json(Body) of
+                         {ok, Json} -> {ok, Code, Hs, Json};
+                         _Otherwise -> Res
+                     end;
+                 Otherwise -> Otherwise
+             end,
 
     lager:debug("GET: ~p", [Result]),
     Result.
@@ -199,7 +246,8 @@ put_(Path, State) ->
 
 put_(Path, Payload, #state{host=Host, headers=Headers, options=Options}) ->
     Target = <<Host/binary, Path/binary>>,
-    Result = hackney:put(Target, Headers, Payload, Options),
+    Json = jiffy:encode(Payload),
+    Result = hackney:put(Target, Headers, Json, Options),
 
     lager:debug("PUT: ~p", [Result]),
     Result.
@@ -257,6 +305,21 @@ insert(Db, Doc, State) ->
         Unexpected ->
             lager:error("insert [POST] of document ~p failed unexpectedly: ~p", [Doc, Unexpected]),
             {error, unexpected}
+    end.
+
+
+update(Id, Func, State) ->
+    update(?OGONEK_DB_NAME, Id, Func, State).
+
+update(Db, Id, Func, State) ->
+    Path = <<"/", Db/binary, "/", Id/binary>>,
+
+    case get_(Path, State) of
+        {ok, Code, _Hs, Body} ->
+            Updated = Func(Code, Body),
+            put_(Path, Updated, State);
+        Otherwise ->
+            Otherwise
     end.
 
 

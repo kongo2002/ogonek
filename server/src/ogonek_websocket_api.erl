@@ -16,14 +16,15 @@ init(Request, Opts) ->
 
     Session = case get_cookie_session(Request) of
                   undefined ->
-                      RemoteIp = elli_request:peer(Request),
-                      Headers = elli_request:headers(Request),
-                      lager:debug("~p ~p", [RemoteIp, Headers]),
-                      {ok, Id, _Rev} = ogonek_db:new_session(RemoteIp, Headers),
-                      Id;
+                      request_session(Request);
                   CookieSession ->
-                      % TODO: check session
-                      CookieSession
+                      case ogonek_db:get_session(CookieSession) of
+                          ok ->
+                              ogonek_db:refresh_session(CookieSession),
+                              CookieSession;
+                          {error, not_found} ->
+                              request_session(Request)
+                      end
               end,
 
     AdditionalHeaders = [{<<"Set-Cookie">>,
@@ -57,6 +58,13 @@ request(Request, Message, State) ->
 %%
 %% PRIVATE FUNCTIONS
 %%
+
+request_session(Request) ->
+    RemoteIp = elli_request:peer(Request),
+    Headers = elli_request:headers(Request),
+    {ok, SessionId, _Rev} = ogonek_db:new_session(RemoteIp, Headers),
+    SessionId.
+
 
 get_cookie_session(Request) ->
     % XXX: does this work with lowercase 'cookie' as well?
