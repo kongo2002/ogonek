@@ -48,19 +48,43 @@ matrix:
     - language: node_js
 
       node_js:
-        - "10.7.0"
+        - "8.11.3"
 
       before_install:
-        - cd client
+        # this is necessary to build in < 10 min
+        # see: <https://github.com/elm-lang/elm-compiler/issues/1473>
+        - git clone https://github.com/obmarg/libsysconfcpus.git
+        - cd libsysconfcpus
+        - ./configure --prefix=$TRAVIS_BUILD_DIR/sysconfcpus
+        - make && make install
+        - cd ../client
 
       install:
         - yarn
 
       script:
-        - yarn build
+        - $TRAVIS_BUILD_DIR/sysconfcpus/bin/sysconfcpus -n 2 yarn build
 
-cache:
-  directories:
-    - client/elm-stuff/build-artifacts
+    - language: node_js
+
+      node_js:
+        - "10.7.0"
+
+      before_install:
+        # this is necessary to build in < 10 min
+        # see: <https://github.com/elm-lang/elm-compiler/issues/1473>
+        - git clone https://github.com/obmarg/libsysconfcpus.git
+        - cd libsysconfcpus
+        - ./configure --prefix=$TRAVIS_BUILD_DIR/sysconfcpus
+        - make && make install
+        - cd ../client
+
+      install:
+        - yarn
+
+      script:
+        - $TRAVIS_BUILD_DIR/sysconfcpus/bin/sysconfcpus -n 2 yarn build
+
+sudo: false
 
 # vim: et sw=2 sts=2:
