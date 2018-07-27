@@ -9,19 +9,46 @@ matrix:
         - wget https://s3.amazonaws.com/rebar3/rebar3 && chmod +x rebar3
 
       otp_release:
-        - 21.0
-        - 20.2
-        - 20.1
-        - 20.0
         - 19.3
-        - 19.2
-        - 19.1
+
+      script:
+        - ./rebar3 compile
+        - ./rebar3 eunit
+
+    - language: erlang
+
+      before_install:
+        - cd server
+
+      install:
+        - wget https://s3.amazonaws.com/rebar3/rebar3 && chmod +x rebar3
+
+      otp_release:
+        - 21.0
+
+      script:
+        - ./rebar3 compile
+        - ./rebar3 eunit
+
+    - language: erlang
+
+      before_install:
+        - cd server
+
+      install:
+        - wget https://s3.amazonaws.com/rebar3/rebar3 && chmod +x rebar3
+
+      otp_release:
+        - 20.2
 
       script:
         - ./rebar3 compile
         - ./rebar3 eunit
 
     - language: node_js
+
+      node_js:
+        - "10.7.0"
 
       before_script:
         - cd client
