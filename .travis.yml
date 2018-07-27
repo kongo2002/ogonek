@@ -59,4 +59,8 @@ matrix:
       script:
         - yarn build
 
+cache:
+  directories:
+    - client/elm-stuff/build-artifacts
+
 # vim: et sw=2 sts=2:
