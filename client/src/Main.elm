@@ -24,6 +24,7 @@ update msg model =
       model ! []
     NavigationChange location ->
       let newRoute = Routing.parse location
+          _ = Debug.log "got new route" newRoute
           model0 = { model | route = newRoute }
       in  model0 ! []
     ApiRequest msg ->
@@ -40,6 +41,7 @@ update msg model =
       in  model ! []
 
 
+main : Program Flags Model Msg
 main =
   Navigation.programWithFlags NavigationChange
     { init = init
