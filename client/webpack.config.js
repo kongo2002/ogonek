@@ -1,4 +1,5 @@
-var path = require('path');
+const path = require('path');
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
 module.exports = {
   entry: {
@@ -7,21 +8,34 @@ module.exports = {
     ]
   },
 
+  plugins: [
+    new MiniCssExtractPlugin()
+  ],
+
   output: {
-    path: path.resolve(__dirname + '/dist'),
+    path: path.resolve(__dirname + '/dist/static'),
     filename: '[name].js',
   },
 
   module: {
     rules: [
       {
-        test: /\.(css|scss)$/,
-        loader:  'file-loader?name=[name].[ext]',
+        test: /\.css$/,
+        use: [
+          {
+            loader: MiniCssExtractPlugin.loader,
+          },
+          "css-loader"
+        ],
       },
       {
         test:    /\.html$/,
         exclude: /node_modules/,
-        loader:  'file-loader?name=[name].[ext]',
+        loader:  'file-loader',
+        options: {
+          name: '[name].[ext]',
+          outputPath: '../',
+        }
       },
       {
         test:    /\.elm$/,

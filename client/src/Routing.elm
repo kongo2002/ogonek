@@ -23,7 +23,7 @@ routeToPath route =
   case route of
     Types.HomeRoute -> home
     Types.LoginRoute -> login
-    Types.AuthRoute -> auth
+    Types.AuthRoute _ _ -> auth
 
 
 parse : Location -> Types.Route
@@ -38,7 +38,7 @@ matchers =
   oneOf
     [ map Types.HomeRoute top
     , map Types.LoginRoute (s "login")
-    , map Types.AuthRoute (s "auth")
+    , map Types.AuthRoute (s "auth" <?> stringParam "code" <?> stringParam "state")
     ]
 
 

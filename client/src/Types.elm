@@ -16,7 +16,8 @@ type Msg
 type Route
   = HomeRoute
   | LoginRoute
-  | AuthRoute
+  -- auth (code, state)
+  | AuthRoute (Maybe String) (Maybe String)
 
 
 type ApiContent

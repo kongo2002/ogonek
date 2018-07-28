@@ -1,6 +1,6 @@
 'use strict';
 
-require('./index.html');
+import './index.html';
 
 import './css/normalize.css';
 import './css/skeleton.css';
