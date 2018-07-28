@@ -1,17 +1,19 @@
 module Main exposing ( main )
 
 import Debug
-import Html
+import Navigation
 
 import Api
 import Types exposing (..)
+import Routing
 import View
 
 
-init : Flags -> ( Model, Cmd Msg )
-init flags =
+init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
+init flags location =
   let auth  = AuthInformation "local" "#login"
-      model = Model Nothing auth flags.websocketHost
+      route = Routing.parse location
+      model = Model route Nothing auth flags.websocketHost
   in  model ! []
 
 
@@ -20,6 +22,10 @@ update msg model =
   case msg of
     NoOp ->
       model ! []
+    NavigationChange location ->
+      let newRoute = Routing.parse location
+          model0 = { model | route = newRoute }
+      in  model0 ! []
     ApiRequest msg ->
       model ! []
     ApiResponseError error ->
@@ -34,9 +40,8 @@ update msg model =
       in  model ! []
 
 
-main : Program Flags Model Msg
 main =
-  Html.programWithFlags
+  Navigation.programWithFlags NavigationChange
     { init = init
     , view = View.view
     , update = update

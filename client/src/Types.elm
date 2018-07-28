@@ -1,11 +1,22 @@
 module Types exposing (..)
 
+import Navigation exposing ( Location )
+
 
 type Msg
   = NoOp
+  -- internals
+  | NavigationChange Location
+  -- API
   | ApiResponseError String
   | ApiResponse ApiContent
   | ApiRequest String
+
+
+type Route
+  = HomeRoute
+  | LoginRoute
+  | AuthRoute
 
 
 type ApiContent
@@ -25,7 +36,7 @@ type alias ApiError =
   }
 
 
-type alias Login =
+type alias LoginInfo =
   { id : String
   , email : String
   }
@@ -37,7 +48,8 @@ type alias Flags =
 
 
 type alias Model =
-  { login : Maybe Login
+  { route : Route
+  , login : Maybe LoginInfo
   , auth : AuthInformation
   , websocketHost : String
   }
