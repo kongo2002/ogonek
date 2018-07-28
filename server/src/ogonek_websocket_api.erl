@@ -72,7 +72,7 @@ get_cookie_session(Request) ->
         undefined -> undefined;
         Cookie ->
             % TODO: improve cookie parsing
-            Values = binary:split(Cookie, <<";">>),
+            Values = binary:split(Cookie, <<";">>, [trim_all, global]),
             KVs = lists:foldl(fun(V, Cs) ->
                                       case binary:split(V, <<"=">>) of
                                           [Key, Value] ->
@@ -88,25 +88,32 @@ get_cookie_session(Request) ->
 send_auth_info(Target, Delay) ->
     erlang:spawn(fun() ->
                          timer:sleep(Delay),
-                         Target ! {json, twitch_auth()}
+                         case twitch_auth() of
+                             undefined -> ok;
+                             Auth -> Target ! {json, Auth}
+                         end
                  end),
     ok.
 
 
 twitch_auth() ->
-    ClientId = list_to_binary(os:getenv("TWITCH_CLIENT_ID", "")),
-    RedirectUrl = list_to_binary(os:getenv("TWITCH_REDIRECT_URL", "http://localhost:8000")),
+    case os:getenv("TWITCH_CLIENT_ID") of
+        false -> undefined;
+        ClientId0 ->
+            ClientId = list_to_binary(ClientId0),
+            RedirectUrl = list_to_binary(os:getenv("TWITCH_REDIRECT_URL", "http://localhost:8000")),
 
-    Url = <<"https://id.twitch.tv/oauth2/authorize",
-            "?client_id=", ClientId/binary,
-            "&redirect_uri=", RedirectUrl/binary,
-            "&response_type=code",
-            "&scope=openid user:read:email">>,
+            Url = <<"https://id.twitch.tv/oauth2/authorize",
+                    "?client_id=", ClientId/binary,
+                    "&redirect_uri=", RedirectUrl/binary,
+                    "&response_type=code",
+                    "&scope=openid user:read:email">>,
 
-    {[{<<"_t">>, <<"auth">>},
-      {<<"provider">>, <<"twitch">>},
-      {<<"loginUrl">>, Url}
-     ]}.
+            {[{<<"_t">>, <<"auth">>},
+              {<<"provider">>, <<"twitch">>},
+              {<<"loginUrl">>, Url}
+             ]}
+    end.
 
 
 handle_request(_Request, _Json, State) ->
