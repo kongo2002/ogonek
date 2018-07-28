@@ -88,12 +88,25 @@ get_cookie_session(Request) ->
 send_auth_info(Target, Delay) ->
     erlang:spawn(fun() ->
                          timer:sleep(Delay),
-                         Target ! {json, {[{<<"_t">>, <<"auth">>},
-                                           {<<"provider">>, <<"twitch">>},
-                                           {<<"loginUrl">>, <<"https://twitch.tv/">>}
-                                          ]}}
+                         Target ! {json, twitch_auth()}
                  end),
     ok.
+
+
+twitch_auth() ->
+    ClientId = list_to_binary(os:getenv("TWITCH_CLIENT_ID", "")),
+    RedirectUrl = list_to_binary(os:getenv("TWITCH_REDIRECT_URL", "http://localhost:8000")),
+
+    Url = <<"https://id.twitch.tv/oauth2/authorize",
+            "?client_id=", ClientId/binary,
+            "&redirect_uri=", RedirectUrl/binary,
+            "&response_type=code",
+            "&scope=openid user:read:email">>,
+
+    {[{<<"_t">>, <<"auth">>},
+      {<<"provider">>, <<"twitch">>},
+      {<<"loginUrl">>, Url}
+     ]}.
 
 
 handle_request(_Request, _Json, State) ->

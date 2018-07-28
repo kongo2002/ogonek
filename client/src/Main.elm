@@ -10,7 +10,8 @@ import View
 
 init : Flags -> ( Model, Cmd Msg )
 init flags =
-  let model = Model Nothing flags.websocketHost
+  let auth  = AuthInformation "local" "#login"
+      model = Model Nothing auth flags.websocketHost
   in  model ! []
 
 
@@ -24,6 +25,10 @@ update msg model =
     ApiResponseError error ->
       let _ = Debug.log "error with API response" error
       in  model ! []
+    ApiResponse (Auth info) ->
+      let _ = Debug.log "auth information received" info
+          model0 = { model | auth = info }
+      in  model0 ! []
     ApiResponse cnt ->
       let _ = Debug.log "api content received" cnt
       in  model ! []

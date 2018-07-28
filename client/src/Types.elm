@@ -38,6 +38,7 @@ type alias Flags =
 
 type alias Model =
   { login : Maybe Login
+  , auth : AuthInformation
   , websocketHost : String
   }
 

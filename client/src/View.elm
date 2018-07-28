@@ -18,12 +18,13 @@ navigation : Model -> Html Msg
 navigation model =
   let link ref name =
         li [] [ a [ href ref ] [ text name ] ]
+      login = link model.auth.loginUrl "login"
   in div [ class "row" ]
      [ div [ id "brand", class "four columns" ]
        [ h1 [] [ text "ogonek" ] ]
      , div [ id "nav", class "eight columns" ]
        [ ul []
-         [ link "#login" "login"
+         [ login
          , link "#help" "help"
          ]
        ]
