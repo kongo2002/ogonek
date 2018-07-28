@@ -11,15 +11,15 @@ type Msg
   -- API
   | ApiResponseError String
   | ApiResponse ApiContent
-  | ApiRequest String
+  | ApiRequest Request
 
 
 type Route
   = HomeRoute
   | LoginRoute
   | LogoutRoute
-  -- auth (code, state)
-  | AuthRoute (Maybe String) (Maybe String)
+  -- auth (code, state, scope)
+  | AuthRoute (Maybe String) (Maybe String) (Maybe String)
   | HelpRoute
 
 
@@ -28,9 +28,20 @@ type ApiContent
   | Error ApiError
 
 
+type Request
+  = AuthorizeRequest Authorize
+
+
 type alias AuthInformation =
   { provider : String
   , loginUrl : String
+  }
+
+
+type alias Authorize =
+  { code : String
+  , state : String
+  , scope : String
   }
 
 
@@ -54,7 +65,7 @@ type alias Flags =
 type alias Model =
   { route : Route
   , login : Maybe LoginInfo
-  , auth : AuthInformation
+  , authInfo : AuthInformation
   , websocketHost : String
   }
 

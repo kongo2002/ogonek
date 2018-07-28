@@ -7,6 +7,8 @@
 
 -record(state, {}).
 
+-define(MSG_TYPE, <<"_t">>).
+
 
 init(Request, Opts) ->
     lager:debug("initialize websocket channel: ~p ~p [~p]", [Request, Opts, self()]),
@@ -45,7 +47,7 @@ request(Request, {text, Msg}, State) ->
     lager:debug("websocket channel: ~p ~p [~p]", [Request, Msg, self()]),
     case ogonek_util:parse_json(Msg) of
         {ok, Payload} ->
-            handle_request(Request, Payload, State);
+            handle_json(Request, Payload, State);
         {error, malformed_json} ->
             {reply, error_json(<<"malformed JSON">>), State}
     end;
@@ -109,20 +111,38 @@ twitch_auth() ->
                     "&response_type=code",
                     "&scope=openid user:read:email">>,
 
-            {[{<<"_t">>, <<"auth">>},
+            {[{?MSG_TYPE, <<"authinfo">>},
               {<<"provider">>, <<"twitch">>},
               {<<"loginUrl">>, Url}
              ]}
     end.
 
 
-handle_request(_Request, _Json, State) ->
+handle_json(Request, {Json}, State) ->
+    case proplists:get_value(?MSG_TYPE, Json) of
+        undefined ->
+            {reply, error_json(<<"missing type field '_t'">>), State};
+        Type ->
+            handle_request(Type, Request, Json, State)
+    end;
+
+handle_json(_Request, _Json, State) ->
+    {reply, error_json(<<"invalid JSON received - expecting JSON object">>), State}.
+
+
+handle_request(<<"authorize">>, _Request, Json, State) ->
+    {reply, json({[{<<"todo">>, true}]}), State};
+
+handle_request(Type, _Request, _Json, State) when is_binary(Type) ->
+    {reply, error_json(<<"unhandled request of type '", Type/binary, "'">>), State};
+
+handle_request(_Type, _Request, _Json, State) ->
     {reply, error_json(<<"unhandled request">>), State}.
 
 
 error_json(Error) ->
     Payload = {[{<<"error">>, true},
-                {<<"_t">>, <<"error">>},
+                {?MSG_TYPE, <<"error">>},
                 {<<"message">>, Error}]},
     json(Payload).
 

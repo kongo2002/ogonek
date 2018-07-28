@@ -60,8 +60,8 @@ navigation model =
 
 login : Model -> Html Msg
 login model =
-  let provider = model.auth.provider
-      login = model.auth.loginUrl
+  let provider = model.authInfo.provider
+      login = model.authInfo.loginUrl
   in
     div [ class "row" ]
     [ h1 [] [ text "login" ]

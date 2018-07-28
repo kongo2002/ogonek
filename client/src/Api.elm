@@ -1,6 +1,7 @@
 module Api exposing ( send, websocket )
 
 import Json.Decode as JD
+import Json.Encode as JE
 import WebSocket
 
 import Types
@@ -12,10 +13,29 @@ websocket model =
   in  WebSocket.listen ws parseWsJson
 
 
-send : Types.Model -> String -> Cmd Types.Msg
+send : Types.Model -> Types.Request -> Cmd Types.Msg
 send model msg =
   let ws = model.websocketHost
-  in  WebSocket.send ws msg
+      req = toRequest msg
+  in  WebSocket.send ws req
+
+
+toRequest : Types.Request -> String
+toRequest request =
+  let json = requestEncoder request
+  in  JE.encode 0 json
+
+
+requestEncoder : Types.Request -> JE.Value
+requestEncoder req =
+  case req of
+    Types.AuthorizeRequest auth ->
+      JE.object
+        [ ("_t", JE.string "authorize")
+        , ("code", JE.string auth.code)
+        , ("state", JE.string auth.state)
+        , ("scope", JE.string auth.scope)
+        ]
 
 
 parseWsJson : String -> Types.Msg
@@ -34,13 +54,13 @@ payloadDecoder =
   (JD.field "_t" JD.string)
   |> JD.andThen (\t ->
     case t of
-      "auth" -> JD.map Types.Auth authDecoder
+      "authinfo" -> JD.map Types.Auth authInfoDecoder
       "error" -> JD.map Types.Error errorDecoder
       _ -> JD.fail ("unexpected message " ++ t))
 
 
-authDecoder : JD.Decoder Types.AuthInformation
-authDecoder =
+authInfoDecoder : JD.Decoder Types.AuthInformation
+authInfoDecoder =
   JD.map2 Types.AuthInformation
     (JD.field "provider" JD.string)
     (JD.field "loginUrl" JD.string)
