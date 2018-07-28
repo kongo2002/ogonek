@@ -126,7 +126,7 @@ serve_file(Path) ->
 
     case file:read_file(Filepath) of
         {ok, Bin} ->
-            {ok, Bin};
+            {ok, [{<<"Cache-Control">>, <<"max-age: 3600">>}], Bin};
         {error, enoent} ->
             {404, <<"not found">>};
         {error, eisdir} ->

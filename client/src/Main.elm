@@ -27,6 +27,8 @@ update msg model =
           _ = Debug.log "got new route" newRoute
           model0 = { model | route = newRoute }
       in  model0 ! []
+    NewUrl url ->
+      model ! [Navigation.newUrl url]
     ApiRequest msg ->
       model ! []
     ApiResponseError error ->

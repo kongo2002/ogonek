@@ -1,4 +1,4 @@
-module Routing exposing ( home, login, auth, parse, routeToPath )
+module Routing exposing ( home, login, auth, help, parse, routeToPath )
 
 import Navigation exposing ( Location )
 import UrlParser exposing (..)
@@ -7,15 +7,19 @@ import Types
 
 
 home : String
-home = "#"
+home = "/"
 
 
 login : String
-login = "#login"
+login = "/login"
 
 
 auth : String
-auth = "#auth"
+auth = "/auth"
+
+
+help : String
+help = "/help"
 
 
 routeToPath : Types.Route -> String
@@ -24,11 +28,12 @@ routeToPath route =
     Types.HomeRoute -> home
     Types.LoginRoute -> login
     Types.AuthRoute _ _ -> auth
+    Types.HelpRoute -> help
 
 
 parse : Location -> Types.Route
 parse location =
-  case parseHash matchers location of
+  case parsePath matchers location of
     Just route -> route
     Nothing    -> Types.HomeRoute
 
@@ -37,8 +42,9 @@ matchers : Parser (Types.Route -> a) a
 matchers =
   oneOf
     [ map Types.HomeRoute top
-    , map Types.LoginRoute (s "login")
     , map Types.AuthRoute (s "auth" <?> stringParam "code" <?> stringParam "state")
+    , map Types.LoginRoute (s "login")
+    , map Types.HelpRoute (s "help")
     ]
 
 

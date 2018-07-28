@@ -2,6 +2,8 @@ module View exposing ( view )
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events exposing ( onClick, onWithOptions )
+import Json.Decode
 
 import Types exposing (..)
 
@@ -14,18 +16,26 @@ view model =
   ]
 
 
+numbClick msg =
+  let opts = { stopPropagation = False, preventDefault = True }
+  in  onWithOptions "click" opts (Json.Decode.succeed msg)
+
+
 navigation : Model -> Html Msg
 navigation model =
   let link ref name =
-        li [] [ a [ href ref ] [ text name ] ]
+        li [] [ a [ href ref, numbClick (NewUrl ref) ] [ text name ] ]
       login = link model.auth.loginUrl "login"
   in div [ class "row" ]
      [ div [ id "brand", class "four columns" ]
-       [ h1 [] [ text "ogonek" ] ]
+       [ a [ href "/", numbClick (NewUrl "/") ] [
+         h1 [] [ text "ogonek" ]
+         ]
+       ]
      , div [ id "nav", class "eight columns" ]
        [ ul []
          [ login
-         , link "#help" "help"
+         , link "/help" "help"
          ]
        ]
      ]

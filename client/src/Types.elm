@@ -7,6 +7,7 @@ type Msg
   = NoOp
   -- internals
   | NavigationChange Location
+  | NewUrl String
   -- API
   | ApiResponseError String
   | ApiResponse ApiContent
@@ -18,6 +19,7 @@ type Route
   | LoginRoute
   -- auth (code, state)
   | AuthRoute (Maybe String) (Maybe String)
+  | HelpRoute
 
 
 type ApiContent
