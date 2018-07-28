@@ -6,6 +6,7 @@ import Html.Events exposing ( onClick, onWithOptions )
 import Json.Decode
 
 import Types exposing (..)
+import Routing
 
 
 view : Model -> Html Msg
@@ -23,9 +24,25 @@ numbClick msg =
 
 navigation : Model -> Html Msg
 navigation model =
-  let link ref name =
-        li [] [ a [ href ref, numbClick (NewUrl ref) ] [ text name ] ]
-      login = link model.auth.loginUrl "login"
+  let loginRoute =
+        case model.login of
+          Just _ -> Types.LogoutRoute
+          Nothing -> Types.LoginRoute
+
+      routes =
+        [ Types.HomeRoute
+        , Types.HelpRoute
+        ]
+
+      link args route =
+        let ref  = Routing.routeToPath route
+            name = Routing.routeToName route
+        in  li args [ a [ href ref, numbClick (NewUrl ref) ] [ text name ] ]
+
+      routesLinks = List.map (link []) routes
+      loginLink = link [class "u-pull-right"] loginRoute
+      links = routesLinks ++ [loginLink]
+
   in div [ class "row" ]
      [ div [ id "brand", class "four columns" ]
        [ a [ href "/", numbClick (NewUrl "/") ] [
@@ -33,10 +50,7 @@ navigation model =
          ]
        ]
      , div [ id "nav", class "eight columns" ]
-       [ ul []
-         [ login
-         , link "/help" "help"
-         ]
+       [ ul [] links
        ]
      ]
 

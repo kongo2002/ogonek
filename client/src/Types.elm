@@ -17,6 +17,7 @@ type Msg
 type Route
   = HomeRoute
   | LoginRoute
+  | LogoutRoute
   -- auth (code, state)
   | AuthRoute (Maybe String) (Maybe String)
   | HelpRoute
