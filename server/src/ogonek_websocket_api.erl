@@ -52,7 +52,7 @@ request(Request, {text, Msg}, State) ->
             {reply, error_json(<<"malformed JSON">>), State}
     end;
 
-request(Request, Message, State) ->
+request(_Request, Message, State) ->
     lager:debug("websocket channel: ~p [~p]", [Message, self()]),
     {reply, error_json(<<"expecting text message">>), State}.
 
@@ -156,7 +156,10 @@ handle_request(<<"authorize">>, _Request, Json, State) ->
             lager:info("authorize: [code ~p; scope ~p; state ~p]", [Code, Scope, St]),
 
             % TODO: actually handle auth token
-            Result = twitch_request_token(Code),
+            _Result = twitch_request_token(Code),
+
+            % request to 'https://api.twitch.tv/helix/users' by
+            % bearer authorization with contained 'access_token'
 
             {reply, json({[{<<"todo">>, true}]}), State};
         _Otherwise ->
