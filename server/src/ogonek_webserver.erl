@@ -37,30 +37,28 @@ handle(Req, Args) ->
     handle(Method, elli_request:path(Req), Req, Args).
 
 
+% serve root file
 handle('GET', [], Req, Args) ->
     handle('GET', [<<"index.html">>], Req, Args);
 
+% websocket upgrade request
 handle('websocket', [<<".ws">>], Req, Args) ->
     elli_websocket:upgrade(Req, Args),
     {close, <<>>};
 
+% websocket request w/o upgrade
 handle('GET', [<<".ws">>], _Req, _Args) ->
     {200, [], <<"use an upgrade request">>};
 
-% arbitrary file request
-handle('GET', Path, _Req, _Args) ->
-    Filepath = filename:join([?DOCROOT | Path]),
-    valid_path(Filepath) orelse throw({403, [], <<"permission denied">>}),
+% arbitrary *static* file request
+handle('GET', [<<"static">> | _]=Path, _Req, _Args) ->
+    serve_file(Path);
 
-    case file:read_file(Filepath) of
-        {ok, Bin} ->
-            {ok, Bin};
-        {error, enoent} ->
-            {404, <<"not found">>};
-        {error, eisdir} ->
-            {404, <<"not found">>}
-    end;
+% all remaining GET request will be mapped to '/index.html'
+handle('GET', _Path, _Req, _Args) ->
+    serve_file([<<"index.html">>]);
 
+% everything else 'does not exist'
 handle(_, _Path, _Req, _Args) ->
     {404, <<"not found">>}.
 
@@ -121,6 +119,20 @@ websocket_handle_event(websocket_exit, [_Request, _Exception, _Stacktrace], _) -
 %%
 %% PRIVATE FUNCTIONS
 %%
+
+serve_file(Path) ->
+    Filepath = filename:join([?DOCROOT | Path]),
+    valid_path(Filepath) orelse throw({403, [], <<"permission denied">>}),
+
+    case file:read_file(Filepath) of
+        {ok, Bin} ->
+            {ok, Bin};
+        {error, enoent} ->
+            {404, <<"not found">>};
+        {error, eisdir} ->
+            {404, <<"not found">>}
+    end.
+
 
 init_ws([<<".ws">>], _Req, _Args) ->
     {ok, handover};
