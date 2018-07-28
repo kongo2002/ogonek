@@ -11,15 +11,15 @@ import Routing
 
 view : Model -> Html Msg
 view model =
-  div [ class "container" ]
-  [ navigation model
-  , body model
-  ]
-
-
-numbClick msg =
-  let opts = { stopPropagation = False, preventDefault = True }
-  in  onWithOptions "click" opts (Json.Decode.succeed msg)
+  let content =
+        case model.route of
+          LoginRoute -> login
+          _ -> body
+  in
+    div [ class "container" ]
+    [ navigation model
+    , content model
+    ]
 
 
 navigation : Model -> Html Msg
@@ -37,10 +37,13 @@ navigation model =
       link args route =
         let ref  = Routing.routeToPath route
             name = Routing.routeToName route
-        in  li args [ a [ href ref, numbClick (NewUrl ref) ] [ text name ] ]
+            active = route == model.route
+            acls = if active then [ class "active" ] else []
+            clss = acls ++ args
+        in  li clss [ a [ href ref, numbClick (NewUrl ref) ] [ text name ] ]
 
       routesLinks = List.map (link []) routes
-      loginLink = link [class "u-pull-right"] loginRoute
+      loginLink = link [toRight] loginRoute
       links = routesLinks ++ [loginLink]
 
   in div [ class "row" ]
@@ -53,6 +56,29 @@ navigation model =
        [ ul [] links
        ]
      ]
+
+
+login : Model -> Html Msg
+login model =
+  let provider = model.auth.provider
+      login = model.auth.loginUrl
+  in
+    div [ class "row" ]
+    [ h1 [] [ text "login" ]
+    , h3 [] [ text ("via " ++ provider) ]
+    , p []
+      [ a [ class "button button-primary", href login ] [ text "login" ]
+      ]
+    ]
+
+
+
+numbClick msg =
+  let opts = { stopPropagation = False, preventDefault = True }
+  in  onWithOptions "click" opts (Json.Decode.succeed msg)
+
+
+toRight = class "u-pull-right"
 
 
 body : Model -> Html Msg

@@ -5,11 +5,15 @@
 #nav ul li {
   display: inline;
   margin: 0 20px 0 0;
-  margin-bottom: 130px;
+  margin-bottom: 80px;
 }
 
 #nav a {
   text-decoration: none;
+}
+
+#nav li.active a {
+  color: #444;
 }
 
 #brand a {
