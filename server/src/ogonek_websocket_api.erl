@@ -44,7 +44,7 @@ info(Request, Message, State) ->
 
 
 request(Request, {text, Msg}, State) ->
-    lager:debug("websocket channel: ~p ~p [~p]", [Request, Msg, self()]),
+    lager:debug("websocket channel: ~p [~p]", [Msg, self()]),
     case ogonek_util:parse_json(Msg) of
         {ok, Payload} ->
             handle_json(Request, Payload, State);
@@ -53,7 +53,7 @@ request(Request, {text, Msg}, State) ->
     end;
 
 request(Request, Message, State) ->
-    lager:debug("websocket channel: ~p ~p [~p]", [Request, Message, self()]),
+    lager:debug("websocket channel: ~p [~p]", [Message, self()]),
     {reply, error_json(<<"expecting text message">>), State}.
 
 
@@ -118,6 +118,26 @@ twitch_auth() ->
     end.
 
 
+twitch_request_token(Code) ->
+    % TODO: abstract this twitch configuration
+    ClientId = list_to_binary(os:getenv("TWITCH_CLIENT_ID")),
+    ClientSecret = list_to_binary(os:getenv("TWITCH_CLIENT_SECRET")),
+    RedirectUrl = list_to_binary(os:getenv("TWITCH_REDIRECT_URL", "http://localhost:8000")),
+
+    Target = <<"https://id.twitch.tv/oauth2/token",
+               "?client_id=", ClientId/binary,
+               "&client_secret=", ClientSecret/binary,
+               "&code=", Code/binary,
+               "&grant_type=authorization_code",
+               "&redirect_uri=", RedirectUrl/binary>>,
+    lager:debug("twitch auth request: ~p", [Target]),
+
+    Opts = [{pool, default}, with_body],
+    Result = hackney:post(Target, [], [], Opts),
+    lager:debug("twitch auth response: ~p", [Result]),
+    Result.
+
+
 handle_json(Request, {Json}, State) ->
     case proplists:get_value(?MSG_TYPE, Json) of
         undefined ->
@@ -131,13 +151,37 @@ handle_json(_Request, _Json, State) ->
 
 
 handle_request(<<"authorize">>, _Request, Json, State) ->
-    {reply, json({[{<<"todo">>, true}]}), State};
+    case keys_([<<"code">>, <<"scope">>, <<"state">>], Json) of
+        [Code, Scope, St] ->
+            lager:info("authorize: [code ~p; scope ~p; state ~p]", [Code, Scope, St]),
+
+            % TODO: actually handle auth token
+            Result = twitch_request_token(Code),
+
+            {reply, json({[{<<"todo">>, true}]}), State};
+        _Otherwise ->
+            {reply, error_json(<<"invalid authorize request">>), State}
+    end;
 
 handle_request(Type, _Request, _Json, State) when is_binary(Type) ->
     {reply, error_json(<<"unhandled request of type '", Type/binary, "'">>), State};
 
 handle_request(_Type, _Request, _Json, State) ->
     {reply, error_json(<<"unhandled request">>), State}.
+
+
+keys_(Keys, {Json}) ->
+    keys_(Keys, Json);
+
+keys_(Keys, Json) when is_list(Json) ->
+    lists:foldr(fun(Key, Res) ->
+                        case proplists:get_value(Key, Json) of
+                            undefined -> Res;
+                            Found -> [Found | Res]
+                        end
+                end, [], Keys);
+
+keys_(_Keys, _Json) -> [].
 
 
 error_json(Error) ->
