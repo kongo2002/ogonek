@@ -1,4 +1,4 @@
--define(MSG_TYPE, <<"_t">>).
+-define(MSG_TYPE, <<"t">>).
 
 -record(oauth_access, {
           access_token :: binary(),
@@ -19,3 +19,15 @@
          }).
 
 -type twitch_user() :: #twitch_user{}.
+
+
+-record(user, {
+          id :: binary(),
+          provider :: binary(),
+          provider_id :: binary(),
+          email :: binary(),
+          name :: binary(),
+          img :: binary()
+         }).
+
+-type user() :: #user{}.

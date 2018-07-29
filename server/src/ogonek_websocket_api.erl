@@ -104,7 +104,7 @@ send_auth_info(Target, Delay) ->
 handle_json(Request, {Json}, State) ->
     case proplists:get_value(?MSG_TYPE, Json) of
         undefined ->
-            {reply, error_json(<<"missing type field '_t'">>), State};
+            {reply, error_json(<<"missing type field 't'">>), State};
         Type ->
             handle_request(Type, Request, Json, State)
     end;
@@ -116,24 +116,12 @@ handle_json(_Request, _Json, State) ->
 handle_request(<<"authorize">>, _Request, Json, State) ->
     case ogonek_util:keys([<<"code">>, <<"scope">>, <<"state">>], Json) of
         [Code, Scope, St] ->
-            lager:info("authorize: [code ~p; scope ~p; state ~p]", [Code, Scope, St]),
-
-            % TODO: get rid of twitch specifics
-            case ogonek_twitch:get_auth_token(Code) of
-                {ok, Token} ->
-                    Provider = <<"twitch">>,
-                    {ok, TUser} = ogonek_twitch:get_user(Token),
-                    User = case ogonek_db:get_user(TUser#twitch_user.id, Provider) of
-                               {ok, Existing} -> Existing;
-                               {error, not_found} ->
-                                   ogonek_db:create_user(TUser, Provider)
-                           end,
-                    lager:info("twitch user authenticated: ~p, ~p", [TUser, User]);
+            case auth_user(Code, Scope, St) of
+                {ok, User} ->
+                    {reply, json(ogonek_user:to_json(User)), State};
                 _Error ->
-                    ok
-            end,
-
-            {reply, json({[{<<"todo">>, true}]}), State};
+                    {reply, error_json(<<"authorization failed">>), State}
+            end;
         _Otherwise ->
             {reply, error_json(<<"invalid authorize request">>), State}
     end;
@@ -143,6 +131,30 @@ handle_request(Type, _Request, _Json, State) when is_binary(Type) ->
 
 handle_request(_Type, _Request, _Json, State) ->
     {reply, error_json(<<"unhandled request">>), State}.
+
+
+auth_user(Code, Scope, StateStr) ->
+    lager:debug("trying to authorize with: [code ~p; scope ~p; state ~p]", [Code, Scope, StateStr]),
+
+    % TODO: abstract twitch specifics into a 'generic' auth-provider
+    case ogonek_twitch:get_auth_token(Code) of
+        {ok, Token} ->
+            Provider = <<"twitch">>,
+            case ogonek_twitch:get_user(Token) of
+                {ok, TwitchUser} ->
+                    case ogonek_db:get_user(TwitchUser#twitch_user.id, Provider) of
+                        {ok, _}=Existing -> Existing;
+                        {error, not_found} ->
+                            ogonek_db:create_user(TwitchUser, Provider)
+                    end;
+                Error ->
+                    lager:warning("twitch user request failed: ~p", [Error]),
+                    {error, authorization_failed}
+            end;
+        Error ->
+            lager:warning("twitch authorization failed: ~p", [Error]),
+            {error, authorization_failed}
+    end.
 
 
 error_json(Error) ->

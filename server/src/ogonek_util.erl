@@ -1,5 +1,9 @@
 -module(ogonek_util).
 
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-endif.
+
 -export([lowercase/1,
          uppercase/1,
          parse_json/1,
@@ -10,7 +14,9 @@
          json_post/2,
          json_post/3,
          json_post/4,
-         keys/2
+         keys/2,
+         path/2,
+         doc/2
         ]).
 
 
@@ -38,9 +44,7 @@ parse_json(Body) ->
     end.
 
 
-keys(Keys, {Json}) ->
-    keys(Keys, Json);
-
+keys(Keys, {Json}) -> keys(Keys, Json);
 keys(Keys, Json) when is_list(Json) ->
     lists:foldr(fun(Key, Res) ->
                         case proplists:get_value(Key, Json) of
@@ -50,6 +54,16 @@ keys(Keys, Json) when is_list(Json) ->
                 end, [], Keys);
 
 keys(_Keys, _Json) -> [].
+
+
+path([], Json) -> Json;
+path(Path, {Json}) -> path(Path, Json);
+path([Part | Path], Json) when is_list(Json) ->
+    case proplists:get_value(Part, Json) of
+        undefined -> undefined;
+        Result -> path(Path, Result)
+    end;
+path(_Path, _Json) -> undefined.
 
 
 json_get(Target) ->
@@ -105,3 +119,29 @@ json_post(Target, Headers, Payload, Options) ->
 
     lager:debug("POST: ~p", [Result]),
     Result.
+
+
+doc(DocType, {Vs}) ->
+    doc(DocType, Vs);
+
+doc(DocType, Values) when is_list(Values) ->
+    {[{<<"t">>, DocType} | Values]}.
+
+
+%%
+%% TESTS
+%%
+
+-ifdef(TEST).
+
+path_test_() ->
+    [?_assertEqual(undefined, path([<<"foo">>], {})),
+     ?_assertEqual(undefined, path([<<"foo">>], [])),
+     ?_assertEqual(undefined, path([<<"foo">>], true)),
+     ?_assertEqual(true, path([<<"foo">>], [{<<"foo">>, true}])),
+     ?_assertEqual(true, path([<<"foo">>], {[{<<"foo">>, true}]})),
+     ?_assertEqual(true, path([<<"foo">>, <<"bar">>], [{<<"foo">>, {[{<<"bar">>, true}]}}])),
+     ?_assertEqual(true, path([<<"foo">>, <<"bar">>], {[{<<"foo">>, {[{<<"bar">>, true}]}}]}))
+    ].
+
+-endif.

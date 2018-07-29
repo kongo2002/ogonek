@@ -49,12 +49,12 @@ new_session(RemoteIP, Headers) ->
     Headers0 = prepare_headers(Headers),
 
     Timestamp = iso8601:format(calendar:universal_time()),
-    Doc = doc(<<"session">>,
-              [{<<"headers">>, {Headers0}},
-               {<<"ip">>, RemoteIP},
-               {<<"created">>, Timestamp},
-               {<<"updated">>, Timestamp}
-              ]),
+    Doc = ogonek_util:doc(<<"session">>,
+                          [{<<"headers">>, {Headers0}},
+                           {<<"ip">>, RemoteIP},
+                           {<<"created">>, Timestamp},
+                           {<<"updated">>, Timestamp}
+                          ]),
 
     gen_server:call(?MODULE, {new_session, Doc}).
 
@@ -140,24 +140,24 @@ handle_call({get_session, Session}, _From, State) ->
     {reply, Response, State};
 
 handle_call({create_user, #twitch_user{}=User, Provider}, _From, State) ->
-    Doc = doc(<<"user">>,
-              [{<<"provider">>, Provider},
-               {<<"pid">>, User#twitch_user.id},
-               {<<"email">>, User#twitch_user.email},
-               {<<"name">>, User#twitch_user.display_name},
-               {<<"img">>, User#twitch_user.profile_image_url}
-              ]),
+    Doc = ogonek_util:doc(<<"user">>,
+                          [{<<"provider">>, Provider},
+                           {<<"pid">>, User#twitch_user.id},
+                           {<<"email">>, User#twitch_user.email},
+                           {<<"name">>, User#twitch_user.display_name},
+                           {<<"img">>, User#twitch_user.profile_image_url}
+                          ]),
     Response = case insert(Doc, State) of
                    {ok, Id, _Rev} ->
-                       {ok, with_id(Doc, Id)};
+                       ogonek_user:from_json(with_id(Doc, Id));
                    Error -> Error
                end,
     {reply, Response, State};
 
 handle_call({get_user, UserId}, _From, State) ->
-    Response = case head_(<<"/ogonek/", UserId/binary>>, State) of
+    Response = case get_(<<"/ogonek/", UserId/binary>>, State) of
                    {ok, Code, _Hs, User} when Code == 200 ->
-                       {ok, User};
+                       ogonek_user:from_json(User);
                    _Error ->
                        {error, not_found}
                end,
@@ -171,8 +171,9 @@ handle_call({get_user, ProviderId, Provider}, _From, State) ->
 
     Response = case get_(Target, State) of
                    {ok, Code, _Hs, Body} when Code == 200 ->
-                       case ogonek_util:keys([<<"rows">>], Body) of
-                           [[User]] -> {ok, User};
+                       case ogonek_util:path([<<"rows">>, <<"value">>], Body) of
+                           [[User]] ->
+                               ogonek_user:from_json(User);
                            _ -> {error, not_found}
                        end;
                    _Error ->
@@ -386,11 +387,6 @@ parse_id_rev({Json}) ->
     end.
 
 
-doc(DocType, {Vs}) ->
-    doc(DocType, Vs);
-
-doc(DocType, Values) when is_list(Values) ->
-    {[{<<"t">>, DocType} | Values]}.
 
 
 with_id({Doc}, Id) ->

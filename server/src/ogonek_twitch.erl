@@ -51,7 +51,7 @@ get_auth_token(AuthCode) ->
                 {ok, 200, _Hs, Body} ->
                     extract_oauth_access(Body);
                 Error ->
-                    lager:warning("get_auth_token failed: ~p", Error),
+                    lager:warning("get_auth_token failed: ~p", [Error]),
                     error
             end;
         Error -> Error

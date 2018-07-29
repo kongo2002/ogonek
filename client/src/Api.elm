@@ -31,7 +31,7 @@ requestEncoder req =
   case req of
     Types.AuthorizeRequest auth ->
       JE.object
-        [ ("_t", JE.string "authorize")
+        [ ("t", JE.string "authorize")
         , ("code", JE.string auth.code)
         , ("state", JE.string auth.state)
         , ("scope", JE.string auth.scope)
@@ -50,8 +50,8 @@ parseWsJson payload =
 
 payloadDecoder : JD.Decoder Types.ApiContent
 payloadDecoder =
-  -- use the "_t" key to determine which decoder to use
-  (JD.field "_t" JD.string)
+  -- use the "t" key to determine which decoder to use
+  (JD.field "t" JD.string)
   |> JD.andThen (\t ->
     case t of
       "authinfo" -> JD.map Types.Auth authInfoDecoder
