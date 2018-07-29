@@ -6,6 +6,10 @@
          json_get/1,
          json_get/2,
          json_get/3,
+         json_post/1,
+         json_post/2,
+         json_post/3,
+         json_post/4,
          keys/2
         ]).
 
@@ -68,4 +72,36 @@ json_get(Target, Headers, Options) ->
              end,
 
     lager:debug("GET: ~p", [Result]),
+    Result.
+
+
+json_post(Target) ->
+    json_post(Target, []).
+
+
+json_post(Target, Headers) ->
+    json_post(Target, Headers, []).
+
+
+json_post(Target, Headers, Payload) ->
+    DefaultOpts = [{pool, default}, with_body],
+    json_post(Target, Headers, Payload, DefaultOpts).
+
+
+json_post(Target, Headers, Payload, Options) ->
+    JsonPayload = case Payload of
+                      [] -> [];
+                      Bin when is_binary(Bin) -> Bin;
+                      Obj -> jiffy:encode(Obj)
+                  end,
+    Result = case hackney:post(Target, Headers, JsonPayload, Options) of
+                 {ok, Code, Hs, Body} = Res ->
+                     case parse_json(Body) of
+                         {ok, Json} -> {ok, Code, Hs, Json};
+                         _Otherwise -> Res
+                     end;
+                 Otherwise -> Otherwise
+             end,
+
+    lager:debug("POST: ~p", [Result]),
     Result.

@@ -245,11 +245,7 @@ put_(Path, Payload, #state{host=Host, headers=Headers, options=Options}) ->
 
 post_(Path, Payload, #state{host=Host, headers=Headers, options=Options}) ->
     Target = <<Host/binary, Path/binary>>,
-    Json = jiffy:encode(Payload),
-    Result = hackney:post(Target, Headers, Json, Options),
-
-    lager:debug("POST: ~p", [Result]),
-    Result.
+    ogonek_util:json_post(Target, Headers, Payload, Options).
 
 
 check_status(State) ->

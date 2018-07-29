@@ -47,17 +47,9 @@ get_info() ->
 get_auth_token(AuthCode) ->
     case gen_server:call(?MODULE, {auth_token_request, AuthCode}) of
         {ok, Target} ->
-            Opts = [{pool, default}, with_body],
-            Result = hackney:post(Target, [], [], Opts),
-            lager:debug("twitch auth response: ~p", [Result]),
-
-            case Result of
+            case ogonek_util:json_post(Target) of
                 {ok, 200, _Hs, Body} ->
-                    case ogonek_util:parse_json(Body) of
-                        {ok, Json} ->
-                            extract_oauth_access(Json);
-                        Error -> Error
-                    end;
+                    extract_oauth_access(Body);
                 Error ->
                     lager:warning("get_auth_token failed: ~p", Error),
                     error
