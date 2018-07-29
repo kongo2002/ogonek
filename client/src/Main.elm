@@ -35,6 +35,13 @@ orEmpty value =
     Nothing -> ""
 
 
+atAuth : Route -> Bool
+atAuth route =
+  case route of
+    AuthRoute _ _ _ -> True
+    _ -> False
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
   case msg of
@@ -61,6 +68,12 @@ update msg model =
       let _ = Debug.log "auth information received" info
           model0 = { model | authInfo = info }
       in  model0 ! []
+
+    ApiResponse (User info) ->
+      let _ = Debug.log "user information received" info
+          model0 = { model | user = Just info}
+          actions = if atAuth model.route then [Navigation.newUrl "/"] else []
+      in  model0 ! actions
 
     ApiResponse cnt ->
       let _ = Debug.log "api content received" cnt

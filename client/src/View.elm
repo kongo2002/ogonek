@@ -25,7 +25,7 @@ view model =
 navigation : Model -> Html Msg
 navigation model =
   let loginRoute =
-        case model.login of
+        case model.user of
           Just _ -> Types.LogoutRoute
           Nothing -> Types.LoginRoute
 

@@ -25,6 +25,7 @@ type Route
 
 type ApiContent
   = Auth AuthInformation
+  | User UserInfo
   | Error ApiError
 
 
@@ -51,9 +52,12 @@ type alias ApiError =
   }
 
 
-type alias LoginInfo =
+type alias UserInfo =
   { id : String
+  , name : String
   , email : String
+  , provider : String
+  , img : String
   }
 
 
@@ -64,7 +68,7 @@ type alias Flags =
 
 type alias Model =
   { route : Route
-  , login : Maybe LoginInfo
+  , user : Maybe UserInfo
   , authInfo : AuthInformation
   , websocketHost : String
   }

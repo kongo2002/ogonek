@@ -55,8 +55,19 @@ payloadDecoder =
   |> JD.andThen (\t ->
     case t of
       "authinfo" -> JD.map Types.Auth authInfoDecoder
+      "user" -> JD.map Types.User userInfoDecoder
       "error" -> JD.map Types.Error errorDecoder
       _ -> JD.fail ("unexpected message " ++ t))
+
+
+userInfoDecoder : JD.Decoder Types.UserInfo
+userInfoDecoder =
+  JD.map5 Types.UserInfo
+    (JD.field "_id" JD.string)
+    (JD.field "name" JD.string)
+    (JD.field "email" JD.string)
+    (JD.field "provider" JD.string)
+    (JD.field "img" JD.string)
 
 
 authInfoDecoder : JD.Decoder Types.AuthInformation
