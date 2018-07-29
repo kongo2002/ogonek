@@ -113,9 +113,15 @@ websocket_handle_event(websocket_close, [Request, _Reason], _State) ->
 %% the user callback code throws an exception, has an error or
 %% exits. After triggering this event, a generated response is sent to
 %% the user.
-websocket_handle_event(websocket_throw, [_Request, _Exception, _Stacktrace], _) -> ok;
-websocket_handle_event(websocket_error, [_Request, _Exception, _Stacktrace], _) -> ok;
-websocket_handle_event(websocket_exit, [_Request, _Exception, _Stacktrace], _) -> ok.
+websocket_handle_event(websocket_throw, [_Request, Exception, Stacktrace], _) ->
+    lager:error("throw on websocket: ~p ~p", [Exception, Stacktrace]),
+    ok;
+websocket_handle_event(websocket_error, [_Request, Exception, Stacktrace], _) ->
+    lager:error("error on websocket: ~p ~p", [Exception, Stacktrace]),
+    ok;
+websocket_handle_event(websocket_exit, [_Request, Exception, Stacktrace], _) ->
+    lager:error("exit on websocket: ~p ~p", [Exception, Stacktrace]),
+    ok.
 
 
 %%

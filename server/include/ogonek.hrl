@@ -1,3 +1,4 @@
+-define(MSG_TYPE, <<"_t">>).
 
 -record(oauth_access, {
           access_token :: binary(),

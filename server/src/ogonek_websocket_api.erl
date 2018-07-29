@@ -1,13 +1,13 @@
 -module(ogonek_websocket_api).
 
+-include("ogonek.hrl").
+
 -export([init/2,
          info/3,
          request/3
         ]).
 
 -record(state, {}).
-
--define(MSG_TYPE, <<"_t">>).
 
 
 init(Request, Opts) ->
@@ -118,11 +118,17 @@ handle_request(<<"authorize">>, _Request, Json, State) ->
         [Code, Scope, St] ->
             lager:info("authorize: [code ~p; scope ~p; state ~p]", [Code, Scope, St]),
 
-            % TODO: actually handle auth token
+            % TODO: get rid of twitch specifics
             case ogonek_twitch:get_auth_token(Code) of
                 {ok, Token} ->
-                    User = ogonek_twitch:get_user(Token),
-                    lager:info("twitch user authenticated: ~p", [User]);
+                    Provider = <<"twitch">>,
+                    {ok, TUser} = ogonek_twitch:get_user(Token),
+                    User = case ogonek_db:get_user(TUser#twitch_user.id, Provider) of
+                               {ok, Existing} -> Existing;
+                               {error, not_found} ->
+                                   ogonek_db:create_user(TUser, Provider)
+                           end,
+                    lager:info("twitch user authenticated: ~p, ~p", [TUser, User]);
                 _Error ->
                     ok
             end,

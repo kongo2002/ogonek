@@ -1,14 +1,21 @@
 -module(ogonek_db).
 
+-include("ogonek.hrl").
+
 -behaviour(gen_server).
 
 %% API
 -export([start_link/0]).
 
-%% DB API
+%% Session API
 -export([new_session/2,
          refresh_session/1,
          get_session/1]).
+
+%% User API
+-export([create_user/2,
+         get_user/1,
+         get_user/2]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -59,6 +66,17 @@ get_session(Session) ->
 refresh_session(Session) ->
     gen_server:cast(?MODULE, {refresh_session, Session}).
 
+
+create_user(User, Provider) ->
+    gen_server:call(?MODULE, {create_user, User, Provider}).
+
+
+get_user(UserId) ->
+    gen_server:call(?MODULE, {get_user, UserId}).
+
+
+get_user(ProviderId, Provider) ->
+    gen_server:call(?MODULE, {get_user, ProviderId, Provider}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -117,6 +135,48 @@ handle_call({get_session, Session}, _From, State) ->
     Response = case head_(<<"/ogonek/", Session/binary>>, State) of
                    {ok, Code, _Hs} when Code == 200 -> ok;
                    _Error -> {error, not_found}
+               end,
+
+    {reply, Response, State};
+
+handle_call({create_user, #twitch_user{}=User, Provider}, _From, State) ->
+    Doc = doc(<<"user">>,
+              [{<<"provider">>, Provider},
+               {<<"pid">>, User#twitch_user.id},
+               {<<"email">>, User#twitch_user.email},
+               {<<"name">>, User#twitch_user.display_name},
+               {<<"img">>, User#twitch_user.profile_image_url}
+              ]),
+    Response = case insert(Doc, State) of
+                   {ok, Id, _Rev} ->
+                       {ok, with_id(Doc, Id)};
+                   Error -> Error
+               end,
+    {reply, Response, State};
+
+handle_call({get_user, UserId}, _From, State) ->
+    Response = case head_(<<"/ogonek/", UserId/binary>>, State) of
+                   {ok, Code, _Hs, User} when Code == 200 ->
+                       {ok, User};
+                   _Error ->
+                       {error, not_found}
+               end,
+
+    {reply, Response, State};
+
+handle_call({get_user, ProviderId, Provider}, _From, State) ->
+    % query the 'user' design doc views
+    Target = <<"/ogonek/_design/user/_view/", Provider/binary,
+               "?key=\"", ProviderId/binary, "\"">>,
+
+    Response = case get_(Target, State) of
+                   {ok, Code, _Hs, Body} when Code == 200 ->
+                       case ogonek_util:keys([<<"rows">>], Body) of
+                           [[User]] -> {ok, User};
+                           _ -> {error, not_found}
+                       end;
+                   _Error ->
+                       {error, not_found}
                end,
 
     {reply, Response, State};
@@ -331,3 +391,10 @@ doc(DocType, {Vs}) ->
 
 doc(DocType, Values) when is_list(Values) ->
     {[{<<"t">>, DocType} | Values]}.
+
+
+with_id({Doc}, Id) ->
+    with_id(Doc, Id);
+
+with_id(Doc, Id) ->
+    {[{<<"_id">>, Id} | Doc]}.
