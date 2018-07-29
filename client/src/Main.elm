@@ -24,7 +24,13 @@ routeActions model =
     AuthRoute (Just code) state scope ->
       let auth = Authorize code (orEmpty state) (orEmpty scope)
           req = AuthorizeRequest auth
-      in  [Api.send model req]
+          emptyAuth = AuthRoute Nothing Nothing Nothing
+          -- we want to immediately reset the url query parameters:
+          -- this makes for a cleaner impression and is more robust
+          -- against accidential 'reloading' of the site that
+          -- might trigger a failing authentication
+          resetLocation = Navigation.newUrl (Routing.routeToPath emptyAuth)
+      in  [ Api.send model req, resetLocation ]
     _ -> []
 
 
@@ -72,8 +78,7 @@ update msg model =
     ApiResponse (User info) ->
       let _ = Debug.log "user information received" info
           model0 = { model | user = Just info}
-          actions = if atAuth model.route then [Navigation.newUrl "/"] else []
-      in  model0 ! actions
+      in  model0 ! []
 
     ApiResponse cnt ->
       let _ = Debug.log "api content received" cnt
