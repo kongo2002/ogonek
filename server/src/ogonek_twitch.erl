@@ -1,5 +1,7 @@
 -module(ogonek_twitch).
 
+-include("ogonek.hrl").
+
 -behaviour(gen_server).
 
 %% API
@@ -43,7 +45,18 @@ get_auth_token(AuthCode) ->
             Opts = [{pool, default}, with_body],
             Result = hackney:post(Target, [], [], Opts),
             lager:debug("twitch auth response: ~p", [Result]),
-            Result;
+
+            case Result of
+                {ok, 200, _Hs, Body} ->
+                    case ogonek_util:parse_json(Body) of
+                        {ok, Json} ->
+                            extract_oauth_access(Json);
+                        Error -> Error
+                    end;
+                Error ->
+                    lager:warning("get_auth_token failed: ~p", Error),
+                    error
+            end;
         Error -> Error
     end.
 
@@ -203,3 +216,25 @@ build_auth_request(Code, State) ->
     lager:debug("twitch auth request: ~p", [Target]),
 
     Target.
+
+
+extract_oauth_access(Json) ->
+    % TODO: validate types and correctness
+    Keys = [<<"access_token">>,
+            <<"id_token">>,
+            <<"refresh_token">>,
+            <<"scope">>,
+            <<"token_type">>],
+
+    case ogonek_util:keys(Keys, Json) of
+        [AToken, IdToken, Refresh, Scope, TType] ->
+            {ok, #oauth_access{access_token=AToken,
+                               id_token=IdToken,
+                               refresh_token=Refresh,
+                               scope=Scope,
+                               token_type=TType
+                              }};
+        _Otherwise ->
+            lager:warning("unexpected or incomplete oauth token received: ~p", [Json]),
+            error
+    end.
