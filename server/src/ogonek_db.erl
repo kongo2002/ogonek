@@ -316,17 +316,13 @@ prepare_headers(Headers) ->
                 end, [], Headers).
 
 
-parse_id_rev(Body) ->
-    case ogonek_util:parse_json(Body) of
-        {ok, {Json}} ->
-            Id = proplists:get_value(<<"id">>, Json),
-            Rev = proplists:get_value(<<"rev">>, Json),
-            case {Id, Rev} of
-                {undefined, _} -> {error, missing_id};
-                {_, undefined} -> {error, missing_rev};
-                _ -> {ok, Id, Rev}
-            end;
-        Error -> Error
+parse_id_rev({Json}) ->
+    Id = proplists:get_value(<<"id">>, Json),
+    Rev = proplists:get_value(<<"rev">>, Json),
+    case {Id, Rev} of
+        {undefined, _} -> {error, missing_id};
+        {_, undefined} -> {error, missing_rev};
+        _ -> {ok, Id, Rev}
     end.
 
 
