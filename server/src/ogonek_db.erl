@@ -220,18 +220,7 @@ get_auth() ->
 
 get_(Path, #state{host=Host, headers=Headers, options=Options}) ->
     Target = <<Host/binary, Path/binary>>,
-
-    Result = case hackney:get(Target, Headers, [], Options) of
-                 {ok, Code, Hs, Body} = Res ->
-                     case ogonek_util:parse_json(Body) of
-                         {ok, Json} -> {ok, Code, Hs, Json};
-                         _Otherwise -> Res
-                     end;
-                 Otherwise -> Otherwise
-             end,
-
-    lager:debug("GET: ~p", [Result]),
-    Result.
+    ogonek_util:json_get(Target, Headers, Options).
 
 
 head_(Path, #state{host=Host, options=Options}) ->

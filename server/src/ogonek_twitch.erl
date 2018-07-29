@@ -1,5 +1,9 @@
 -module(ogonek_twitch).
 
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-endif.
+
 -include("ogonek.hrl").
 
 -behaviour(gen_server).
@@ -8,7 +12,8 @@
 -export([start_link/0]).
 
 -export([get_info/0,
-         get_auth_token/1]).
+         get_auth_token/1,
+         get_user/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -59,6 +64,19 @@ get_auth_token(AuthCode) ->
             end;
         Error -> Error
     end.
+
+
+get_user(#oauth_access{access_token=Token}) ->
+    Target = <<"https://api.twitch.tv/helix/users">>,
+    Headers = [{<<"Accept">>, <<"application/json">>},
+               {<<"Authorization">>, <<"Bearer ", Token/binary>>}],
+
+    case ogonek_util:json_get(Target, Headers) of
+        {ok, 200, _Hs, Json} ->
+            extract_user(Json);
+        Error -> Error
+    end.
+
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -238,3 +256,49 @@ extract_oauth_access(Json) ->
             lager:warning("unexpected or incomplete oauth token received: ~p", [Json]),
             error
     end.
+
+
+extract_user({Json}) ->
+    Data = proplists:get_value(<<"data">>, Json, []),
+    case Data of
+        [Fst] ->
+            Keys = [<<"id">>, <<"display_name">>, <<"email">>, <<"profile_image_url">>],
+            case ogonek_util:keys(Keys, Fst) of
+                [Id, Name, Email, Image] ->
+                    {ok, #twitch_user{id=Id,
+                                      display_name=Name,
+                                      email=Email,
+                                      profile_image_url=Image}};
+                _Otherwise ->
+                    error
+            end;
+        _ -> error
+    end.
+
+
+%%
+%% Tests
+%%
+
+-ifdef(TEST).
+
+extract_oauth_access_test_() ->
+    Input = {[{<<"data">>,
+               [{[{<<"id">>,<<"1">>},
+                  {<<"login">>,<<"kongo2002">>},
+                  {<<"display_name">>,<<"kongo2002">>},
+                  {<<"type">>,<<>>},
+                  {<<"broadcaster_type">>,<<>>},
+                  {<<"description">>,<<>>},
+                  {<<"profile_image_url">>,<<"https://some.where.com">>},
+                  {<<"offline_image_url">>,<<>>},
+                  {<<"view_count">>,6},
+                  {<<"email">>,<<"kongo2002@gmail.com">>}]}]}]},
+
+    [?_assertEqual({ok, #twitch_user{id= <<"1">>,
+                                     display_name= <<"kongo2002">>,
+                                     email= <<"kongo2002@gmail.com">>,
+                                     profile_image_url= <<"https://some.where.com">>}},
+                   extract_user(Input))].
+
+-endif.

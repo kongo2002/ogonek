@@ -8,3 +8,13 @@
          }).
 
 -type oauth_access() :: #oauth_access{}.
+
+
+-record(twitch_user, {
+          id :: binary(),
+          display_name :: binary(),
+          email :: binary(),
+          profile_image_url :: binary()
+         }).
+
+-type twitch_user() :: #twitch_user{}.

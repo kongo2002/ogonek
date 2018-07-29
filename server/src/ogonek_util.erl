@@ -3,6 +3,9 @@
 -export([lowercase/1,
          uppercase/1,
          parse_json/1,
+         json_get/1,
+         json_get/2,
+         json_get/3,
          keys/2
         ]).
 
@@ -43,3 +46,26 @@ keys(Keys, Json) when is_list(Json) ->
                 end, [], Keys);
 
 keys(_Keys, _Json) -> [].
+
+
+json_get(Target) ->
+    json_get(Target, []).
+
+
+json_get(Target, Headers) ->
+    DefaultOpts = [{pool, default}, with_body],
+    json_get(Target, Headers, DefaultOpts).
+
+
+json_get(Target, Headers, Options) ->
+    Result = case hackney:get(Target, Headers, [], Options) of
+                 {ok, Code, Hs, Body} = Res ->
+                     case parse_json(Body) of
+                         {ok, Json} -> {ok, Code, Hs, Json};
+                         _Otherwise -> Res
+                     end;
+                 Otherwise -> Otherwise
+             end,
+
+    lager:debug("GET: ~p", [Result]),
+    Result.

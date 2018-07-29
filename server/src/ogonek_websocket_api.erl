@@ -119,11 +119,13 @@ handle_request(<<"authorize">>, _Request, Json, State) ->
             lager:info("authorize: [code ~p; scope ~p; state ~p]", [Code, Scope, St]),
 
             % TODO: actually handle auth token
-            Result = ogonek_twitch:get_auth_token(Code),
-            lager:debug("auth_token: ~p", [Result]),
-
-            % request to 'https://api.twitch.tv/helix/users' by
-            % bearer authorization with contained 'access_token'
+            case ogonek_twitch:get_auth_token(Code) of
+                {ok, Token} ->
+                    User = ogonek_twitch:get_user(Token),
+                    lager:info("twitch user authenticated: ~p", [User]);
+                _Error ->
+                    ok
+            end,
 
             {reply, json({[{<<"todo">>, true}]}), State};
         _Otherwise ->
