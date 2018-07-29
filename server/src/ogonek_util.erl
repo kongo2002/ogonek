@@ -2,7 +2,8 @@
 
 -export([lowercase/1,
          uppercase/1,
-         parse_json/1
+         parse_json/1,
+         keys/2
         ]).
 
 
@@ -28,3 +29,17 @@ parse_json(Body) ->
     catch
         _Error -> {error, malformed_json}
     end.
+
+
+keys(Keys, {Json}) ->
+    keys(Keys, Json);
+
+keys(Keys, Json) when is_list(Json) ->
+    lists:foldr(fun(Key, Res) ->
+                        case proplists:get_value(Key, Json) of
+                            undefined -> Res;
+                            Found -> [Found | Res]
+                        end
+                end, [], Keys);
+
+keys(_Keys, _Json) -> [].

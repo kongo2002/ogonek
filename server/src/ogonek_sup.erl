@@ -35,12 +35,14 @@ start_link() ->
 %% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}
 init([]) ->
     WebserverPort = 8000,
-    CbArgs = [{mods, [{ogonek_webserver, [{handler, ogonek_webserver}]},
+    ElliCbArgs = [{mods, [{ogonek_webserver, [{handler, ogonek_webserver}]},
                       {elli_websocket, []}]}],
-    Children = [?WORKER(webserver, elli, [[{callback, elli_middleware},
-                                           {callback_args, CbArgs},
-                                           {port, WebserverPort}]]),
-                ?WORKER(db, ogonek_db, [])
+
+    Children = [?WORKER(db, ogonek_db, []),
+                ?WORKER(twitch, ogonek_twitch, []),
+                ?WORKER(webserver, elli, [[{callback, elli_middleware},
+                                           {callback_args, ElliCbArgs},
+                                           {port, WebserverPort}]])
                ],
     {ok, {{one_for_all, 5, 10}, Children}}.
 

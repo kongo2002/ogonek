@@ -90,52 +90,15 @@ get_cookie_session(Request) ->
 send_auth_info(Target, Delay) ->
     erlang:spawn(fun() ->
                          timer:sleep(Delay),
-                         case twitch_auth() of
-                             undefined -> ok;
-                             Auth -> Target ! {json, Auth}
+                         case ogonek_twitch:get_info() of
+                             {ok, AuthInfo} ->
+                                 Target ! {json, AuthInfo};
+                             _Otherwise ->
+                                 % do nothing
+                                 ok
                          end
                  end),
     ok.
-
-
-twitch_auth() ->
-    case os:getenv("TWITCH_CLIENT_ID") of
-        false -> undefined;
-        ClientId0 ->
-            ClientId = list_to_binary(ClientId0),
-            RedirectUrl = list_to_binary(os:getenv("TWITCH_REDIRECT_URL", "http://localhost:8000")),
-
-            Url = <<"https://id.twitch.tv/oauth2/authorize",
-                    "?client_id=", ClientId/binary,
-                    "&redirect_uri=", RedirectUrl/binary,
-                    "&response_type=code",
-                    "&scope=openid user:read:email">>,
-
-            {[{?MSG_TYPE, <<"authinfo">>},
-              {<<"provider">>, <<"twitch">>},
-              {<<"loginUrl">>, Url}
-             ]}
-    end.
-
-
-twitch_request_token(Code) ->
-    % TODO: abstract this twitch configuration
-    ClientId = list_to_binary(os:getenv("TWITCH_CLIENT_ID")),
-    ClientSecret = list_to_binary(os:getenv("TWITCH_CLIENT_SECRET")),
-    RedirectUrl = list_to_binary(os:getenv("TWITCH_REDIRECT_URL", "http://localhost:8000")),
-
-    Target = <<"https://id.twitch.tv/oauth2/token",
-               "?client_id=", ClientId/binary,
-               "&client_secret=", ClientSecret/binary,
-               "&code=", Code/binary,
-               "&grant_type=authorization_code",
-               "&redirect_uri=", RedirectUrl/binary>>,
-    lager:debug("twitch auth request: ~p", [Target]),
-
-    Opts = [{pool, default}, with_body],
-    Result = hackney:post(Target, [], [], Opts),
-    lager:debug("twitch auth response: ~p", [Result]),
-    Result.
 
 
 handle_json(Request, {Json}, State) ->
@@ -151,12 +114,12 @@ handle_json(_Request, _Json, State) ->
 
 
 handle_request(<<"authorize">>, _Request, Json, State) ->
-    case keys_([<<"code">>, <<"scope">>, <<"state">>], Json) of
+    case ogonek_util:keys([<<"code">>, <<"scope">>, <<"state">>], Json) of
         [Code, Scope, St] ->
             lager:info("authorize: [code ~p; scope ~p; state ~p]", [Code, Scope, St]),
 
             % TODO: actually handle auth token
-            _Result = twitch_request_token(Code),
+            _Result = ogonek_twitch:get_auth_token(Code),
 
             % request to 'https://api.twitch.tv/helix/users' by
             % bearer authorization with contained 'access_token'
@@ -171,20 +134,6 @@ handle_request(Type, _Request, _Json, State) when is_binary(Type) ->
 
 handle_request(_Type, _Request, _Json, State) ->
     {reply, error_json(<<"unhandled request">>), State}.
-
-
-keys_(Keys, {Json}) ->
-    keys_(Keys, Json);
-
-keys_(Keys, Json) when is_list(Json) ->
-    lists:foldr(fun(Key, Res) ->
-                        case proplists:get_value(Key, Json) of
-                            undefined -> Res;
-                            Found -> [Found | Res]
-                        end
-                end, [], Keys);
-
-keys_(_Keys, _Json) -> [].
 
 
 error_json(Error) ->
