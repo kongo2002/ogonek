@@ -204,7 +204,7 @@ auth_info(#state{client_id=ClientId, redirect_uri=RedirectUri}) ->
             "?client_id=", ClientId/binary,
             "&redirect_uri=", RedirectUri/binary,
             "&response_type=code",
-            "&scope=openid user:read:email">>,
+            "&scope=openid+user:read:email">>,
 
     {[{<<"_t">>, <<"authinfo">>},
       {<<"provider">>, <<"twitch">>},
