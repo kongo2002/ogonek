@@ -54,6 +54,7 @@ init([]) ->
 
     Children = [?WORKER(db, ogonek_db, []),
                 ?WORKER(twitch, ogonek_twitch, []),
+                ?WORKER(session_manager, ogonek_session_manager, []),
                 ?WORKER(webserver, elli, [[{callback, elli_middleware},
                                            {callback_args, ElliCbArgs},
                                            {port, WebserverPort}]])

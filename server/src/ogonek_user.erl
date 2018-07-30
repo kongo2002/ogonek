@@ -20,6 +20,7 @@
          to_json/1]).
 
 
+-spec from_json(any()) -> {ok, user()} | {error, invalid_user}.
 from_json(UserJson) ->
     Keys = [<<"_id">>, <<"provider">>, <<"pid">>, <<"email">>, <<"name">>, <<"img">>],
 
@@ -36,6 +37,7 @@ from_json(UserJson) ->
     end.
 
 
+-spec to_json(user()) -> tuple().
 to_json(#user{}=User) ->
     ogonek_util:doc(<<"user">>,
                     {[{<<"_id">>, User#user.id},

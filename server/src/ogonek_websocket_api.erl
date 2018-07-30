@@ -21,7 +21,9 @@
          request/3
         ]).
 
--record(state, {}).
+-record(state, {
+          session_id :: binary()
+         }).
 
 
 init(Request, Opts) ->
@@ -30,35 +32,41 @@ init(Request, Opts) ->
     % TODO: not sure about this delayed send at all
     send_auth_info(self(), 1000),
 
-    Session = case get_cookie_session(Request) of
-                  undefined ->
-                      request_session(Request);
-                  CookieSession ->
-                      case ogonek_db:get_session(CookieSession) of
-                          ok ->
-                              ogonek_db:refresh_session(CookieSession),
-                              CookieSession;
-                          {error, not_found} ->
-                              request_session(Request)
-                      end
-              end,
+    SessionId = case get_cookie_session(Request) of
+                    undefined ->
+                        request_session(Request);
+                    CookieSessionId ->
+                        case ogonek_db:get_session(CookieSessionId) of
+                            {ok, _StoredSession} ->
+                                ogonek_db:refresh_session(CookieSessionId),
+                                CookieSessionId;
+                            {error, not_found} ->
+                                request_session(Request)
+                        end
+                end,
 
+    % set or update session-id in client cookie (valid for 7 days at max)
     AdditionalHeaders = [{<<"Set-Cookie">>,
-                          <<"ogonekSession=", Session/binary, "; Max-Age=604800; HttpOnly">>}],
+                          <<"ogonekSession=", SessionId/binary, "; Max-Age=604800; HttpOnly">>}],
 
-    {ok, AdditionalHeaders, #state{}}.
+    {ok, AdditionalHeaders, #state{session_id=SessionId}}.
 
 
 info(_Request, {json, Json}, State) ->
     {reply, json(Json), State};
 
+info(_Request, {logout, Reason}, State) ->
+    lager:info("received logout request with reason: ~p", [Reason]),
+    {reply, json({[{?MSG_TYPE, logout}]}), State};
+
 info(Request, Message, State) ->
-    lager:warning("websocket unhandled info: ~p ~p [~p]", [Request, Message, self()]),
+    lager:warning("websocket unhandled info: ~p ~p [~p]", [Request, Message, State]),
     {ok, State}.
 
 
 request(Request, {text, Msg}, State) ->
-    lager:debug("websocket channel: ~p [~p]", [Msg, self()]),
+    lager:debug("websocket request: ~p [~p]", [Msg, State]),
+
     case ogonek_util:parse_json(Msg) of
         {ok, Payload} ->
             handle_json(Request, Payload, State);
@@ -132,6 +140,7 @@ handle_request(<<"authorize">>, _Request, Json, State) ->
         [Code, Scope, St] ->
             case auth_user(Code, Scope, St) of
                 {ok, User} ->
+                    ogonek_session_manager:register(User#user.id, State#state.session_id),
                     {reply, json(ogonek_user:to_json(User)), State};
                 _Error ->
                     {reply, error_json(<<"authorization failed">>), State}

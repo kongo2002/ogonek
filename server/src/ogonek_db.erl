@@ -145,10 +145,12 @@ handle_call({new_session, Doc}, _From, State) ->
     Response = insert(Doc, State),
     {reply, Response, State};
 
-handle_call({get_session, Session}, _From, State) ->
-    Response = case head_(<<"/ogonek/", Session/binary>>, State) of
-                   {ok, Code, _Hs} when Code == 200 -> ok;
-                   _Error -> {error, not_found}
+handle_call({get_session, SessionId}, _From, State) ->
+    Response = case get_(<<"/ogonek/", SessionId/binary>>, State) of
+                   {ok, Code, _Hs, Session} when Code == 200 ->
+                       {ok, Session};
+                   _Error ->
+                       {error, not_found}
                end,
 
     {reply, Response, State};
