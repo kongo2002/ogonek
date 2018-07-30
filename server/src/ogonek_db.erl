@@ -182,18 +182,11 @@ handle_call({get_user, UserId}, _From, State) ->
 
 handle_call({get_user, ProviderId, Provider}, _From, State) ->
     % query the 'user' design doc views
-    Target = <<"/ogonek/_design/user/_view/", Provider/binary,
-               "?key=\"", ProviderId/binary, "\"">>,
-
-    Response = case get_(Target, State) of
-                   {ok, Code, _Hs, Body} when Code == 200 ->
-                       case ogonek_util:path([<<"rows">>, <<"value">>], Body) of
-                           [[User]] ->
-                               ogonek_user:from_json(User);
-                           _ -> {error, not_found}
-                       end;
-                   _Error ->
-                       {error, not_found}
+    Response = case singleton_from_view(<<"user">>, Provider, ProviderId, State) of
+                   {ok, _Key, User} ->
+                       ogonek_user:from_json(User);
+                   Error ->
+                       Error
                end,
 
     {reply, Response, State};
@@ -403,6 +396,34 @@ parse_id_rev({Json}) ->
     end.
 
 
+singleton_from_view(Design, View, Key, State) ->
+    singleton_from_view(?OGONEK_DB_NAME, Design, View, Key, State).
+
+singleton_from_view(Db, Design, View, Key, State) ->
+    Target = <<"/", Db/binary, "/_design/", Design/binary,
+               "/_view/", View/binary,
+               "?key=\"", Key/binary, "\"">>,
+
+    case get_(Target, State) of
+        {ok, Code, _Hs, Body} when Code == 200 ->
+            case ogonek_util:keys([<<"rows">>], Body) of
+                [[Singleton]] ->
+                    case ogonek_util:keys([<<"key">>, <<"value">>], Singleton) of
+                        [Key, Value] ->
+                            {ok, Key, Value};
+                        Unexpected ->
+                            lager:error("received unexpected result from view: ~p", [Unexpected]),
+                            error
+                    end;
+                [] -> {error, not_found};
+                [[]] -> {error, not_found};
+                [_Multiple] ->
+                    lager:error("received multiple results from view where only one was expected: '~s'", [Target]),
+                    {error, multiple}
+            end;
+        _Error ->
+            {error, not_found}
+    end.
 
 
 with_id({Doc}, Id) ->
