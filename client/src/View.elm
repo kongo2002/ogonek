@@ -54,7 +54,7 @@ navigation model =
             active = route == model.route
             acls = if active then [ class "active" ] else []
             clss = acls ++ args
-        in  li clss [ a [ href ref, numbClick (NewUrl ref) ] [ text name ] ]
+        in  li clss [ a [ href ref, numbClick (NewUrl route) ] [ text name ] ]
 
       routesLinks = List.map (link []) routes
       loginLink = link [toRight] loginRoute
@@ -62,7 +62,7 @@ navigation model =
 
   in div [ class "row" ]
      [ div [ id "brand", class "four columns" ]
-       [ a [ href "/", numbClick (NewUrl "/") ] [
+       [ a [ href "/", numbClick (NewUrl HomeRoute) ] [
          h1 [] [ text "ogonek" ]
          ]
        ]
@@ -87,11 +87,13 @@ login model =
 
 
 
+numbClick : a -> Attribute a
 numbClick msg =
   let opts = { stopPropagation = False, preventDefault = True }
   in  onWithOptions "click" opts (Json.Decode.succeed msg)
 
 
+toRight : Attribute a
 toRight = class "u-pull-right"
 
 

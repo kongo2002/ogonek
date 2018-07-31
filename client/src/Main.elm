@@ -62,6 +62,7 @@ atAuth route =
     _ -> False
 
 
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
   case msg of
@@ -74,8 +75,14 @@ update msg model =
           model0 = { model | route = newRoute }
       in  model0 ! []
 
+    NewUrl LogoutRoute ->
+      let model0 = { model | user = Nothing }
+          logout = Api.send model0 LogoutRequest
+          toHome = Navigation.newUrl (Routing.routeToPath HomeRoute)
+      in  model0 ! [ logout, toHome ]
+
     NewUrl url ->
-      model ! [ Navigation.newUrl url ]
+      model ! [ Navigation.newUrl (Routing.routeToPath url) ]
 
     ApiRequest msg ->
       model ! [ Api.send model msg ]

@@ -50,6 +50,10 @@ requestEncoder req =
         , ("state", JE.string auth.state)
         , ("scope", JE.string auth.scope)
         ]
+    Types.LogoutRequest ->
+      JE.object
+        [ ("t", JE.string "logout")
+        ]
 
 
 parseWsJson : String -> Types.Msg

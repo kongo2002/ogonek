@@ -21,7 +21,7 @@ type Msg
   = NoOp
   -- internals
   | NavigationChange Location
-  | NewUrl String
+  | NewUrl Route
   -- API
   | ApiResponseError String
   | ApiResponse ApiContent
@@ -45,6 +45,7 @@ type ApiContent
 
 type Request
   = AuthorizeRequest Authorize
+  | LogoutRequest
 
 
 type alias AuthInformation =
