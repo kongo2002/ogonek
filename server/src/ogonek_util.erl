@@ -62,7 +62,10 @@ parse_json(Body) ->
 
 keys(Keys, {Json}) -> keys(Keys, Json);
 keys(Keys, Json) when is_list(Json) ->
-    lists:foldr(fun(Key, Res) ->
+    lists:foldr(fun({Key, Default}, Res) ->
+                        Value = proplists:get_value(Key, Json, Default),
+                        [Value | Res];
+                   (Key, Res) ->
                         case proplists:get_value(Key, Json) of
                             undefined -> Res;
                             Found -> [Found | Res]

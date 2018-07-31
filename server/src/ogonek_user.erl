@@ -17,33 +17,47 @@
 -include("ogonek.hrl").
 
 -export([from_json/1,
-         to_json/1]).
+         to_json/1,
+         has_oauth/1]).
 
 
--spec from_json(any()) -> {ok, user()} | {error, invalid_user}.
+-spec from_json(any()) -> {ok, user()} | {error, invalid}.
 from_json(UserJson) ->
-    Keys = [<<"_id">>, <<"provider">>, <<"pid">>, <<"email">>, <<"name">>, <<"img">>],
+    Keys = [<<"_id">>, <<"provider">>, <<"pid">>, <<"email">>, <<"name">>, <<"img">>,
+            {<<"oauth">>, undefined} % oauth is optional
+           ],
 
     case ogonek_util:keys(Keys, UserJson) of
-        [Id, Provider, Pid, Email, Name, Img] ->
+        [Id, Provider, Pid, Email, Name, Img, OAuth] ->
             {ok, #user{id=Id,
                        provider=Provider,
                        provider_id=Pid,
                        email=Email,
                        name=Name,
-                       img=Img}};
+                       img=Img,
+                       oauth=OAuth}};
         _Otherwise ->
-            {error, invalid_user}
+            {error, invalid}
     end.
+
+
+-spec has_oauth(user()) -> boolean().
+has_oauth(#user{oauth=undefined}) -> false;
+has_oauth(#user{oauth=_OAuth}) -> true.
 
 
 -spec to_json(user()) -> tuple().
 to_json(#user{}=User) ->
-    ogonek_util:doc(<<"user">>,
-                    {[{<<"_id">>, User#user.id},
-                      {<<"provider">>, User#user.provider},
-                      {<<"pid">>, User#user.provider_id},
-                      {<<"email">>, User#user.email},
-                      {<<"name">>, User#user.name},
-                      {<<"img">>, User#user.img}
-                     ]}).
+    Values = [{<<"_id">>, User#user.id},
+              {<<"provider">>, User#user.provider},
+              {<<"pid">>, User#user.provider_id},
+              {<<"email">>, User#user.email},
+              {<<"name">>, User#user.name},
+              {<<"img">>, User#user.img}
+             ] ++ to_oauth(User),
+    ogonek_util:doc(<<"user">>, {Values}).
+
+
+to_oauth(#user{oauth=undefined}) -> [];
+to_oauth(#user{oauth=OAuth}) ->
+    [{<<"oauth">>, ogonek_oauth:to_json(OAuth)}].

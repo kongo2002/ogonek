@@ -41,7 +41,8 @@
           provider_id :: binary(),
           email :: binary(),
           name :: binary(),
-          img :: binary()
+          img :: binary(),
+          oauth :: oauth_access() | undefined
          }).
 
 -type user() :: #user{}.
