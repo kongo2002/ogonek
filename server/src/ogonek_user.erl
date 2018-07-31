@@ -41,11 +41,6 @@ from_json(UserJson) ->
     end.
 
 
--spec has_oauth(user()) -> boolean().
-has_oauth(#user{oauth=undefined}) -> false;
-has_oauth(#user{oauth=_OAuth}) -> true.
-
-
 -spec to_json(user()) -> tuple().
 to_json(#user{}=User) ->
     Values = [{<<"_id">>, User#user.id},
@@ -55,7 +50,12 @@ to_json(#user{}=User) ->
               {<<"name">>, User#user.name},
               {<<"img">>, User#user.img}
              ] ++ to_oauth(User),
-    ogonek_util:doc(<<"user">>, {Values}).
+    ogonek_util:doc(<<"user">>, Values).
+
+
+-spec has_oauth(user()) -> boolean().
+has_oauth(#user{oauth=undefined}) -> false;
+has_oauth(#user{oauth=_OAuth}) -> true.
 
 
 to_oauth(#user{oauth=undefined}) -> [];

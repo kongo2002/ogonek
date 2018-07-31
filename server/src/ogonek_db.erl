@@ -61,14 +61,14 @@ start_link() ->
 
 new_session(RemoteIP, Headers) ->
     Headers0 = prepare_headers(Headers),
-
     Timestamp = iso8601:format(calendar:universal_time()),
-    Doc = ogonek_util:doc(<<"session">>,
-                          [{<<"headers">>, {Headers0}},
-                           {<<"ip">>, RemoteIP},
-                           {<<"created">>, Timestamp},
-                           {<<"updated">>, Timestamp}
-                          ]),
+
+    Session = #session{ip=RemoteIP,
+                       created=Timestamp,
+                       updated=Timestamp,
+                       headers=Headers0
+                      },
+    Doc = ogonek_session:to_json(Session),
 
     gen_server:call(?MODULE, {new_session, Doc}).
 
@@ -146,9 +146,9 @@ handle_call({new_session, Doc}, _From, State) ->
     {reply, Response, State};
 
 handle_call({get_session, SessionId}, _From, State) ->
-    Response = case get_(<<"/ogonek/", SessionId/binary>>, State) of
+    Response = case get_by_id(SessionId, State) of
                    {ok, Code, _Hs, Session} when Code == 200 ->
-                       {ok, Session};
+                       ogonek_session:from_json(Session);
                    _Error ->
                        {error, not_found}
                end,
@@ -171,7 +171,7 @@ handle_call({create_user, #twitch_user{}=User, Provider}, _From, State) ->
     {reply, Response, State};
 
 handle_call({get_user, UserId}, _From, State) ->
-    Response = case get_(<<"/ogonek/", UserId/binary>>, State) of
+    Response = case get_by_id(UserId, State) of
                    {ok, Code, _Hs, User} when Code == 200 ->
                        ogonek_user:from_json(User);
                    _Error ->
@@ -291,6 +291,14 @@ get_auth() ->
 get_(Path, #state{host=Host, headers=Headers, options=Options}) ->
     Target = <<Host/binary, Path/binary>>,
     ogonek_util:json_get(Target, Headers, Options).
+
+
+get_by_id(Id, State) ->
+    get_by_id(?OGONEK_DB_NAME, Id, State).
+
+get_by_id(Db, Id, State) ->
+    Path = <<"/", Db/binary, "/", Id/binary>>,
+    get_(Path, State).
 
 
 head_(Path, #state{host=Host, options=Options}) ->

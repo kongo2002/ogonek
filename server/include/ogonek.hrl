@@ -14,6 +14,20 @@
 
 -define(MSG_TYPE, <<"t">>).
 
+-type kvalue() :: {binary(), any()}.
+
+
+-record(session, {
+          ip :: binary(),
+          created :: binary(),
+          updated :: binary(),
+          headers :: [kvalue()],
+          customer_id :: binary() | undefined
+         }).
+
+-type session() :: #session{}.
+
+
 -record(oauth_access, {
           access_token :: binary(),
           id_token :: binary(),
