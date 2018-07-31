@@ -14,6 +14,8 @@
 
 -module(ogonek_util).
 
+-include("ogonek.hrl").
+
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 -endif.
@@ -139,7 +141,7 @@ doc(DocType, {Vs}) ->
     doc(DocType, Vs);
 
 doc(DocType, Values) when is_list(Values) ->
-    {[{<<"t">>, DocType} | Values]}.
+    {[{?MSG_TYPE, DocType} | Values]}.
 
 
 %%
@@ -147,6 +149,13 @@ doc(DocType, Values) when is_list(Values) ->
 %%
 
 -ifdef(TEST).
+
+doc_test_() ->
+    [?_assertEqual({[{?MSG_TYPE, <<"test">>}, {<<"foo">>, true}]},
+                  doc(<<"test">>, [{<<"foo">>, true}])),
+     ?_assertEqual({[{?MSG_TYPE, <<"test">>}, {<<"foo">>, true}]},
+                  doc(<<"test">>, {[{<<"foo">>, true}]}))
+    ].
 
 path_test_() ->
     [?_assertEqual(undefined, path([<<"foo">>], {})),
@@ -156,6 +165,35 @@ path_test_() ->
      ?_assertEqual(true, path([<<"foo">>], {[{<<"foo">>, true}]})),
      ?_assertEqual(true, path([<<"foo">>, <<"bar">>], [{<<"foo">>, {[{<<"bar">>, true}]}}])),
      ?_assertEqual(true, path([<<"foo">>, <<"bar">>], {[{<<"foo">>, {[{<<"bar">>, true}]}}]}))
+    ].
+
+keys_test_() ->
+    [?_assertEqual([], keys([<<"foo">>], {})),
+     ?_assertEqual([], keys([<<"foo">>], [])),
+     ?_assertEqual([], keys([<<"foo">>], true)),
+     ?_assertEqual([true], keys([<<"foo">>], [{<<"foo">>, true}])),
+     ?_assertEqual([true], keys([<<"foo">>], {[{<<"foo">>, true}]})),
+     ?_assertEqual([{[{<<"bar">>, true}]}], keys([<<"foo">>, <<"bar">>], [{<<"foo">>, {[{<<"bar">>, true}]}}])),
+     ?_assertEqual([{[{<<"bar">>, true}]}], keys([<<"foo">>, <<"bar">>], {[{<<"foo">>, {[{<<"bar">>, true}]}}]})),
+     ?_assertEqual([true, false], keys([<<"foo">>, <<"bar">>], [{<<"bar">>, false}, {<<"foo">>, true}]))
+    ].
+
+lowercase_test_() ->
+    [?_assertEqual("foo", lowercase("Foo")),
+     ?_assertEqual("foo", lowercase("foo")),
+     ?_assertEqual("", lowercase("")),
+     ?_assertEqual(<<"foo bar">>, lowercase(<<"Foo BAR">>)),
+     ?_assertEqual(<<"foo bar ">>, lowercase(<<"foo bar ">>)),
+     ?_assertEqual(<<>>, lowercase(<<>>))
+    ].
+
+uppercase_test_() ->
+    [?_assertEqual("FOO", uppercase("Foo")),
+     ?_assertEqual("FOO", uppercase("foo")),
+     ?_assertEqual("", uppercase("")),
+     ?_assertEqual(<<"FOO BAR">>, uppercase(<<"Foo BAR">>)),
+     ?_assertEqual(<<"FOO BAR ">>, uppercase(<<"foo bar ">>)),
+     ?_assertEqual(<<>>, uppercase(<<>>))
     ].
 
 -endif.
