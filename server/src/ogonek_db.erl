@@ -224,6 +224,8 @@ handle_cast(prepare, State) ->
 
     ok = db_create_if_not_exists(?OGONEK_DB_NAME, State),
 
+    % TODO: check/create/update design documents + views
+
     {noreply, State#state{status=ready}};
 
 handle_cast({refresh_session, Session}, State) ->
