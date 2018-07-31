@@ -32,6 +32,7 @@
          json_post/4,
          keys/2,
          path/2,
+         replace_with/2,
          doc/2
         ]).
 
@@ -83,6 +84,11 @@ path([Part | Path], Json) when is_list(Json) ->
         Result -> path(Path, Result)
     end;
 path(_Path, _Json) -> undefined.
+
+
+replace_with(PList, Values) ->
+    Combined = Values ++ PList,
+    lists:usort(fun({K1, _}, {K2, _}) -> K1 =< K2 end, Combined).
 
 
 json_get(Target) ->
@@ -197,6 +203,14 @@ uppercase_test_() ->
      ?_assertEqual(<<"FOO BAR">>, uppercase(<<"Foo BAR">>)),
      ?_assertEqual(<<"FOO BAR ">>, uppercase(<<"foo bar ">>)),
      ?_assertEqual(<<>>, uppercase(<<>>))
+    ].
+
+replace_with_test_() ->
+    [?_assertEqual([], replace_with([], [])),
+     ?_assertEqual([{<<"id">>, <<"1">>}], replace_with([], [{<<"id">>, <<"1">>}])),
+     ?_assertEqual([{<<"id">>, <<"1">>}], replace_with([{<<"id">>, <<"0">>}], [{<<"id">>, <<"1">>}])),
+     ?_assertEqual([{<<"bar">>, <<"2">>}, {<<"id">>, <<"1">>}],
+                   replace_with([{<<"id">>, <<"0">>}], [{<<"id">>, <<"1">>}, {<<"bar">>, <<"2">>}]))
     ].
 
 -endif.

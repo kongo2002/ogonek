@@ -24,7 +24,9 @@
 %% Session API
 -export([new_session/2,
          refresh_session/1,
-         get_session/1]).
+         get_session/1,
+         add_user_to_session/2,
+         remove_user_from_session/1]).
 
 %% User API
 -export([create_user/2,
@@ -79,6 +81,15 @@ get_session(Session) ->
 
 refresh_session(Session) ->
     gen_server:cast(?MODULE, {refresh_session, Session}).
+
+
+remove_user_from_session(undefined) -> ok;
+remove_user_from_session(SessionId) ->
+    gen_server:cast(?MODULE, {remove_user_from_session, SessionId}).
+
+
+add_user_to_session(UserId, SessionId) ->
+    gen_server:cast(?MODULE, {add_user_to_session, UserId, SessionId}).
 
 
 create_user(User, Provider) ->
@@ -230,6 +241,47 @@ handle_cast({refresh_session, Session}, State) ->
             error;
         Error ->
             lager:error("refresh_session failed: ~p", [Error]),
+            error
+    end,
+
+    {noreply, State};
+
+handle_cast({add_user_to_session, UserId, SessionId}, State) ->
+    Now = iso8601:format(calendar:universal_time()),
+    NewKeys = [{<<"updated">>, Now}, {<<"user_id">>, UserId}],
+    Update = fun(_Code, {S}) ->
+                     Updated = ogonek_util:replace_with(S, NewKeys),
+                     {Updated}
+             end,
+
+    case update(SessionId, Update, State) of
+        {ok, Code, _Hs, _Body} when Code == 200 orelse Code == 201 -> ok;
+        {ok, Code, _Hs, Body} ->
+            lager:error("add_user_to_session failed [~p]: ~p", [Code, Body]),
+            error;
+        Error ->
+            lager:error("add_user_to_session failed: ~p", [Error]),
+            error
+    end,
+
+    {noreply, State};
+
+handle_cast({remove_user_from_session, SessionId}, State) ->
+    Now = iso8601:format(calendar:universal_time()),
+    Update = fun(_Code, {S}) ->
+                     Ts = <<"updated">>,
+                     Updated0 = lists:keyreplace(Ts, 1, S, {Ts, Now}),
+                     Updated1 = lists:keydelete(<<"user_id">>, 1, Updated0),
+                     {Updated1}
+             end,
+
+    case update(SessionId, Update, State) of
+        {ok, Code, _Hs, _Body} when Code == 200 orelse Code == 201 -> ok;
+        {ok, Code, _Hs, Body} ->
+            lager:error("remove_user_from_session failed [~p]: ~p", [Code, Body]),
+            error;
+        Error ->
+            lager:error("remove_user_from_session failed: ~p", [Error]),
             error
     end,
 

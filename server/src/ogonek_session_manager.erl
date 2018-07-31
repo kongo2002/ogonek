@@ -108,7 +108,7 @@ handle_cast({register, Socket, UserId, SessionId}, State) ->
     UserSessions = State#state.sessions,
     Sessions = maps:get(UserId, UserSessions, undefined),
 
-    {ToClose, Sessions0} = record_session(SessionId, Socket, Sessions),
+    {ToClose, OldSession, Sessions0} = record_session(SessionId, Socket, Sessions),
 
     % close existing sockets of old/replaced session
     lists:foreach(fun(Close) ->
@@ -116,6 +116,12 @@ handle_cast({register, Socket, UserId, SessionId}, State) ->
                           Close ! {logout, replaced_session}
                   end,
                   ToClose),
+
+    % moreover we are going to remove any user-id from the old session
+    ogonek_db:remove_user_from_session(OldSession),
+
+    % and associate the user-id with the new session instead
+    ogonek_db:add_user_to_session(UserId, SessionId),
 
     {_, Sockets} = Sessions0,
     lager:info("registered ~p sockets at session '~s' for user '~s'",
@@ -172,14 +178,14 @@ code_change(_OldVsn, State, _Extra) ->
 
 % no recorded session at all
 record_session(SessionId, Socket, undefined) ->
-    {[], {SessionId, [Socket]}};
+    {[], undefined, {SessionId, [Socket]}};
 
 % there are senders registered to the same session-id already
 record_session(SessionId, Socket, {SessionId, Senders}) ->
     Sockets = lists:usort([Socket | Senders]),
-    {[], {SessionId, Sockets}};
+    {[], undefined, {SessionId, Sockets}};
 
 % a different session is registered already
 % -> drop the existing senders and replace with the new one
-record_session(SessionId, Socket, {_OtherSession, Senders}) ->
-    {Senders, {SessionId, [Socket]}}.
+record_session(SessionId, Socket, {OldSession, Senders}) ->
+    {Senders, OldSession, {SessionId, [Socket]}}.

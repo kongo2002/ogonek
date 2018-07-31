@@ -18,23 +18,23 @@
 
 -export([from_json/1,
          to_json/1,
-         has_customer_id/1]).
+         has_user_id/1]).
 
 
 -spec from_json(any()) -> {ok, session()} | {error, invalid}.
 from_json(Json) ->
     Keys = [<<"ip">>, <<"created">>, <<"updated">>,
             {<<"headers">>, []},
-            {<<"customer_id">>, undefined}
+            {<<"user_id">>, undefined}
            ],
 
     case ogonek_util:keys(Keys, Json) of
-        [Ip, Created, Updated, Headers, CustomerId] ->
+        [Ip, Created, Updated, Headers, UserId] ->
             {ok, #session{ip=Ip,
                           created=Created,
                           updated=Updated,
                           headers=Headers,
-                          customer_id=CustomerId}};
+                          user_id=UserId}};
         _Otherwise ->
             {error, invalid}
     end.
@@ -46,16 +46,16 @@ to_json(#session{}=Session) ->
               {<<"created">>, Session#session.created},
               {<<"updated">>, Session#session.updated},
               {<<"headers">>, Session#session.headers}
-             ] ++ to_customer_id(Session),
+             ] ++ to_user_id(Session),
 
     ogonek_util:doc(<<"session">>, Values).
 
 
--spec has_customer_id(session()) -> boolean().
-has_customer_id(#session{customer_id=undefined}) -> false;
-has_customer_id(#session{customer_id=_CustomerId}) -> true.
+-spec has_user_id(session()) -> boolean().
+has_user_id(#session{user_id=undefined}) -> false;
+has_user_id(#session{user_id=_UserId}) -> true.
 
 
-to_customer_id(#session{customer_id=undefined}) -> [];
-to_customer_id(#session{customer_id=CustomerId}) ->
-    [{<<"customer_id">>, CustomerId}].
+to_user_id(#session{user_id=undefined}) -> [];
+to_user_id(#session{user_id=UserId}) ->
+    [{<<"user_id">>, UserId}].

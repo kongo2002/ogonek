@@ -136,16 +136,25 @@ handle_json(_Request, _Json, State) ->
 
 
 handle_request(<<"authorize">>, _Request, Json, State) ->
+    % the values 'code', 'scope' and 'state' are passed to the
+    % callback uri of the oauth procedure and sent via websocket
+    % to this authorize API
     case ogonek_util:keys([<<"code">>, <<"scope">>, <<"state">>], Json) of
         [Code, Scope, St] ->
+            % at first we are going to validate the passed values
+            % against the configured auth service (twitch for now)
             case auth_user(Code, Scope, St) of
                 {ok, User} ->
+                    % on success we are going to connect this session with the
+                    % user that is associated with the authorized user
                     ogonek_session_manager:register(User#user.id, State#state.session_id),
                     {reply, json(ogonek_user:to_json(User)), State};
                 _Error ->
+                    % TODO: more specific error response for the client
                     {reply, error_json(<<"authorization failed">>), State}
             end;
         _Otherwise ->
+            % TODO: more specific error response for the client
             {reply, error_json(<<"invalid authorize request">>), State}
     end;
 

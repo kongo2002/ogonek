@@ -22,7 +22,7 @@
           created :: binary(),
           updated :: binary(),
           headers :: [kvalue()],
-          customer_id :: binary() | undefined
+          user_id :: binary() | undefined
          }).
 
 -type session() :: #session{}.
