@@ -20,7 +20,9 @@
 -export([start_link/0]).
 
 -export([register/2,
-         register/3]).
+         register/3,
+         logout/1,
+         logout/2]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -55,6 +57,16 @@ register(UserId, SessionId) ->
 -spec register(pid(), binary(), binary()) -> ok.
 register(Socket, UserId, SessionId) ->
     gen_server:cast(?MODULE, {register, Socket, UserId, SessionId}).
+
+
+-spec logout(binary()) -> ok.
+logout(UserId) ->
+    logout(self(), UserId).
+
+
+-spec logout(pid(), binary()) -> ok.
+logout(Socket, UserId) ->
+    gen_server:cast(?MODULE, {logout, Socket, UserId}).
 
 
 %%%===================================================================
@@ -111,11 +123,7 @@ handle_cast({register, Socket, UserId, SessionId}, State) ->
     {ToClose, OldSession, Sessions0} = record_session(SessionId, Socket, Sessions),
 
     % close existing sockets of old/replaced session
-    lists:foreach(fun(Close) ->
-                          lager:info("sending close to socket [~p] of replaced session", [Close]),
-                          Close ! {logout, replaced_session}
-                  end,
-                  ToClose),
+    logout_sockets(ToClose, replaced_session),
 
     % moreover we are going to remove any user-id from the old session
     ogonek_db:remove_user_from_session(OldSession),
@@ -128,6 +136,27 @@ handle_cast({register, Socket, UserId, SessionId}, State) ->
                [length(Sockets), SessionId, UserId]),
 
     UserSessions0 = maps:put(UserId, Sessions0, UserSessions),
+
+    {noreply, State#state{sessions=UserSessions0}};
+
+handle_cast({logout, Socket, UserId}, State) ->
+    lager:info("logout for user '~s' requested from ~p", [UserId, Socket]),
+
+    UserSessions = State#state.sessions,
+
+    case maps:get(UserId, UserSessions, undefined) of
+        undefined ->
+            lager:warning("session-manager: there are no session associated with user '~s'", [UserId]),
+            ok;
+        {Session, Sockets} ->
+            % close connected sockets
+            logout_sockets(Sockets, user_logout),
+
+            % and remove user association from session
+            ogonek_db:remove_user_from_session(Session)
+    end,
+
+    UserSessions0 = maps:remove(UserId, UserSessions),
 
     {noreply, State#state{sessions=UserSessions0}};
 
@@ -189,3 +218,11 @@ record_session(SessionId, Socket, {SessionId, Senders}) ->
 % -> drop the existing senders and replace with the new one
 record_session(SessionId, Socket, {OldSession, Senders}) ->
     {Senders, OldSession, {SessionId, [Socket]}}.
+
+
+logout_sockets(Sockets, Reason) ->
+    lists:foreach(fun(Socket) ->
+                          lager:info("sending close to socket [~p] due to ~p", [Socket, Reason]),
+                          Socket ! {logout, Reason}
+                  end,
+                  Sockets).

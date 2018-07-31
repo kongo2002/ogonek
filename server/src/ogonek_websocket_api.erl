@@ -22,7 +22,8 @@
         ]).
 
 -record(state, {
-          session_id :: binary()
+          session_id :: binary(),
+          user_id :: binary() | undefined
          }).
 
 
@@ -57,7 +58,7 @@ info(_Request, {json, Json}, State) ->
 
 info(_Request, {logout, Reason}, State) ->
     lager:info("received logout request with reason: ~p", [Reason]),
-    {reply, json({[{?MSG_TYPE, logout}]}), State};
+    {shutdown, State};
 
 info(Request, Message, State) ->
     lager:warning("websocket unhandled info: ~p ~p [~p]", [Request, Message, State]),
@@ -148,7 +149,9 @@ handle_request(<<"authorize">>, _Request, Json, State) ->
                     % on success we are going to connect this session with the
                     % user that is associated with the authorized user
                     ogonek_session_manager:register(User#user.id, State#state.session_id),
-                    {reply, json(ogonek_user:to_json(User)), State};
+
+                    State0 = State#state{user_id=User#user.id},
+                    {reply, json(ogonek_user:to_json(User)), State0};
                 _Error ->
                     % TODO: more specific error response for the client
                     {reply, error_json(<<"authorization failed">>), State}
@@ -157,6 +160,14 @@ handle_request(<<"authorize">>, _Request, Json, State) ->
             % TODO: more specific error response for the client
             {reply, error_json(<<"invalid authorize request">>), State}
     end;
+
+handle_request(<<"logout">>, _Request, _Json, #state{user_id=undefined}=State) ->
+    {reply, error_json(<<"not logged in at all">>), State};
+
+handle_request(<<"logout">>, _Request, _Json, State) ->
+    UserId = State#state.user_id,
+    ogonek_session_manager:logout(UserId),
+    {ok, State};
 
 handle_request(Type, _Request, _Json, State) when is_binary(Type) ->
     {reply, error_json(<<"unhandled request of type '", Type/binary, "'">>), State};
