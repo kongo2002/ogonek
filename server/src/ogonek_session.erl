@@ -23,14 +23,15 @@
 
 -spec from_json(any()) -> {ok, session()} | {error, invalid}.
 from_json(Json) ->
-    Keys = [<<"ip">>, <<"created">>, <<"updated">>,
+    Keys = [<<"_id">>, <<"ip">>, <<"created">>, <<"updated">>,
             {<<"headers">>, []},
             {<<"user_id">>, undefined}
            ],
 
     case ogonek_util:keys(Keys, Json) of
-        [Ip, Created, Updated, Headers, UserId] ->
-            {ok, #session{ip=Ip,
+        [Id, Ip, Created, Updated, Headers, UserId] ->
+            {ok, #session{id=Id,
+                          ip=Ip,
                           created=Created,
                           updated=Updated,
                           headers=Headers,
@@ -46,7 +47,9 @@ to_json(#session{}=Session) ->
               {<<"created">>, Session#session.created},
               {<<"updated">>, Session#session.updated},
               {<<"headers">>, Session#session.headers}
-             ] ++ to_user_id(Session),
+             ]
+    ++ if_defined(<<"user_id">>, Session#session.user_id)
+    ++ if_defined(<<"_id">>, Session#session.id),
 
     ogonek_util:doc(<<"session">>, Values).
 
@@ -56,6 +59,5 @@ has_user_id(#session{user_id=undefined}) -> false;
 has_user_id(#session{user_id=_UserId}) -> true.
 
 
-to_user_id(#session{user_id=undefined}) -> [];
-to_user_id(#session{user_id=UserId}) ->
-    [{<<"user_id">>, UserId}].
+if_defined(_Key, undefined) -> [];
+if_defined(Key, Value) -> [{Key, Value}].

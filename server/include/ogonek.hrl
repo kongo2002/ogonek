@@ -18,6 +18,7 @@
 
 
 -record(session, {
+          id :: binary() | undefined,
           ip :: binary(),
           created :: binary(),
           updated :: binary(),

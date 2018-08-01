@@ -30,6 +30,7 @@
 
 %% User API
 -export([create_user/2,
+         update_user/1,
          get_user/1,
          get_user/2]).
 
@@ -102,6 +103,10 @@ get_user(UserId) ->
 
 get_user(ProviderId, Provider) ->
     gen_server:call(?MODULE, {get_user, ProviderId, Provider}).
+
+
+update_user(User) ->
+    gen_server:cast(?MODULE, {update_user, User}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -289,6 +294,15 @@ handle_cast({remove_user_from_session, SessionId}, State) ->
 
     {noreply, State};
 
+handle_cast({update_user, User}, State) ->
+    Json = ogonek_user:to_json(User),
+    case replace(User#user.id, Json, State) of
+        {ok, 201, _Hs, _Body} -> ok;
+        Error ->
+            lager:error("failed to update user: ~p", [Error])
+    end,
+    {noreply, State};
+
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -438,6 +452,35 @@ update(Db, Id, Func, State) ->
             put_(Path, Updated, State);
         Otherwise ->
             Otherwise
+    end.
+
+
+replace(Id, Entity, State) ->
+    replace(?OGONEK_DB_NAME, Id, Entity, State).
+
+replace(Db, Id, Entity, State) ->
+    Path = <<"/", Db/binary, "/", Id/binary>>,
+    case get_rev(Path, State) of
+        {ok, Rev} ->
+            WithRev = ogonek_util:replace_with(Entity, [{<<"_rev">>, Rev}]),
+            put_(Path, WithRev, State);
+        error ->
+            % we assume the document does not exist (yet)
+            % let's try to PUT without a revision
+            put_(Path, Entity, State)
+    end.
+
+
+get_rev(Path, State) ->
+    case head_(Path, State) of
+        {ok, 200, Hs} ->
+            case proplists:get_value(<<"ETag">>, Hs) of
+                undefined -> error;
+                QuotedRevision ->
+                    [Revision] = binary:split(QuotedRevision, <<"\"">>, [global, trim_all]),
+                    {ok, Revision}
+            end;
+        _Error -> error
     end.
 
 

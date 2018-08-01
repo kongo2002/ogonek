@@ -86,7 +86,10 @@ path([Part | Path], Json) when is_list(Json) ->
 path(_Path, _Json) -> undefined.
 
 
-replace_with(PList, Values) ->
+replace_with({PList}, Values) ->
+    {replace_with(PList, Values)};
+
+replace_with(PList, Values) when is_list(PList) ->
     Combined = Values ++ PList,
     lists:usort(fun({K1, _}, {K2, _}) -> K1 =< K2 end, Combined).
 

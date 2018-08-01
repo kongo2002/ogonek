@@ -37,13 +37,7 @@ init(Request, Opts) ->
                     undefined ->
                         request_session(Request);
                     CookieSessionId ->
-                        case ogonek_db:get_session(CookieSessionId) of
-                            {ok, _StoredSession} ->
-                                ogonek_db:refresh_session(CookieSessionId),
-                                CookieSessionId;
-                            {error, not_found} ->
-                                request_session(Request)
-                        end
+                        process_session_id(CookieSessionId, Request)
                 end,
 
     % set or update session-id in client cookie (valid for 7 days at max)
@@ -176,6 +170,34 @@ handle_request(_Type, _Request, _Json, State) ->
     {reply, error_json(<<"unhandled request">>), State}.
 
 
+process_session_id(CookieSessionId, Request) ->
+    case ogonek_db:get_session(CookieSessionId) of
+        {ok, StoredSession} ->
+            ogonek_db:refresh_session(CookieSessionId),
+
+            % in case the session is associated with a specific user-id
+            % we are going to attempt auto-authorization
+            case ogonek_session:has_user_id(StoredSession) of
+                true ->
+                    % we are spawning user authorization asynchronously
+                    % since we want to return with the initial connect
+                    % as soon as possible
+                    Socket = self(),
+                    erlang:spawn(fun() -> try_auth_user(Socket, StoredSession) end);
+                false -> ok
+            end,
+
+            CookieSessionId;
+        {error, not_found} ->
+            request_session(Request)
+    end.
+
+
+try_auth_user(Socket, #session{id=Id, user_id=UserId}) ->
+    lager:info("trying to auth user '~s' at session: ~s", [UserId, Id]),
+    ok.
+
+
 auth_user(Code, Scope, StateStr) ->
     lager:debug("trying to authorize with: [code ~p; scope ~p; state ~p]", [Code, Scope, StateStr]),
 
@@ -186,7 +208,10 @@ auth_user(Code, Scope, StateStr) ->
             case ogonek_twitch:get_user(Token) of
                 {ok, TwitchUser} ->
                     case ogonek_db:get_user(TwitchUser#twitch_user.id, Provider) of
-                        {ok, _}=Existing -> Existing;
+                        {ok, Existing} ->
+                            WithAuth = Existing#user{oauth=Token},
+                            ogonek_db:update_user(WithAuth),
+                            {ok, WithAuth};
                         {error, not_found} ->
                             ogonek_db:create_user(TwitchUser, Provider)
                     end;
