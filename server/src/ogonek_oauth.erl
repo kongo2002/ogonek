@@ -26,12 +26,12 @@ from_json(Json) ->
 
     case ogonek_util:keys(Keys, Json) of
         [AToken, IdToken, RefreshT, Scope, TokenT] ->
-            #oauth_access{access_token=AToken,
-                          id_token=IdToken,
-                          refresh_token=RefreshT,
-                          scope=Scope,
-                          token_type=TokenT
-                         };
+            {ok, #oauth_access{access_token=AToken,
+                               id_token=IdToken,
+                               refresh_token=RefreshT,
+                               scope=Scope,
+                               token_type=TokenT
+                              }};
         _Otherwise -> {error, invalid}
     end.
 

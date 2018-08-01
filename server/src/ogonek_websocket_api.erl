@@ -50,6 +50,19 @@ init(Request, Opts) ->
 info(_Request, {json, Json}, State) ->
     {reply, json(Json), State};
 
+info(_Request, {session_login, SessionId, User}, #state{session_id=SessionId}=State) ->
+    UserId = User#user.id,
+    lager:info("user '~s' successfully logged in via session '~s'", [UserId, SessionId]),
+
+    ogonek_session_manager:register(UserId, SessionId),
+
+    {reply, json(ogonek_user:to_json(User)), State#state{user_id=UserId}};
+
+info(_Request, {session_login, SessionId, UserId}, State) ->
+    lager:warning("received session_login for session '~s' and user '~s' at websocket of session '~s'",
+                  [SessionId, UserId, State#state.session_id]),
+    {ok, State};
+
 info(_Request, {logout, Reason}, State) ->
     lager:info("received logout request with reason: ~p", [Reason]),
     {shutdown, State};
@@ -194,8 +207,25 @@ process_session_id(CookieSessionId, Request) ->
 
 
 try_auth_user(Socket, #session{id=Id, user_id=UserId}) ->
-    lager:info("trying to auth user '~s' at session: ~s", [UserId, Id]),
-    ok.
+    lager:info("validating authorization of user '~s' at session: ~s", [UserId, Id]),
+
+    case ogonek_db:get_user(UserId) of
+        {ok, #user{oauth=undefined}} ->
+            false;
+        {ok, User} ->
+            OAuth = User#user.oauth,
+            ProviderId = User#user.provider_id,
+            case ogonek_twitch:validate_token(OAuth#oauth_access.access_token) of
+                {ok, ProviderId} ->
+                    % notify owning socket of successful session login
+                    Socket ! {session_login, Id, User};
+                _Otherwise ->
+                    % TODO: try refresh-token
+                    ok
+            end;
+        _Otherwise ->
+            ok
+    end.
 
 
 auth_user(Code, Scope, StateStr) ->

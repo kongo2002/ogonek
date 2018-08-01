@@ -35,7 +35,7 @@ from_json(UserJson) ->
                        email=Email,
                        name=Name,
                        img=Img,
-                       oauth=OAuth}};
+                       oauth=from_oauth(OAuth)}};
         _Otherwise ->
             {error, invalid}
     end.
@@ -56,6 +56,14 @@ to_json(#user{}=User) ->
 -spec has_oauth(user()) -> boolean().
 has_oauth(#user{oauth=undefined}) -> false;
 has_oauth(#user{oauth=_OAuth}) -> true.
+
+
+from_oauth(undefined) -> undefined;
+from_oauth(Json) ->
+    case ogonek_oauth:from_json(Json) of
+        {ok, OAuth} -> OAuth;
+        _Otherwise -> undefined
+    end.
 
 
 to_oauth(#user{oauth=undefined}) -> [];

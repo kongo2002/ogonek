@@ -27,7 +27,8 @@
 
 -export([get_info/0,
          get_auth_token/1,
-         get_user/1]).
+         get_user/1,
+         validate_token/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -84,6 +85,28 @@ get_user(#oauth_access{access_token=Token}) ->
     end.
 
 
+-spec validate_token(binary()) -> {ok, binary()} | error.
+validate_token(AccessToken) ->
+    case gen_server:call(?MODULE, get_client_id) of
+        {ok, ClientId} ->
+            Target = <<"https://id.twitch.tv/oauth2/validate">>,
+            Headers = [{<<"Authorization">>, <<"OAuth ", AccessToken/binary>>}],
+            case ogonek_util:json_get(Target, Headers) of
+                {ok, 200, _Hs, Body} ->
+                    case ogonek_util:keys([<<"user_id">>, <<"client_id">>], Body) of
+                        [UserId, ClientId] -> {ok, UserId};
+                        _Otherwise ->
+                            lager:info("twitch access-token validation of '~s' failed: ~p", [AccessToken, Body]),
+                            error
+                    end;
+                Error ->
+                    lager:info("twitch access-token validation of '~s' failed: ~p", [AccessToken, Error]),
+                    error
+            end;
+        _Error ->
+            error
+    end.
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -124,6 +147,12 @@ handle_call(get_info, _From, #state{enabled=false}=State) ->
 handle_call(get_info, _From, State) ->
     AuthInfo = auth_info(State),
     {reply, {ok, AuthInfo}, State};
+
+handle_call(get_client_id, _From, #state{enabled=false}=State) ->
+    {reply, {error, inactive}, State};
+
+handle_call(get_client_id, _From, State) ->
+    {reply, {ok, State#state.client_id}, State};
 
 handle_call({auth_token_request, _Code}, _From, #state{enabled=false}=State) ->
     {reply, {error, inactive}, State};
