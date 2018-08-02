@@ -46,7 +46,7 @@ to_json(#session{}=Session) ->
     Values = [{<<"ip">>, Session#session.ip},
               {<<"created">>, Session#session.created},
               {<<"updated">>, Session#session.updated},
-              {<<"headers">>, Session#session.headers}
+              {<<"headers">>, {Session#session.headers}}
              ]
     ++ if_defined(<<"user_id">>, Session#session.user_id)
     ++ if_defined(<<"_id">>, Session#session.id),

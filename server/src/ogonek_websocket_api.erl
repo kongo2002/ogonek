@@ -21,11 +21,6 @@
          request/3
         ]).
 
--record(state, {
-          session_id :: binary(),
-          user_id :: binary() | undefined
-         }).
-
 
 init(Request, Opts) ->
     lager:debug("initialize websocket channel: ~p ~p [~p]", [Request, Opts, self()]),
@@ -44,23 +39,23 @@ init(Request, Opts) ->
     AdditionalHeaders = [{<<"Set-Cookie">>,
                           <<"ogonekSession=", SessionId/binary, "; Max-Age=604800; HttpOnly">>}],
 
-    {ok, AdditionalHeaders, #state{session_id=SessionId}}.
+    {ok, AdditionalHeaders, #ws_state{session_id=SessionId}}.
 
 
 info(_Request, {json, Json}, State) ->
     {reply, json(Json), State};
 
-info(_Request, {session_login, SessionId, User}, #state{session_id=SessionId}=State) ->
+info(_Request, {session_login, SessionId, User}, #ws_state{session_id=SessionId}=State) ->
     UserId = User#user.id,
     lager:info("user '~s' successfully logged in via session '~s'", [UserId, SessionId]),
 
     ogonek_session_manager:register(UserId, SessionId),
 
-    {reply, json(ogonek_user:to_json(User)), State#state{user_id=UserId}};
+    {reply, json(ogonek_user:to_json(User)), State#ws_state{user_id=UserId}};
 
 info(_Request, {session_login, SessionId, UserId}, State) ->
     lager:warning("received session_login for session '~s' and user '~s' at websocket of session '~s'",
-                  [SessionId, UserId, State#state.session_id]),
+                  [SessionId, UserId, State#ws_state.session_id]),
     {ok, State};
 
 info(_Request, {logout, Reason}, State) ->
@@ -155,9 +150,9 @@ handle_request(<<"authorize">>, _Request, Json, State) ->
                 {ok, User} ->
                     % on success we are going to connect this session with the
                     % user that is associated with the authorized user
-                    ogonek_session_manager:register(User#user.id, State#state.session_id),
+                    ogonek_session_manager:register(User#user.id, State#ws_state.session_id),
 
-                    State0 = State#state{user_id=User#user.id},
+                    State0 = State#ws_state{user_id=User#user.id},
                     {reply, json(ogonek_user:to_json(User)), State0};
                 _Error ->
                     % TODO: more specific error response for the client
@@ -168,11 +163,11 @@ handle_request(<<"authorize">>, _Request, Json, State) ->
             {reply, error_json(<<"invalid authorize request">>), State}
     end;
 
-handle_request(<<"logout">>, _Request, _Json, #state{user_id=undefined}=State) ->
+handle_request(<<"logout">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
     {reply, error_json(<<"not logged in at all">>), State};
 
 handle_request(<<"logout">>, _Request, _Json, State) ->
-    UserId = State#state.user_id,
+    UserId = State#ws_state.user_id,
     ogonek_session_manager:logout(UserId),
     {ok, State};
 

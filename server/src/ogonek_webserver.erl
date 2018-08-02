@@ -14,6 +14,8 @@
 
 -module(ogonek_webserver).
 
+-include("ogonek.hrl").
+
 -export([init/2,
          handle/2,
          handle_event/3]).
@@ -119,6 +121,11 @@ handle_event(_Event, _Data, _Args) ->
 %% websocket_open and websocket_close events are sent when the websocket
 %% opens, and when it closes.
 websocket_handle_event(websocket_open, [_, _Version, _Compress], _) -> ok;
+
+websocket_handle_event(websocket_close, [Request, _Reason], #ws_state{user_id=UserId}) ->
+    lager:debug("closing websocket: ~p", [Request]),
+    ogonek_session_manager:close_socket(UserId),
+    ok;
 websocket_handle_event(websocket_close, [Request, _Reason], _State) ->
     lager:debug("closing websocket: ~p", [Request]),
     ok;

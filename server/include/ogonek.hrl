@@ -61,3 +61,11 @@
          }).
 
 -type user() :: #user{}.
+
+
+-record(ws_state, {
+          session_id :: binary(),
+          user_id :: binary() | undefined
+         }).
+
+-type ws_state() :: #ws_state{}.

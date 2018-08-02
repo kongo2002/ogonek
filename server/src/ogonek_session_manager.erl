@@ -21,6 +21,8 @@
 
 -export([register/2,
          register/3,
+         close_socket/1,
+         close_socket/2,
          logout/1,
          logout/2]).
 
@@ -68,6 +70,16 @@ logout(UserId) ->
 logout(Socket, UserId) ->
     gen_server:cast(?MODULE, {logout, Socket, UserId}).
 
+
+-spec close_socket(binary()) -> ok.
+close_socket(UserId) ->
+    close_socket(self(), UserId).
+
+
+-spec close_socket(pid(), binary() | undefined) -> ok.
+close_socket(_Socket, undefined) -> ok;
+close_socket(Socket, UserId) ->
+    gen_server:cast(?MODULE, {close_socket, Socket, UserId}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -146,7 +158,7 @@ handle_cast({logout, Socket, UserId}, State) ->
 
     case maps:get(UserId, UserSessions, undefined) of
         undefined ->
-            lager:warning("session-manager: there are no session associated with user '~s'", [UserId]),
+            lager:warning("session-manager: there are no sessions associated with user '~s'", [UserId]),
             ok;
         {Session, Sockets} ->
             % close connected sockets
@@ -159,6 +171,23 @@ handle_cast({logout, Socket, UserId}, State) ->
     UserSessions0 = maps:remove(UserId, UserSessions),
 
     {noreply, State#state{sessions=UserSessions0}};
+
+handle_cast({close_socket, Socket, UserId}, State) ->
+    UserSessions = State#state.sessions,
+
+    case maps:get(UserId, UserSessions) of
+        undefined ->
+            {noreply, State};
+        {Session, Sockets} ->
+            lager:debug("remove socket ~p from user '~s'", [Socket, UserId]),
+
+            Sockets0 = lists:delete(Socket, Sockets),
+            UserSessions0 = case Sockets0 of
+                                [] -> maps:remove(UserId, UserSessions);
+                                _ -> maps:put(UserId, {Session, Sockets0})
+                            end,
+            {noreply, State#state{sessions=UserSessions0}}
+    end;
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
