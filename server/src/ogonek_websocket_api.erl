@@ -220,7 +220,8 @@ try_auth_user(Socket, #session{id=Id, user_id=UserId}) ->
                     % notify owning socket of successful session login
                     Socket ! {session_login, Id, User};
                 _Otherwise ->
-                    % TODO: try refresh-token
+                    % TODO: process refresh-token
+                    ogonek_twitch:refresh_token(User),
                     ok
             end;
         _Otherwise ->

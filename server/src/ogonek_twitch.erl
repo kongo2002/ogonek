@@ -28,7 +28,8 @@
 -export([get_info/0,
          get_auth_token/1,
          get_user/1,
-         validate_token/1]).
+         validate_token/1,
+         refresh_token/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -107,6 +108,23 @@ validate_token(AccessToken) ->
             error
     end.
 
+
+-spec refresh_token(user()) -> {ok, oauth_access()} | error.
+refresh_token(User) ->
+    case gen_server:call(?MODULE, {refresh_token_request, User}) of
+        {ok, Target} ->
+            case ogonek_util:json_post(Target) of
+                {ok, 200, _Hs, Body} ->
+                    OAuth = User#user.oauth,
+                    extract_refresh_token(Body, OAuth);
+                Error ->
+                    lager:warning("refresh-token failed: ~p", [Error]),
+                    error
+            end;
+        Error ->
+            Error
+    end.
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -159,6 +177,12 @@ handle_call({auth_token_request, _Code}, _From, #state{enabled=false}=State) ->
 
 handle_call({auth_token_request, Code}, _From, State) ->
     {reply, {ok, build_auth_request(Code, State)}, State};
+
+handle_call({refresh_token_request, _User}, _From, #state{enabled=false}=State) ->
+    {reply, {error, inactive}, State};
+
+handle_call({refresh_token_request, User}, _From, State) ->
+    {reply, {ok, build_refresh_token_request(User, State)}, State};
 
 handle_call(_Request, _From, State) ->
     Reply = ok,
@@ -271,6 +295,22 @@ build_auth_request(Code, State) ->
     Target.
 
 
+build_refresh_token_request(User, State) ->
+    ClientId = State#state.client_id,
+    ClientSecret = State#state.client_secret,
+    OAuth = User#user.oauth,
+    RefreshToken = OAuth#oauth_access.refresh_token,
+
+    Target = <<"https://id.twitch.tv/oauth2/token",
+               "?client_id=", ClientId/binary,
+               "&client_secret=", ClientSecret/binary,
+               "&refresh_token=", RefreshToken/binary,
+               "&grant_type=refresh_token">>,
+    lager:debug("twitch refresh-token request: ~p", [Target]),
+
+    Target.
+
+
 extract_oauth_access(Json) ->
     % TODO: validate types and correctness
     Keys = [<<"access_token">>,
@@ -289,6 +329,24 @@ extract_oauth_access(Json) ->
                               }};
         _Otherwise ->
             lager:warning("unexpected or incomplete oauth token received: ~p", [Json]),
+            error
+    end.
+
+
+extract_refresh_token(Json, OAuth) ->
+    % TODO: validate types and correctness
+    Keys = [<<"access_token">>,
+            <<"refresh_token">>,
+            <<"scope">>],
+
+    case ogonek_util:keys(Keys, Json) of
+        [AToken, Refresh, Scope] ->
+            Updated = OAuth#oauth_access{access_token=AToken,
+                                         refresh_token=Refresh,
+                                         scope=Scope},
+            {ok, Updated};
+        _Otherwise ->
+            lager:warning("unexpected or incomplete oauth refresh-token received: ~p", [Json]),
             error
     end.
 
