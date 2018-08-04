@@ -79,7 +79,8 @@
           type :: planet_type(),
           size :: integer(),
           position :: coordinate(),
-          index :: integer()
+          index :: integer(),
+          owner :: binary() | undefined
          }).
 
 -type planet() :: #planet{}.

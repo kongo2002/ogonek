@@ -22,10 +22,12 @@
 
 -spec from_json(any()) -> {ok, planet()} | {error, invalid}.
 from_json(Planet) ->
-    Keys = [<<"_id">>, <<"type">>, <<"size">>, <<"pos">>, <<"idx">>],
+    Keys = [<<"_id">>, <<"type">>, <<"size">>, <<"pos">>, <<"idx">>,
+            {<<"owner">>, undefined}
+           ],
 
     case ogonek_util:keys(Keys, Planet) of
-        [Id, Type, Size, [X, Y, Z], Idx] ->
+        [Id, Type, Size, [X, Y, Z], Idx, Owner] ->
             case parse_type(Type) of
                 error -> {error, invalid};
                 Type0 ->
@@ -33,7 +35,8 @@ from_json(Planet) ->
                                  type=Type0,
                                  size=Size,
                                  position={X, Y, Z},
-                                 index=Idx}}
+                                 index=Idx,
+                                 owner=Owner}}
             end;
         _Otherwise ->
             {error, invalid}
@@ -48,7 +51,7 @@ to_json(Planet) ->
               {<<"size">>, Planet#planet.size},
               {<<"pos">>, [X, Y, Z]},
               {<<"idx">>, Planet#planet.index}
-             ],
+             ] ++ if_defined(<<"owner">>, Planet#planet.owner),
     ogonek_util:doc(<<"planet">>, Values).
 
 
@@ -62,3 +65,7 @@ parse_type(<<"water">>) -> water;
 parse_type(<<"fire">>) -> fire;
 parse_type(<<"ice">>) -> ice;
 parse_type(_Invalid) -> error.
+
+
+if_defined(_Key, undefined) -> [];
+if_defined(Key, Value) -> [{Key, Value}].
