@@ -17,7 +17,9 @@
 -include("ogonek.hrl").
 
 -export([from_json/1,
-         to_json/1]).
+         to_json/1,
+         exists/1,
+         exists/3]).
 
 
 -spec from_json(any()) -> {ok, planet()} | {error, invalid}.
@@ -46,13 +48,24 @@ from_json(Planet) ->
 -spec to_json(planet()) -> tuple().
 to_json(Planet) ->
     {X, Y, Z} = Planet#planet.position,
-    Values = [{<<"_id">>, Planet#planet.id},
-              {<<"type">>, Planet#planet.type},
+    Values = [{<<"type">>, Planet#planet.type},
               {<<"size">>, Planet#planet.size},
               {<<"pos">>, [X, Y, Z]},
               {<<"idx">>, Planet#planet.index}
-             ] ++ if_defined(<<"owner">>, Planet#planet.owner),
+             ]
+    ++ if_defined(<<"_id">>, Planet#planet.id)
+    ++ if_defined(<<"owner">>, Planet#planet.owner),
     ogonek_util:doc(<<"planet">>, Values).
+
+
+-spec exists(coordinate()) -> boolean().
+exists({X, Y, Z}) ->
+    exists(X, Y, Z).
+
+
+-spec exists(integer(), integer(), integer()) -> boolean().
+exists(X, Y, Z) ->
+    ogonek_db:planet_exists(X, Y, Z).
 
 
 %%%===================================================================

@@ -53,6 +53,7 @@ init([]) ->
                       {elli_websocket, []}]}],
 
     Children = [?WORKER(db, ogonek_db, []),
+                ?WORKER(planet_manager, ogonek_planet_manager, []),
                 ?WORKER(twitch, ogonek_twitch, []),
                 ?WORKER(session_manager, ogonek_session_manager, []),
                 ?WORKER(webserver, elli, [[{callback, elli_middleware},

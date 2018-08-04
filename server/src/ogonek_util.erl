@@ -145,7 +145,7 @@ json_post(Target, Headers, Payload, Options) ->
                  Otherwise -> Otherwise
              end,
 
-    lager:debug("POST: ~p", [Result]),
+    lager:debug("POST [~s] ~p", [Target, Result]),
     Result.
 
 

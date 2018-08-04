@@ -34,6 +34,10 @@
          get_user/1,
          get_user/2]).
 
+%% Planet API
+-export([planet_exists/3,
+         planet_create/1]).
+
 %% gen_server callbacks
 -export([init/1,
          handle_call/3,
@@ -107,6 +111,15 @@ get_user(ProviderId, Provider) ->
 
 update_user(User) ->
     gen_server:cast(?MODULE, {update_user, User}).
+
+
+planet_exists(X, Y, Z) ->
+    gen_server:call(?MODULE, {planet_exists, X, Y, Z}).
+
+
+planet_create(Planet) ->
+    gen_server:cast(?MODULE, {planet_create, Planet}).
+
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -207,6 +220,13 @@ handle_call({get_user, ProviderId, Provider}, _From, State) ->
 
     {reply, Response, State};
 
+handle_call({planet_exists, X, Y, Z}, _From, State) ->
+    Response = case singleton_from_view(<<"planet">>, <<"by_coordinate">>, [X, Y, Z], State) of
+                   {ok, _Key, _Value} -> true;
+                   _Otherwise -> false
+               end,
+    {reply, Response, State};
+
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
@@ -249,6 +269,18 @@ handle_cast(prepare, State) ->
     },
     \"local\": {
       \"map\": \"function(doc) { if (doc.pid && doc.t == 'user' && doc.provider == 'local') { emit(doc.pid, doc) } }\"
+    }
+  }
+}">>, State),
+
+    ok = design_create_if_not_exists(<<"planet">>,
+<<"{
+  \"views\": {
+    \"by_coordinate\": {
+      \"map\": \"function(doc) { if (doc.t == 'planet' && doc.pos) { emit(doc.pos, doc) } }\"
+    },
+    \"by_owner\": {
+      \"map\": \"function(doc) { if (doc.t == 'planet' && doc.owner) { emit(doc.owner, doc) } }\"
     }
   }
 }">>, State),
@@ -323,6 +355,11 @@ handle_cast({update_user, User}, State) ->
         Error ->
             lager:error("failed to update user: ~p", [Error])
     end,
+    {noreply, State};
+
+handle_cast({planet_create, Planet}, State) ->
+    Json = ogonek_planet:to_json(Planet),
+    insert(Json, State),
     {noreply, State};
 
 handle_cast(_Msg, State) ->
@@ -560,9 +597,10 @@ singleton_from_view(Design, View, Key, State) ->
     singleton_from_view(?OGONEK_DB_NAME, Design, View, Key, State).
 
 singleton_from_view(Db, Design, View, Key, State) ->
+    JsonKey = jiffy:encode(Key),
     Target = <<"/", Db/binary, "/_design/", Design/binary,
                "/_view/", View/binary,
-               "?key=\"", Key/binary, "\"">>,
+               "?key=", JsonKey/binary>>,
 
     case get_(Target, State) of
         {ok, Code, _Hs, Body} when Code == 200 ->
