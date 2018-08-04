@@ -215,9 +215,14 @@ try_auth_user(Socket, #session{id=Id, user_id=UserId}) ->
                     % notify owning socket of successful session login
                     Socket ! {session_login, Id, User};
                 _Otherwise ->
-                    % TODO: process refresh-token
-                    ogonek_twitch:refresh_token(User),
-                    ok
+                    case ogonek_twitch:refresh_token(User) of
+                        {ok, RefreshOAuth} ->
+                            WithAuth = User#user{oauth=RefreshOAuth},
+                            ogonek_db:update_user(WithAuth),
+                            Socket ! {session_login, Id, User},
+                            ok;
+                        error -> ok
+                    end
             end;
         _Otherwise ->
             ok
