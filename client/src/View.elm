@@ -56,9 +56,14 @@ navigation model =
             clss = acls ++ args
         in  li clss [ a [ href ref, numbClick (NewUrl route) ] [ text name ] ]
 
+      userInfo =
+        case model.user of
+          Just user -> [ li [toRight, class "username"] [ text user.name ] ]
+          Nothing -> []
+
       routesLinks = List.map (link []) routes
       loginLink = link [toRight] loginRoute
-      links = routesLinks ++ [loginLink]
+      links = routesLinks ++ [loginLink] ++ userInfo
 
   in div [ class "row" ]
      [ div [ id "brand", class "four columns" ]

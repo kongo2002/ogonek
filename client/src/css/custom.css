@@ -16,6 +16,10 @@
   color: #444;
 }
 
+#nav li.username {
+  color: #888;
+}
+
 #brand a {
   text-decoration: none;
 }
