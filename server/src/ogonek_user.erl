@@ -42,7 +42,7 @@ from_json(UserJson) ->
 
 
 -spec to_json(user()) -> tuple().
-to_json(#user{}=User) ->
+to_json(User) ->
     Values = [{<<"_id">>, User#user.id},
               {<<"provider">>, User#user.provider},
               {<<"pid">>, User#user.provider_id},
