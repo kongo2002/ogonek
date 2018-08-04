@@ -33,7 +33,8 @@
          keys/2,
          path/2,
          replace_with/2,
-         doc/2
+         doc/2,
+         choose_random/1
         ]).
 
 
@@ -156,6 +157,12 @@ doc(DocType, Values) when is_list(Values) ->
     {[{?MSG_TYPE, DocType} | Values]}.
 
 
+choose_random([Singleton]) -> Singleton;
+choose_random(Candidates) ->
+    Idx = rand:uniform(length(Candidates)),
+    lists:nth(Idx, Candidates).
+
+
 %%
 %% TESTS
 %%
@@ -214,6 +221,14 @@ replace_with_test_() ->
      ?_assertEqual([{<<"id">>, <<"1">>}], replace_with([{<<"id">>, <<"0">>}], [{<<"id">>, <<"1">>}])),
      ?_assertEqual([{<<"bar">>, <<"2">>}, {<<"id">>, <<"1">>}],
                    replace_with([{<<"id">>, <<"0">>}], [{<<"id">>, <<"1">>}, {<<"bar">>, <<"2">>}]))
+    ].
+
+choose_random_test_() ->
+    [?_assertEqual(1, choose_random([1])),
+     ?_assertEqual(true, lists:member(choose_random([1, 2, 3]), [1, 2, 3])),
+     ?_assertEqual(true, lists:member(choose_random([1, 2, 3]), [1, 2, 3])),
+     ?_assertEqual(true, lists:member(choose_random([1, 2, 3]), [1, 2, 3])),
+     ?_assertEqual(true, lists:member(choose_random([1, 2, 3]), [1, 2, 3]))
     ].
 
 -endif.

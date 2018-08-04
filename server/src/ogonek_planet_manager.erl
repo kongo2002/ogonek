@@ -95,19 +95,7 @@ handle_call(_Request, _From, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast(prepare, State) ->
-    % create a random planet
-    [X, Y, Z] = [rand:uniform(100) || _ <- lists:seq(1, 3)],
-    Size = rand:uniform(4),
-    Index = rand:uniform(8),
-    Planet = #planet{type=earth,
-                     size=Size,
-                     position={X, Y, Z},
-                     index=Index},
-
-    case ogonek_db:planet_exists(X, Y, Z) of
-        false -> ogonek_db:planet_create(Planet);
-        true -> ok
-    end,
+    self() ! create_planet,
 
     {noreply, State};
 
@@ -124,6 +112,26 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_info(create_planet, State) ->
+    % create a random planet
+    [X, Y, Z] = [rand:uniform(100) || _ <- lists:seq(1, 3)],
+    Size = rand:uniform(4),
+    Index = rand:uniform(8),
+    Type = ogonek_util:choose_random([earth, water, fire, ice]),
+    Planet = #planet{type=Type,
+                     size=Size,
+                     position={X, Y, Z},
+                     index=Index},
+
+    case ogonek_db:planet_exists(X, Y, Z) of
+        false -> ogonek_db:planet_create(Planet);
+        true -> ok
+    end,
+
+    erlang:send_after(60 * 1000, self(), create_planet),
+
+    {noreply, State};
+
 handle_info(_Info, State) ->
     {noreply, State}.
 
