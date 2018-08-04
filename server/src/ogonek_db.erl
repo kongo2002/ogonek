@@ -373,7 +373,7 @@ head_(Path, #state{host=Host, options=Options}) ->
     Target = <<Host/binary, Path/binary>>,
     Result = hackney:head(Target, [], [], Options),
 
-    lager:debug("HEAD: ~p", [Result]),
+    lager:debug("HEAD [~s] ~p", [Target, Result]),
     Result.
 
 
@@ -385,7 +385,7 @@ put_(Path, Payload, #state{host=Host, headers=Headers, options=Options}) ->
     Json = jiffy:encode(Payload),
     Result = hackney:put(Target, Headers, Json, Options),
 
-    lager:debug("PUT: ~p", [Result]),
+    lager:debug("PUT [~s] ~p", [Target, Result]),
     Result.
 
 

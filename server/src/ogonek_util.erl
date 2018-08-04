@@ -113,7 +113,7 @@ json_get(Target, Headers, Options) ->
                  Otherwise -> Otherwise
              end,
 
-    lager:debug("GET: ~p", [Result]),
+    lager:debug("GET [~s] ~p", [Target, Result]),
     Result.
 
 
