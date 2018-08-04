@@ -184,7 +184,7 @@ handle_cast({close_socket, Socket, UserId}, State) ->
             Sockets0 = lists:delete(Socket, Sockets),
             UserSessions0 = case Sockets0 of
                                 [] -> maps:remove(UserId, UserSessions);
-                                _ -> maps:put(UserId, {Session, Sockets0})
+                                _ -> maps:put(UserId, {Session, Sockets0}, UserSessions)
                             end,
             {noreply, State#state{sessions=UserSessions0}}
     end;
