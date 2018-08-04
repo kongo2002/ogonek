@@ -456,7 +456,7 @@ design_create_if_not_exists(Db, Name, Doc, State) ->
 design_create(Db, Name, Doc, State) ->
     Target = <<"/", Db/binary, "/_design/", Name/binary>>,
     case put_(Target, Doc, State) of
-        {ok, 201, _Hs, _Body} -> ok;
+        {ok, Code, _Hs, _Body} when Code == 201 orelse Code == 202 -> ok;
         _Otherwise -> error
     end.
 
