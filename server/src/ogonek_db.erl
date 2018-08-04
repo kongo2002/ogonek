@@ -229,7 +229,29 @@ handle_cast(prepare, State) ->
 
     ok = db_create_if_not_exists(?OGONEK_DB_NAME, State),
 
-    % TODO: check/create/update design documents + views
+    ok = design_create_if_not_exists(<<"session">>,
+<<"{
+  \"views\": {
+    \"by_updated\": {
+      \"map\": \"function(doc) { if (doc.updated && doc.t == 'session') { emit(doc.updated, doc) } }\"
+    },
+    \"by_ip\": {
+      \"map\": \"function(doc) { if (doc.ip && doc.t == 'session') { emit(doc.ip, doc) } }\"
+    }
+  }
+}">>, State),
+
+    ok = design_create_if_not_exists(<<"user">>,
+<<"{
+  \"views\": {
+    \"twitter\": {
+      \"map\": \"function(doc) { if (doc.pid && doc.t == 'user' && doc.provider == 'twitch') { emit(doc.pid, doc) } }\"
+    },
+    \"local\": {
+      \"map\": \"function(doc) { if (doc.pid && doc.t == 'user' && doc.provider == 'local') { emit(doc.pid, doc) } }\"
+    }
+  }
+}">>, State),
 
     {noreply, State#state{status=ready}};
 
@@ -382,8 +404,12 @@ put_(Path, State) ->
 
 put_(Path, Payload, #state{host=Host, headers=Headers, options=Options}) ->
     Target = <<Host/binary, Path/binary>>,
-    Json = jiffy:encode(Payload),
-    Result = hackney:put(Target, Headers, Json, Options),
+    Encoded = case Payload of
+                  [] -> [];
+                  P when is_binary(P) -> P;
+                  Obj -> jiffy:encode(Payload)
+              end,
+    Result = hackney:put(Target, Headers, Encoded, Options),
 
     lager:debug("PUT [~s] ~p", [Target, Result]),
     Result.
@@ -399,9 +425,40 @@ check_status(State) ->
     Code == 200.
 
 
-db_exists(Db, State) ->
-    {ok, Code, _Hs} = head_(<<"/", Db/binary>>, State),
+exists(Path, State) ->
+    {ok, Code, _Hs} = head_(Path, State),
     Code == 200.
+
+
+db_exists(Db, State) ->
+    exists(<<"/", Db/binary>>, State).
+
+
+design_doc_exists(Doc, State) ->
+    design_doc_exists(?OGONEK_DB_NAME, Doc, State).
+
+
+design_doc_exists(Db, Doc, State) ->
+    exists(<<"/", Db/binary, "/_design/", Doc/binary>>, State).
+
+
+design_create_if_not_exists(Name, Doc, State) ->
+    design_create_if_not_exists(?OGONEK_DB_NAME, Name, Doc, State).
+
+
+design_create_if_not_exists(Db, Name, Doc, State) ->
+    case design_doc_exists(Db, Name, State) of
+        true -> ok;
+        false -> design_create(Db, Name, Doc, State)
+    end.
+
+
+design_create(Db, Name, Doc, State) ->
+    Target = <<"/", Db/binary, "/_design/", Name/binary>>,
+    case put_(Target, Doc, State) of
+        {ok, 201, _Hs, _Body} -> ok;
+        _Otherwise -> error
+    end.
 
 
 db_create(Db, State) ->
