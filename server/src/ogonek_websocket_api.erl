@@ -219,8 +219,7 @@ try_auth_user(Socket, #session{id=Id, user_id=UserId}) ->
                         {ok, RefreshOAuth} ->
                             WithAuth = User#user{oauth=RefreshOAuth},
                             ogonek_db:update_user(WithAuth),
-                            Socket ! {session_login, Id, User},
-                            ok;
+                            Socket ! {session_login, Id, User};
                         error -> ok
                     end
             end;
