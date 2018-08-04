@@ -69,3 +69,16 @@
          }).
 
 -type ws_state() :: #ws_state{}.
+
+-type coordinate() :: {integer(), integer(), integer()}.
+
+-type planet_type() :: earth | water | fire | ice.
+
+-record(planet, {
+          type :: planet_type(),
+          size :: integer(),
+          position :: coordinate(),
+          index :: integer()
+         }).
+
+-type planet() :: #planet{}.

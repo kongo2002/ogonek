@@ -407,7 +407,7 @@ put_(Path, Payload, #state{host=Host, headers=Headers, options=Options}) ->
     Encoded = case Payload of
                   [] -> [];
                   P when is_binary(P) -> P;
-                  Obj -> jiffy:encode(Payload)
+                  Obj -> jiffy:encode(Obj)
               end,
     Result = hackney:put(Target, Headers, Encoded, Options),
 
@@ -434,10 +434,6 @@ db_exists(Db, State) ->
     exists(<<"/", Db/binary>>, State).
 
 
-design_doc_exists(Doc, State) ->
-    design_doc_exists(?OGONEK_DB_NAME, Doc, State).
-
-
 design_doc_exists(Db, Doc, State) ->
     exists(<<"/", Db/binary, "/_design/", Doc/binary>>, State).
 
@@ -456,7 +452,9 @@ design_create_if_not_exists(Db, Name, Doc, State) ->
 design_create(Db, Name, Doc, State) ->
     Target = <<"/", Db/binary, "/_design/", Name/binary>>,
     case put_(Target, Doc, State) of
-        {ok, Code, _Hs, _Body} when Code == 201 orelse Code == 202 -> ok;
+        {ok, Code, _Hs, _Body} when Code == 201 orelse Code == 202 ->
+            lager:info("successfully created design document '~s'", [Name]),
+            ok;
         _Otherwise -> error
     end.
 
