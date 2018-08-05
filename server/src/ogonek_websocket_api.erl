@@ -243,7 +243,7 @@ auth_user(Code, Scope, StateStr) ->
                             ogonek_db:update_user(WithAuth),
                             {ok, WithAuth};
                         {error, not_found} ->
-                            ogonek_db:create_user(TwitchUser, Provider)
+                            ogonek_db:create_user_from_twitch(TwitchUser, Provider)
                     end;
                 Error ->
                     lager:warning("twitch user request failed: ~p", [Error]),

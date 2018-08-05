@@ -29,7 +29,7 @@
          remove_user_from_session/1]).
 
 %% User API
--export([create_user/2,
+-export([create_user_from_twitch/2,
          update_user/1,
          get_user/1,
          get_user/2]).
@@ -89,7 +89,7 @@ new_session(RemoteIP, Headers) ->
     insert(Doc, get_info()).
 
 
--spec get_session(binary()) -> {ok, oauth_access()} | {error, not_found} | {error, invalid}.
+-spec get_session(binary()) -> {ok, session()} | {error, not_found} | {error, invalid}.
 get_session(SessionId) ->
     case get_by_id(SessionId, get_info()) of
         {ok, Code, _Hs, Session} when Code == 200 ->
@@ -115,12 +115,12 @@ add_user_to_session(UserId, SessionId) ->
     gen_server:cast(?MODULE, {add_user_to_session, UserId, SessionId}).
 
 
--spec create_user(user(), binary()) ->
+-spec create_user_from_twitch(twitch_user(), binary()) ->
     {ok, user()} |
     {error, invalid} |
     {error, missing_id} |
     {error, missing_rev}.
-create_user(User, Provider) ->
+create_user_from_twitch(User, Provider) ->
     Values = [{<<"provider">>, Provider},
               {<<"pid">>, User#twitch_user.id},
               {<<"email">>, User#twitch_user.email},

@@ -75,7 +75,7 @@
 -type planet_type() :: earth | water | fire | ice.
 
 -record(planet, {
-          id :: binary(),
+          id :: binary() | undefined,
           type :: planet_type(),
           size :: integer(),
           position :: coordinate(),
