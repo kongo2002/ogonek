@@ -21,7 +21,7 @@
 %% API
 -export([start_link/0]).
 
--export([free_planet/0,
+-export([claim_free_planet/1,
          user_planets/1]).
 
 %% gen_server callbacks
@@ -32,7 +32,7 @@
          terminate/2,
          code_change/3]).
 
--record(state, {}).
+-record(state, {planets :: map(), user_planets :: map()}).
 
 %%%===================================================================
 %%% API
@@ -49,9 +49,9 @@ start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 
--spec free_planet() -> {ok, planet()} | {error, not_found} | {error, invalid}.
-free_planet() ->
-    gen_server:call(?MODULE, free_planet).
+-spec claim_free_planet(binary()) -> {ok, planet()} | {error, not_found} | {error, invalid}.
+claim_free_planet(UserId) ->
+    gen_server:call(?MODULE, {claim_free_planet, UserId}).
 
 
 -spec user_planets(binary()) -> [planet()].
@@ -77,7 +77,7 @@ init([]) ->
     lager:info("initializing planet manager at ~p", [self()]),
 
     gen_server:cast(self(), prepare),
-    {ok, #state{}}.
+    {ok, #state{planets=maps:new(), user_planets=maps:new()}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -93,16 +93,21 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call(free_planet, _From, State) ->
-    % TODO
-    Free = ogonek_db:planet_free(),
-    lager:info("free planet: ~p", [Free]),
-    {reply, Free, State};
+handle_call({claim_free_planet, UserId}, _From, State) ->
+    case ogonek_db:planet_free() of
+        {ok, Free} ->
+            ogonek_db:planet_claim(Free, UserId),
+            Planet = Free#planet{owner=UserId},
+            {reply, {ok, Planet}, track_planet(Planet, State)};
+        Error ->
+            lager:error("there is no free planet to claim for user '~s': ~p", [UserId, Error]),
+            {reply, Error, State}
+    end;
 
 handle_call({user_planets, UserId}, _From, State) ->
-    % TODO
     UserPlanets = ogonek_db:planets_of_user(UserId),
-    {reply, UserPlanets, State};
+    State0 = lists:foldl(fun track_planet/2, State, UserPlanets),
+    {reply, UserPlanets, State0};
 
 handle_call(_Request, _From, State) ->
     Reply = ok,
@@ -187,3 +192,22 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+-spec track_planet(planet(), #state{}) -> #state{}.
+track_planet(Planet, State) ->
+    Planets = maps:put(Planet#planet.id, Planet, State#state.planets),
+    track_user_planet(Planet, State#state{planets=Planets}).
+
+
+-spec track_user_planet(planet(), #state{}) -> #state{}.
+track_user_planet(#planet{owner=undefined}, State) -> State;
+track_user_planet(#planet{owner=UserId}=Planet, State) ->
+    Id = Planet#planet.id,
+    Planets = State#state.user_planets,
+    Planets0 = case maps:get(UserId, Planets, undefined) of
+                   undefined ->
+                       maps:put(UserId, maps:from_list([{Id, Planet}]), Planets);
+                   UPlanets ->
+                       maps:put(UserId, maps:put(Id, Planet, UPlanets), Planets)
+               end,
+    State#state{user_planets=Planets0}.

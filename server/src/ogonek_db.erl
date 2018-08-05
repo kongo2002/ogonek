@@ -37,6 +37,7 @@
 %% Planet API
 -export([planet_exists/3,
          planet_create/1,
+         planet_claim/2,
          planet_free/0,
          planets_of_user/1]).
 
@@ -183,6 +184,12 @@ planet_exists(X, Y, Z) ->
 -spec planet_create(planet()) -> ok.
 planet_create(Planet) ->
     gen_server:cast(?MODULE, {planet_create, Planet}).
+
+
+-spec planet_claim(planet(), binary()) -> ok.
+planet_claim(Planet, UserId) ->
+    Updated = Planet#planet{owner=UserId},
+    gen_server:cast(?MODULE, {planet_update, Updated}).
 
 
 -spec planet_free() -> {ok, planet()} | {error, not_found} | {error, invalid}.
@@ -415,6 +422,15 @@ handle_cast({update_user, User}, #state{info=Info}=State) ->
 handle_cast({planet_create, Planet}, #state{info=Info}=State) ->
     Json = ogonek_planet:to_json(Planet),
     insert(Json, Info),
+    {noreply, State};
+
+handle_cast({planet_update, Planet}, #state{info=Info}=State) ->
+    Json = ogonek_planet:to_json(Planet),
+    case replace(Planet#planet.id, Json, Info) of
+        {ok, 201, _Hs, _Body} -> ok;
+        Error ->
+            lager:error("failed to update planet: ~p", [Error])
+    end,
     {noreply, State};
 
 handle_cast(_Msg, State) ->

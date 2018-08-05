@@ -165,7 +165,7 @@ fetch_planets(State) ->
     case Planets of
         [] ->
             lager:info("user '~s' has no planets yet - assigning a free one now", [UserId]),
-            {ok, Planet} = ogonek_planet_manager:free_planet(),
+            {ok, Planet} = ogonek_planet_manager:claim_free_planet(UserId),
             [Planet];
         Ps -> Ps
     end.
