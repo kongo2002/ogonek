@@ -48,7 +48,10 @@
 
 -define(OGONEK_DB_NAME, <<"ogonek">>).
 
--record(state, {host, headers, options, status}).
+-record(db_info, {host, headers, options}).
+-type db_info() :: #db_info{}.
+
+-record(state, {info, status}).
 
 
 %%%===================================================================
@@ -66,6 +69,10 @@ start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 
+-spec new_session(binary(), [kvalue()]) ->
+    {ok, binary(), binary()} |
+    {error, missing_id} |
+    {error, missing_rev}.
 new_session(RemoteIP, Headers) ->
     Headers0 = prepare_headers(Headers),
     Timestamp = iso8601:format(calendar:universal_time()),
@@ -77,46 +84,101 @@ new_session(RemoteIP, Headers) ->
                       },
     Doc = ogonek_session:to_json(Session),
 
-    gen_server:call(?MODULE, {new_session, Doc}).
+    lager:debug("creating new session: ~p", [Doc]),
+
+    insert(Doc, get_info()).
 
 
-get_session(Session) ->
-    gen_server:call(?MODULE, {get_session, Session}).
+-spec get_session(binary()) -> {ok, oauth_access()} | {error, not_found} | {error, invalid}.
+get_session(SessionId) ->
+    case get_by_id(SessionId, get_info()) of
+        {ok, Code, _Hs, Session} when Code == 200 ->
+            ogonek_session:from_json(Session);
+        _Error ->
+            {error, not_found}
+    end.
 
 
+-spec refresh_session(binary()) -> ok.
 refresh_session(Session) ->
     gen_server:cast(?MODULE, {refresh_session, Session}).
 
 
+-spec remove_user_from_session(binary() | undefined) -> ok.
 remove_user_from_session(undefined) -> ok;
 remove_user_from_session(SessionId) ->
     gen_server:cast(?MODULE, {remove_user_from_session, SessionId}).
 
 
+-spec add_user_to_session(binary(), binary()) -> ok.
 add_user_to_session(UserId, SessionId) ->
     gen_server:cast(?MODULE, {add_user_to_session, UserId, SessionId}).
 
 
+-spec create_user(user(), binary()) ->
+    {ok, user()} |
+    {error, invalid} |
+    {error, missing_id} |
+    {error, missing_rev}.
 create_user(User, Provider) ->
-    gen_server:call(?MODULE, {create_user, User, Provider}).
+    Values = [{<<"provider">>, Provider},
+              {<<"pid">>, User#twitch_user.id},
+              {<<"email">>, User#twitch_user.email},
+              {<<"name">>, User#twitch_user.display_name},
+              {<<"img">>, User#twitch_user.profile_image_url}
+             ],
+    Doc = ogonek_util:doc(<<"user">>, Values),
+
+    case insert(Doc, get_info()) of
+        {ok, Id, _Rev} ->
+            ogonek_user:from_json(with_id(Doc, Id));
+        Error -> Error
+    end.
 
 
+-spec get_user(binary()) ->
+    {ok, user()} |
+    {error, invalid} |
+    {error, not_found}.
 get_user(UserId) ->
-    gen_server:call(?MODULE, {get_user, UserId}).
+    case get_by_id(UserId, get_info()) of
+        {ok, Code, _Hs, User} when Code == 200 ->
+            ogonek_user:from_json(User);
+        _Error ->
+            {error, not_found}
+    end.
 
 
+-spec get_user(binary(), binary()) ->
+    {ok, user()} |
+    {error, invalid} |
+    {error, multiple} |
+    {error, not_found} |
+    error.
 get_user(ProviderId, Provider) ->
-    gen_server:call(?MODULE, {get_user, ProviderId, Provider}).
+    % query the 'user' design doc views
+    case singleton_from_view(<<"user">>, Provider, ProviderId, get_info()) of
+        {ok, _Key, User} ->
+            ogonek_user:from_json(User);
+        Error ->
+            Error
+    end.
 
 
+-spec update_user(user()) -> ok.
 update_user(User) ->
     gen_server:cast(?MODULE, {update_user, User}).
 
 
+-spec planet_exists(integer(), integer(), integer()) -> boolean().
 planet_exists(X, Y, Z) ->
-    gen_server:call(?MODULE, {planet_exists, X, Y, Z}).
+    case singleton_from_view(<<"planet">>, <<"by_coordinate">>, [X, Y, Z], get_info()) of
+        {ok, _Key, _Value} -> true;
+        _Otherwise -> false
+    end.
 
 
+-spec planet_create(planet()) -> ok.
 planet_create(Planet) ->
     gen_server:cast(?MODULE, {planet_create, Planet}).
 
@@ -149,9 +211,11 @@ init([]) ->
 
     gen_server:cast(self(), prepare),
 
-    {ok, #state{host=Host,
-                headers=DefaultHeaders,
-                options=DefaultOptions,
+    Info = #db_info{host=Host,
+                    headers=DefaultHeaders,
+                    options=DefaultOptions},
+
+    {ok, #state{info=Info,
                 status=init}}.
 
 %%--------------------------------------------------------------------
@@ -168,64 +232,9 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({new_session, Doc}, _From, State) ->
-    lager:debug("creating new session: ~p", [Doc]),
-
-    Response = insert(Doc, State),
-    {reply, Response, State};
-
-handle_call({get_session, SessionId}, _From, State) ->
-    Response = case get_by_id(SessionId, State) of
-                   {ok, Code, _Hs, Session} when Code == 200 ->
-                       ogonek_session:from_json(Session);
-                   _Error ->
-                       {error, not_found}
-               end,
-
-    {reply, Response, State};
-
-handle_call({create_user, #twitch_user{}=User, Provider}, _From, State) ->
-    Doc = ogonek_util:doc(<<"user">>,
-                          [{<<"provider">>, Provider},
-                           {<<"pid">>, User#twitch_user.id},
-                           {<<"email">>, User#twitch_user.email},
-                           {<<"name">>, User#twitch_user.display_name},
-                           {<<"img">>, User#twitch_user.profile_image_url}
-                          ]),
-    Response = case insert(Doc, State) of
-                   {ok, Id, _Rev} ->
-                       ogonek_user:from_json(with_id(Doc, Id));
-                   Error -> Error
-               end,
-    {reply, Response, State};
-
-handle_call({get_user, UserId}, _From, State) ->
-    Response = case get_by_id(UserId, State) of
-                   {ok, Code, _Hs, User} when Code == 200 ->
-                       ogonek_user:from_json(User);
-                   _Error ->
-                       {error, not_found}
-               end,
-
-    {reply, Response, State};
-
-handle_call({get_user, ProviderId, Provider}, _From, State) ->
-    % query the 'user' design doc views
-    Response = case singleton_from_view(<<"user">>, Provider, ProviderId, State) of
-                   {ok, _Key, User} ->
-                       ogonek_user:from_json(User);
-                   Error ->
-                       Error
-               end,
-
-    {reply, Response, State};
-
-handle_call({planet_exists, X, Y, Z}, _From, State) ->
-    Response = case singleton_from_view(<<"planet">>, <<"by_coordinate">>, [X, Y, Z], State) of
-                   {ok, _Key, _Value} -> true;
-                   _Otherwise -> false
-               end,
-    {reply, Response, State};
+handle_call(get_info, _From, State) ->
+    Info = State#state.info,
+    {reply, Info, State};
 
 handle_call(_Request, _From, State) ->
     Reply = ok,
@@ -241,13 +250,13 @@ handle_call(_Request, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_cast(prepare, State) ->
-    lager:info("initializing database at ~s [~p]", [State#state.host, self()]),
+handle_cast(prepare, #state{info=Info}=State) ->
+    lager:info("initializing database at ~s [~p]", [Info#db_info.host, self()]),
 
-    true = check_status(State),
+    true = check_status(Info),
     lager:debug("database connection is up and running"),
 
-    ok = db_create_if_not_exists(?OGONEK_DB_NAME, State),
+    ok = db_create_if_not_exists(?OGONEK_DB_NAME, Info),
 
     ok = design_create_if_not_exists(<<"session">>,
 <<"{
@@ -259,7 +268,7 @@ handle_cast(prepare, State) ->
       \"map\": \"function(doc) { if (doc.ip && doc.t == 'session') { emit(doc.ip, doc) } }\"
     }
   }
-}">>, State),
+}">>, Info),
 
     ok = design_create_if_not_exists(<<"user">>,
 <<"{
@@ -271,7 +280,7 @@ handle_cast(prepare, State) ->
       \"map\": \"function(doc) { if (doc.pid && doc.t == 'user' && doc.provider == 'local') { emit(doc.pid, doc) } }\"
     }
   }
-}">>, State),
+}">>, Info),
 
     ok = design_create_if_not_exists(<<"planet">>,
 <<"{
@@ -283,11 +292,11 @@ handle_cast(prepare, State) ->
       \"map\": \"function(doc) { if (doc.t == 'planet' && doc.owner) { emit(doc.owner, doc) } }\"
     }
   }
-}">>, State),
+}">>, Info),
 
     {noreply, State#state{status=ready}};
 
-handle_cast({refresh_session, Session}, State) ->
+handle_cast({refresh_session, Session}, #state{info=Info}=State) ->
     Now = iso8601:format(calendar:universal_time()),
     Update = fun(_Code, {S}) ->
                      Ts = <<"updated">>,
@@ -295,7 +304,7 @@ handle_cast({refresh_session, Session}, State) ->
                      {Updated}
              end,
 
-    case update(Session, Update, State) of
+    case update(Session, Update, Info) of
         {ok, Code, _Hs, _Body} when Code == 200 orelse Code == 201 -> ok;
         {ok, Code, _Hs, Body} ->
             lager:error("refresh_session failed [~p]: ~p", [Code, Body]),
@@ -307,7 +316,7 @@ handle_cast({refresh_session, Session}, State) ->
 
     {noreply, State};
 
-handle_cast({add_user_to_session, UserId, SessionId}, State) ->
+handle_cast({add_user_to_session, UserId, SessionId}, #state{info=Info}=State) ->
     Now = iso8601:format(calendar:universal_time()),
     NewKeys = [{<<"updated">>, Now}, {<<"user_id">>, UserId}],
     Update = fun(_Code, {S}) ->
@@ -315,7 +324,7 @@ handle_cast({add_user_to_session, UserId, SessionId}, State) ->
                      {Updated}
              end,
 
-    case update(SessionId, Update, State) of
+    case update(SessionId, Update, Info) of
         {ok, Code, _Hs, _Body} when Code == 200 orelse Code == 201 -> ok;
         {ok, Code, _Hs, Body} ->
             lager:error("add_user_to_session failed [~p]: ~p", [Code, Body]),
@@ -327,7 +336,7 @@ handle_cast({add_user_to_session, UserId, SessionId}, State) ->
 
     {noreply, State};
 
-handle_cast({remove_user_from_session, SessionId}, State) ->
+handle_cast({remove_user_from_session, SessionId}, #state{info=Info}=State) ->
     Now = iso8601:format(calendar:universal_time()),
     Update = fun(_Code, {S}) ->
                      Ts = <<"updated">>,
@@ -336,7 +345,7 @@ handle_cast({remove_user_from_session, SessionId}, State) ->
                      {Updated1}
              end,
 
-    case update(SessionId, Update, State) of
+    case update(SessionId, Update, Info) of
         {ok, Code, _Hs, _Body} when Code == 200 orelse Code == 201 -> ok;
         {ok, Code, _Hs, Body} ->
             lager:error("remove_user_from_session failed [~p]: ~p", [Code, Body]),
@@ -348,18 +357,18 @@ handle_cast({remove_user_from_session, SessionId}, State) ->
 
     {noreply, State};
 
-handle_cast({update_user, User}, State) ->
+handle_cast({update_user, User}, #state{info=Info}=State) ->
     Json = ogonek_user:to_json(User),
-    case replace(User#user.id, Json, State) of
+    case replace(User#user.id, Json, Info) of
         {ok, 201, _Hs, _Body} -> ok;
         Error ->
             lager:error("failed to update user: ~p", [Error])
     end,
     {noreply, State};
 
-handle_cast({planet_create, Planet}, State) ->
+handle_cast({planet_create, Planet}, #state{info=Info}=State) ->
     Json = ogonek_planet:to_json(Planet),
-    insert(Json, State),
+    insert(Json, Info),
     {noreply, State};
 
 handle_cast(_Msg, State) ->
@@ -407,6 +416,11 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
+-spec get_info() -> db_info().
+get_info() ->
+    gen_server:call(?MODULE, get_info).
+
+
 get_auth() ->
     case {os:getenv("COUCH_USER"), os:getenv("COUCH_PW")} of
         {false, _} -> [];
@@ -415,20 +429,20 @@ get_auth() ->
     end.
 
 
-get_(Path, #state{host=Host, headers=Headers, options=Options}) ->
+get_(Path, #db_info{host=Host, headers=Headers, options=Options}) ->
     Target = <<Host/binary, Path/binary>>,
     ogonek_util:json_get(Target, Headers, Options).
 
 
-get_by_id(Id, State) ->
-    get_by_id(?OGONEK_DB_NAME, Id, State).
+get_by_id(Id, Info) ->
+    get_by_id(?OGONEK_DB_NAME, Id, Info).
 
-get_by_id(Db, Id, State) ->
+get_by_id(Db, Id, Info) ->
     Path = <<"/", Db/binary, "/", Id/binary>>,
-    get_(Path, State).
+    get_(Path, Info).
 
 
-head_(Path, #state{host=Host, options=Options}) ->
+head_(Path, #db_info{host=Host, options=Options}) ->
     Target = <<Host/binary, Path/binary>>,
     Result = hackney:head(Target, [], [], Options),
 
@@ -436,10 +450,10 @@ head_(Path, #state{host=Host, options=Options}) ->
     Result.
 
 
-put_(Path, State) ->
-    put_(Path, [], State).
+put_(Path, Info) ->
+    put_(Path, [], Info).
 
-put_(Path, Payload, #state{host=Host, headers=Headers, options=Options}) ->
+put_(Path, Payload, #db_info{host=Host, headers=Headers, options=Options}) ->
     Target = <<Host/binary, Path/binary>>,
     Encoded = case Payload of
                   [] -> [];
@@ -452,43 +466,43 @@ put_(Path, Payload, #state{host=Host, headers=Headers, options=Options}) ->
     Result.
 
 
-post_(Path, Payload, #state{host=Host, headers=Headers, options=Options}) ->
+post_(Path, Payload, #db_info{host=Host, headers=Headers, options=Options}) ->
     Target = <<Host/binary, Path/binary>>,
     ogonek_util:json_post(Target, Headers, Payload, Options).
 
 
-check_status(State) ->
-    {ok, Code, _Hs, _Body} = get_(<<"/_up">>, State),
+check_status(Info) ->
+    {ok, Code, _Hs, _Body} = get_(<<"/_up">>, Info),
     Code == 200.
 
 
-exists(Path, State) ->
-    {ok, Code, _Hs} = head_(Path, State),
+exists(Path, Info) ->
+    {ok, Code, _Hs} = head_(Path, Info),
     Code == 200.
 
 
-db_exists(Db, State) ->
-    exists(<<"/", Db/binary>>, State).
+db_exists(Db, Info) ->
+    exists(<<"/", Db/binary>>, Info).
 
 
-design_doc_exists(Db, Doc, State) ->
-    exists(<<"/", Db/binary, "/_design/", Doc/binary>>, State).
+design_doc_exists(Db, Doc, Info) ->
+    exists(<<"/", Db/binary, "/_design/", Doc/binary>>, Info).
 
 
-design_create_if_not_exists(Name, Doc, State) ->
-    design_create_if_not_exists(?OGONEK_DB_NAME, Name, Doc, State).
+design_create_if_not_exists(Name, Doc, Info) ->
+    design_create_if_not_exists(?OGONEK_DB_NAME, Name, Doc, Info).
 
 
-design_create_if_not_exists(Db, Name, Doc, State) ->
-    case design_doc_exists(Db, Name, State) of
+design_create_if_not_exists(Db, Name, Doc, Info) ->
+    case design_doc_exists(Db, Name, Info) of
         true -> ok;
-        false -> design_create(Db, Name, Doc, State)
+        false -> design_create(Db, Name, Doc, Info)
     end.
 
 
-design_create(Db, Name, Doc, State) ->
+design_create(Db, Name, Doc, Info) ->
     Target = <<"/", Db/binary, "/_design/", Name/binary>>,
-    case put_(Target, Doc, State) of
+    case put_(Target, Doc, Info) of
         {ok, Code, _Hs, _Body} when Code == 201 orelse Code == 202 ->
             lager:info("successfully created design document '~s'", [Name]),
             ok;
@@ -496,8 +510,8 @@ design_create(Db, Name, Doc, State) ->
     end.
 
 
-db_create(Db, State) ->
-    {ok, Code, _Hs, Body} = put_(<<"/", Db/binary>>, State),
+db_create(Db, Info) ->
+    {ok, Code, _Hs, Body} = put_(<<"/", Db/binary>>, Info),
     case Code of
         201 ->
             lager:info("successfully created database '~s'", [Db]),
@@ -508,18 +522,18 @@ db_create(Db, State) ->
     end.
 
 
-db_create_if_not_exists(Db, State) ->
-    case db_exists(Db, State) of
+db_create_if_not_exists(Db, Info) ->
+    case db_exists(Db, Info) of
         true -> ok;
-        false -> db_create(Db, State)
+        false -> db_create(Db, Info)
     end.
 
 
-insert(Doc, State) ->
-    insert(?OGONEK_DB_NAME, Doc, State).
+insert(Doc, Info) ->
+    insert(?OGONEK_DB_NAME, Doc, Info).
 
-insert(Db, Doc, State) ->
-    case post_(<<"/", Db/binary>>, Doc, State) of
+insert(Db, Doc, Info) ->
+    case post_(<<"/", Db/binary>>, Doc, Info) of
         % created or accepted
         {ok, Code, _Hs, Body} when Code == 201 orelse Code == 202 ->
             parse_id_rev(Body);
@@ -532,39 +546,39 @@ insert(Db, Doc, State) ->
     end.
 
 
-update(Id, Func, State) ->
-    update(?OGONEK_DB_NAME, Id, Func, State).
+update(Id, Func, Info) ->
+    update(?OGONEK_DB_NAME, Id, Func, Info).
 
-update(Db, Id, Func, State) ->
+update(Db, Id, Func, Info) ->
     Path = <<"/", Db/binary, "/", Id/binary>>,
 
-    case get_(Path, State) of
+    case get_(Path, Info) of
         {ok, Code, _Hs, Body} ->
             Updated = Func(Code, Body),
-            put_(Path, Updated, State);
+            put_(Path, Updated, Info);
         Otherwise ->
             Otherwise
     end.
 
 
-replace(Id, Entity, State) ->
-    replace(?OGONEK_DB_NAME, Id, Entity, State).
+replace(Id, Entity, Info) ->
+    replace(?OGONEK_DB_NAME, Id, Entity, Info).
 
-replace(Db, Id, Entity, State) ->
+replace(Db, Id, Entity, Info) ->
     Path = <<"/", Db/binary, "/", Id/binary>>,
-    case get_rev(Path, State) of
+    case get_rev(Path, Info) of
         {ok, Rev} ->
             WithRev = ogonek_util:replace_with(Entity, [{<<"_rev">>, Rev}]),
-            put_(Path, WithRev, State);
+            put_(Path, WithRev, Info);
         error ->
             % we assume the document does not exist (yet)
             % let's try to PUT without a revision
-            put_(Path, Entity, State)
+            put_(Path, Entity, Info)
     end.
 
 
-get_rev(Path, State) ->
-    case head_(Path, State) of
+get_rev(Path, Info) ->
+    case head_(Path, Info) of
         {ok, 200, Hs} ->
             case proplists:get_value(<<"ETag">>, Hs) of
                 undefined -> error;
@@ -583,6 +597,7 @@ prepare_headers(Headers) ->
                 end, [], Headers).
 
 
+-spec parse_id_rev(tuple()) -> {ok, binary(), binary()} | {error, missing_id} | {error, missing_rev}.
 parse_id_rev({Json}) ->
     Id = proplists:get_value(<<"id">>, Json),
     Rev = proplists:get_value(<<"rev">>, Json),
@@ -593,16 +608,16 @@ parse_id_rev({Json}) ->
     end.
 
 
-singleton_from_view(Design, View, Key, State) ->
-    singleton_from_view(?OGONEK_DB_NAME, Design, View, Key, State).
+singleton_from_view(Design, View, Key, Info) ->
+    singleton_from_view(?OGONEK_DB_NAME, Design, View, Key, Info).
 
-singleton_from_view(Db, Design, View, Key, State) ->
+singleton_from_view(Db, Design, View, Key, Info) ->
     JsonKey = jiffy:encode(Key),
     Target = <<"/", Db/binary, "/_design/", Design/binary,
                "/_view/", View/binary,
                "?key=", JsonKey/binary>>,
 
-    case get_(Target, State) of
+    case get_(Target, Info) of
         {ok, Code, _Hs, Body} when Code == 200 ->
             case ogonek_util:keys([<<"rows">>], Body) of
                 [[Singleton]] ->
