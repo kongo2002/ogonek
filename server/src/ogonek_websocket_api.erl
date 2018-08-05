@@ -25,11 +25,13 @@
 init(Request, Opts) ->
     lager:debug("initialize websocket channel: ~p ~p [~p]", [Request, Opts, self()]),
 
-    % TODO: not sure about this delayed send at all
-    send_auth_info(self(), 1000),
-
     SessionId = case get_cookie_session(Request) of
                     undefined ->
+                        % there is no session stored at all
+                        % so we have to send auth-info to the client for sure
+                        send_auth_info(self()),
+
+                        % moreover create a new session
                         request_session(Request);
                     CookieSessionId ->
                         process_session_id(CookieSessionId, Request)
@@ -112,18 +114,14 @@ get_cookie_session(Request) ->
     end.
 
 
-send_auth_info(Target, Delay) ->
-    erlang:spawn(fun() ->
-                         timer:sleep(Delay),
-                         case ogonek_twitch:get_info() of
-                             {ok, AuthInfo} ->
-                                 Target ! {json, AuthInfo};
-                             _Otherwise ->
-                                 % do nothing
-                                 ok
-                         end
-                 end),
-    ok.
+send_auth_info(Target) ->
+    case ogonek_twitch:get_info() of
+        {ok, AuthInfo} ->
+            Target ! {json, AuthInfo};
+        _Otherwise ->
+            % do nothing
+            ok
+    end.
 
 
 handle_json(Request, {Json}, State) ->
@@ -181,6 +179,7 @@ handle_request(_Type, _Request, _Json, State) ->
 process_session_id(CookieSessionId, Request) ->
     case ogonek_db:get_session(CookieSessionId) of
         {ok, StoredSession} ->
+            Socket = self(),
             ogonek_db:refresh_session(CookieSessionId),
 
             % in case the session is associated with a specific user-id
@@ -190,20 +189,26 @@ process_session_id(CookieSessionId, Request) ->
                     % we are spawning user authorization asynchronously
                     % since we want to return with the initial connect
                     % as soon as possible
-                    Socket = self(),
                     erlang:spawn(fun() -> try_auth_user(Socket, StoredSession) end);
-                false -> ok
+                false ->
+                    send_auth_info(Socket)
             end,
 
             CookieSessionId;
         {error, not_found} ->
+            % no session cookie yet:
+            % - send auth-info to client
+            % - create a new session
+            send_auth_info(self()),
             request_session(Request)
     end.
 
 
+-spec try_auth_user(pid(), session()) -> ok.
 try_auth_user(Socket, #session{id=Id, user_id=UserId}) ->
     lager:info("validating authorization of user '~s' at session: ~s", [UserId, Id]),
 
+    LoggedIn =
     case ogonek_db:get_user(UserId) of
         {ok, #user{oauth=undefined}} ->
             false;
@@ -213,21 +218,35 @@ try_auth_user(Socket, #session{id=Id, user_id=UserId}) ->
             case ogonek_twitch:validate_token(OAuth#oauth_access.access_token) of
                 {ok, ProviderId} ->
                     % notify owning socket of successful session login
-                    Socket ! {session_login, Id, User};
+                    Socket ! {session_login, Id, User},
+                    true;
                 _Otherwise ->
                     case ogonek_twitch:refresh_token(User) of
                         {ok, RefreshOAuth} ->
                             WithAuth = User#user{oauth=RefreshOAuth},
                             ogonek_db:update_user(WithAuth),
-                            Socket ! {session_login, Id, User};
-                        error -> ok
+                            Socket ! {session_login, Id, User},
+                            true;
+                        error -> false
                     end
             end;
         _Otherwise ->
-            ok
+            false
+    end,
+
+    % send the auth-info to the client if it wasn't logged in
+    case LoggedIn of
+        false -> send_auth_info(Socket);
+        true -> ok
     end.
 
 
+-spec auth_user(binary(), binary(), binary()) ->
+    {ok, user()} |
+    {error, invalid} |
+    {error, missing_id} |
+    {error, missing_rev} |
+    {error, authorization_failed}.
 auth_user(Code, Scope, StateStr) ->
     lager:debug("trying to authorize with: [code ~p; scope ~p; state ~p]", [Code, Scope, StateStr]),
 
@@ -255,6 +274,7 @@ auth_user(Code, Scope, StateStr) ->
     end.
 
 
+-spec error_json(binary()) -> {text, binary()}.
 error_json(Error) ->
     Payload = {[{<<"error">>, true},
                 {?MSG_TYPE, <<"error">>},
@@ -262,6 +282,7 @@ error_json(Error) ->
     json(Payload).
 
 
+-spec json(any()) -> {text, binary()}.
 json(Payload) ->
     Encoded = jiffy:encode(Payload),
     {text, Encoded}.
