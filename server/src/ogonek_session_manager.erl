@@ -287,6 +287,5 @@ logout_sockets(Sockets, Reason) ->
 
 
 -spec terminate_lifecycle(user_session(), atom()) -> ok.
-terminate_lifecycle(#user_session{lifecycle=undefined}, _Reason) -> ok;
 terminate_lifecycle(#user_session{lifecycle=Pid}, Reason) ->
     gen_server:cast(Pid, {terminate, Reason}).

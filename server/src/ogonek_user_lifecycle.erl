@@ -29,7 +29,10 @@
          terminate/2,
          code_change/3]).
 
--record(state, {id :: binary()}).
+-record(state, {
+          id :: binary(),
+          planets :: [planet()]
+         }).
 
 %%%===================================================================
 %%% API
@@ -62,7 +65,7 @@ start_link(UserId) ->
 %%--------------------------------------------------------------------
 init(UserId) ->
     lager:info("initializing user lifecycle of '~s' [~p]", [UserId, self()]),
-    State = #state{id=UserId},
+    State = #state{id=UserId, planets=[]},
 
     gen_server:cast(self(), prepare),
 
@@ -99,8 +102,12 @@ handle_call(_Request, _From, State) ->
 handle_cast(prepare, #state{id=UserId}=State) ->
     lager:debug("preparing user lifecycle of '~s'", [UserId]),
 
-    % TODO
-    {noreply, State};
+    Planets = fetch_planets(State),
+    PIds = lists:map(fun(#planet{id=Id}) -> Id end, Planets),
+
+    lager:debug("user '~s' has ~p planets: ~p", [UserId, length(Planets), PIds]),
+
+    {noreply, State#state{planets=Planets}};
 
 handle_cast({terminate, Reason}, #state{id=UserId}=State) ->
     lager:info("request to terminate user lifecycle of '~s' [reason ~p]", [UserId, Reason]),
@@ -150,3 +157,15 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+fetch_planets(State) ->
+    UserId = State#state.id,
+    Planets = ogonek_planet_manager:user_planets(UserId),
+
+    case Planets of
+        [] ->
+            lager:info("user '~s' has no planets yet - assigning a free one now", [UserId]),
+            {ok, Planet} = ogonek_planet_manager:free_planet(),
+            [Planet];
+        Ps -> Ps
+    end.

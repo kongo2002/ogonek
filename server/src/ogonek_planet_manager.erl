@@ -21,6 +21,9 @@
 %% API
 -export([start_link/0]).
 
+-export([free_planet/0,
+         user_planets/1]).
+
 %% gen_server callbacks
 -export([init/1,
          handle_call/3,
@@ -44,6 +47,16 @@
 %%--------------------------------------------------------------------
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+
+-spec free_planet() -> {ok, planet()} | {error, not_found} | {error, invalid}.
+free_planet() ->
+    gen_server:call(?MODULE, free_planet).
+
+
+-spec user_planets(binary()) -> [planet()].
+user_planets(UserId) ->
+    gen_server:call(?MODULE, {user_planets, UserId}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -80,6 +93,17 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_call(free_planet, _From, State) ->
+    % TODO
+    Free = ogonek_db:planet_free(),
+    lager:info("free planet: ~p", [Free]),
+    {reply, Free, State};
+
+handle_call({user_planets, UserId}, _From, State) ->
+    % TODO
+    UserPlanets = ogonek_db:planets_of_user(UserId),
+    {reply, UserPlanets, State};
+
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
