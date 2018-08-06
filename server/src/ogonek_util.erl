@@ -34,7 +34,8 @@
          path/2,
          replace_with/2,
          doc/2,
-         choose_random/1
+         choose_random/1,
+         if_defined/2
         ]).
 
 
@@ -172,6 +173,11 @@ choose_random([Singleton]) -> Singleton;
 choose_random(Candidates) ->
     Idx = rand:uniform(length(Candidates)),
     lists:nth(Idx, Candidates).
+
+
+-spec if_defined(binary(), term()) -> list().
+if_defined(_Key, undefined) -> [];
+if_defined(Key, Value) -> [{Key, Value}].
 
 
 %%

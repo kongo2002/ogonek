@@ -48,8 +48,8 @@ to_json(#session{}=Session) ->
               {<<"updated">>, Session#session.updated},
               {<<"headers">>, {Session#session.headers}}
              ]
-    ++ if_defined(<<"user_id">>, Session#session.user_id)
-    ++ if_defined(<<"_id">>, Session#session.id),
+    ++ ogonek_util:if_defined(<<"user_id">>, Session#session.user_id)
+    ++ ogonek_util:if_defined(<<"_id">>, Session#session.id),
 
     ogonek_util:doc(<<"session">>, Values).
 
@@ -57,7 +57,3 @@ to_json(#session{}=Session) ->
 -spec has_user_id(session()) -> boolean().
 has_user_id(#session{user_id=undefined}) -> false;
 has_user_id(#session{user_id=_UserId}) -> true.
-
-
-if_defined(_Key, undefined) -> [];
-if_defined(Key, Value) -> [{Key, Value}].

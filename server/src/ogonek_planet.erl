@@ -53,8 +53,8 @@ to_json(Planet) ->
               {<<"pos">>, [X, Y, Z]},
               {<<"idx">>, Planet#planet.index}
              ]
-    ++ if_defined(<<"_id">>, Planet#planet.id)
-    ++ if_defined(<<"owner">>, Planet#planet.owner),
+    ++ ogonek_util:if_defined(<<"_id">>, Planet#planet.id)
+    ++ ogonek_util:if_defined(<<"owner">>, Planet#planet.owner),
     ogonek_util:doc(<<"planet">>, Values).
 
 
@@ -78,7 +78,3 @@ parse_type(<<"water">>) -> water;
 parse_type(<<"fire">>) -> fire;
 parse_type(<<"ice">>) -> ice;
 parse_type(_Invalid) -> error.
-
-
-if_defined(_Key, undefined) -> [];
-if_defined(Key, Value) -> [{Key, Value}].

@@ -16,14 +16,18 @@
 
 -type kvalue() :: {binary(), any()}.
 
+-type maybe_unset_id() :: binary() | undefined.
+
+-type timestamp() :: binary().
+
 
 -record(session, {
-          id :: binary() | undefined,
+          id :: maybe_unset_id(),
           ip :: binary(),
           created :: binary(),
           updated :: binary(),
           headers :: [kvalue()],
-          user_id :: binary() | undefined
+          user_id :: maybe_unset_id()
          }).
 
 -type session() :: #session{}.
@@ -65,7 +69,7 @@
 
 -record(ws_state, {
           session_id :: binary(),
-          user_id :: binary() | undefined
+          user_id :: maybe_unset_id()
          }).
 
 -type ws_state() :: #ws_state{}.
@@ -78,12 +82,12 @@
 
 
 -record(planet, {
-          id :: binary() | undefined,
+          id :: maybe_unset_id(),
           type :: planet_type(),
           size :: integer(),
           position :: coordinate(),
           index :: integer(),
-          owner :: binary() | undefined
+          owner :: maybe_unset_id()
          }).
 
 -type planet() :: #planet{}.
@@ -104,3 +108,14 @@
          }).
 
 -type bdef() :: #bdef{}.
+
+
+-record(building, {
+          id :: maybe_unset_id(),
+          planet :: binary(),
+          type :: atom(),
+          level :: integer(),
+          created :: timestamp()
+         }).
+
+-type building() :: #building{}.
