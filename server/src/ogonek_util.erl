@@ -39,10 +39,6 @@
         ]).
 
 
--type json_props() :: [tuple()].
--type json_doc() :: json_props() | {json_props()}.
-
-
 -spec lowercase(string() | binary()) -> string() | binary().
 lowercase(Str) when is_list(Str) ->
     string:to_lower(Str);

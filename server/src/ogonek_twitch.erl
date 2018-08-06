@@ -56,10 +56,12 @@ start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 
+-spec get_info() -> {ok, json_doc()} | {error, inactive}.
 get_info() ->
     gen_server:call(?MODULE, get_info).
 
 
+-spec get_auth_token(binary()) -> {ok, oauth_access()} | {error, inactive} | error.
 get_auth_token(AuthCode) ->
     case gen_server:call(?MODULE, {auth_token_request, AuthCode}) of
         {ok, Target} ->
@@ -67,13 +69,15 @@ get_auth_token(AuthCode) ->
                 {ok, 200, _Hs, Body} ->
                     extract_oauth_access(Body);
                 Error ->
-                    lager:warning("get_auth_token failed: ~p", [Error]),
+                    lager:warning("twitch get_auth_token failed: ~p", [Error]),
                     error
             end;
-        Error -> Error
+        _Error ->
+            {error, inactive}
     end.
 
 
+-spec get_user(oauth_access()) -> {ok, twitch_user()} | {error, authorization_failed} | error.
 get_user(#oauth_access{access_token=Token}) ->
     Target = <<"https://api.twitch.tv/helix/users">>,
     Headers = [{<<"Accept">>, <<"application/json">>},
@@ -82,7 +86,8 @@ get_user(#oauth_access{access_token=Token}) ->
     case ogonek_util:json_get(Target, Headers) of
         {ok, 200, _Hs, Json} ->
             extract_user(Json);
-        Error -> Error
+        _Error ->
+            {error, authorization_failed}
     end.
 
 
@@ -266,6 +271,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
+-spec auth_info(#state{}) -> json_doc().
 auth_info(#state{client_id=ClientId, redirect_uri=RedirectUri}) ->
     Url = <<"https://id.twitch.tv/oauth2/authorize",
             "?client_id=", ClientId/binary,
@@ -279,6 +285,7 @@ auth_info(#state{client_id=ClientId, redirect_uri=RedirectUri}) ->
      ]}.
 
 
+-spec build_auth_request(binary(), #state{}) -> binary().
 build_auth_request(Code, State) ->
     ClientId = State#state.client_id,
     ClientSecret = State#state.client_secret,
@@ -295,6 +302,7 @@ build_auth_request(Code, State) ->
     Target.
 
 
+-spec build_refresh_token_request(user(), #state{}) -> binary().
 build_refresh_token_request(User, State) ->
     ClientId = State#state.client_id,
     ClientSecret = State#state.client_secret,
@@ -311,6 +319,7 @@ build_refresh_token_request(User, State) ->
     Target.
 
 
+-spec extract_oauth_access(json_doc()) -> {ok, oauth_access()} | error.
 extract_oauth_access(Json) ->
     % TODO: validate types and correctness
     Keys = [<<"access_token">>,
@@ -333,6 +342,7 @@ extract_oauth_access(Json) ->
     end.
 
 
+-spec extract_refresh_token(json_doc(), oauth_access()) -> {ok, oauth_access()} | error.
 extract_refresh_token(Json, OAuth) ->
     % TODO: validate types and correctness
     Keys = [<<"access_token">>,
@@ -351,6 +361,7 @@ extract_refresh_token(Json, OAuth) ->
     end.
 
 
+-spec extract_user(json_doc()) -> {ok, twitch_user()} | error.
 extract_user({Json}) ->
     Data = proplists:get_value(<<"data">>, Json, []),
     case Data of

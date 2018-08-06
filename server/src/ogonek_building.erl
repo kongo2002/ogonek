@@ -20,7 +20,7 @@
          to_json/1]).
 
 
--spec from_json(term()) -> {ok, building()} | {error, invalid}.
+-spec from_json(json_doc()) -> {ok, building()} | {error, invalid}.
 from_json(Json) ->
     Keys = [<<"_id">>, <<"planet">>, <<"type">>, <<"level">>, <<"created">>],
 

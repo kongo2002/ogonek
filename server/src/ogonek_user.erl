@@ -21,7 +21,7 @@
          has_oauth/1]).
 
 
--spec from_json(any()) -> {ok, user()} | {error, invalid}.
+-spec from_json(json_doc()) -> {ok, user()} | {error, invalid}.
 from_json(UserJson) ->
     Keys = [<<"_id">>, <<"provider">>, <<"pid">>, <<"email">>, <<"name">>, <<"img">>,
             {<<"oauth">>, undefined} % oauth is optional
@@ -58,6 +58,7 @@ has_oauth(#user{oauth=undefined}) -> false;
 has_oauth(#user{oauth=_OAuth}) -> true.
 
 
+-spec from_oauth(json_doc() | undefined) -> oauth_access() | undefined.
 from_oauth(undefined) -> undefined;
 from_oauth(Json) ->
     case ogonek_oauth:from_json(Json) of
@@ -66,6 +67,7 @@ from_oauth(Json) ->
     end.
 
 
+-spec to_oauth(user()) -> list().
 to_oauth(#user{oauth=undefined}) -> [];
 to_oauth(#user{oauth=OAuth}) ->
     [{<<"oauth">>, ogonek_oauth:to_json(OAuth)}].

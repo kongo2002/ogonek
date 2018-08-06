@@ -14,6 +14,10 @@
 
 -define(MSG_TYPE, <<"t">>).
 
+-type json_props() :: [tuple()].
+
+-type json_doc() :: json_props() | {json_props()}.
+
 -type kvalue() :: {binary(), any()}.
 
 -type maybe_unset_id() :: binary() | undefined.

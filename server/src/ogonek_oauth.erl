@@ -20,7 +20,7 @@
          to_json/1]).
 
 
--spec from_json(any()) -> {ok, oauth_access()} | {error, invalid}.
+-spec from_json(json_doc()) -> {ok, oauth_access()} | {error, invalid}.
 from_json(Json) ->
     Keys = [<<"atoken">>, <<"id_token">>, <<"rtoken">>, <<"scope">>, <<"ttype">>],
 

@@ -21,7 +21,7 @@
          has_user_id/1]).
 
 
--spec from_json(any()) -> {ok, session()} | {error, invalid}.
+-spec from_json(json_doc()) -> {ok, session()} | {error, invalid}.
 from_json(Json) ->
     Keys = [<<"_id">>, <<"ip">>, <<"created">>, <<"updated">>,
             {<<"headers">>, []},
@@ -42,7 +42,7 @@ from_json(Json) ->
 
 
 -spec to_json(session()) -> tuple().
-to_json(#session{}=Session) ->
+to_json(Session) ->
     Values = [{<<"ip">>, Session#session.ip},
               {<<"created">>, Session#session.created},
               {<<"updated">>, Session#session.updated},

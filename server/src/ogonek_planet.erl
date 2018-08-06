@@ -22,7 +22,7 @@
          exists/3]).
 
 
--spec from_json(any()) -> {ok, planet()} | {error, invalid}.
+-spec from_json(json_doc()) -> {ok, planet()} | {error, invalid}.
 from_json(Planet) ->
     Keys = [<<"_id">>, <<"type">>, <<"size">>, <<"pos">>, <<"idx">>,
             {<<"owner">>, undefined}
