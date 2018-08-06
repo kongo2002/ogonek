@@ -48,7 +48,8 @@ start_link() ->
 
 %% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}
 init([]) ->
-    WebserverPort = 8000,
+    {ok, WebserverPort} = application:get_env(webserver_port),
+
     ElliCbArgs = [{mods, [{ogonek_webserver, [{handler, ogonek_webserver}]},
                       {elli_websocket, []}]}],
 

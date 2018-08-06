@@ -252,9 +252,7 @@ planets_of_user(UserId) ->
 %% @end
 %%--------------------------------------------------------------------
 init([]) ->
-    % TODO: configuration
-    Host = <<"http://localhost:5984">>,
-
+    Host = get_db_host(),
     Json = <<"application/json">>,
     DefaultHeaders = [{<<"Accept">>, Json},
                       {<<"Content-Type">>, Json}
@@ -754,3 +752,12 @@ with_id({Doc}, Id) ->
 
 with_id(Doc, Id) ->
     {[{<<"_id">>, Id} | Doc]}.
+
+
+get_db_host() ->
+    case application:get_env(couchdb_host) of
+        {ok, Host} when is_binary(Host) -> Host;
+        {ok, Host} when is_list(Host) -> list_to_binary(Host);
+        _Error ->
+            erlang:error(invalid_config)
+    end.
