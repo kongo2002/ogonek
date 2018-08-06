@@ -38,6 +38,11 @@
         ]).
 
 
+-type json_props() :: [tuple()].
+-type json_doc() :: json_props() | {json_props()}.
+
+
+-spec lowercase(string() | binary()) -> string() | binary().
 lowercase(Str) when is_list(Str) ->
     string:to_lower(Str);
 
@@ -45,6 +50,7 @@ lowercase(Bin) when is_binary(Bin) ->
     list_to_binary(string:to_lower(binary_to_list(Bin))).
 
 
+-spec uppercase(string() | binary()) -> string() | binary().
 uppercase(Str) when is_list(Str) ->
     string:to_upper(Str);
 
@@ -62,6 +68,7 @@ parse_json(Body) ->
     end.
 
 
+-spec keys([term()], json_doc()) -> list().
 keys(Keys, {Json}) -> keys(Keys, Json);
 keys(Keys, Json) when is_list(Json) ->
     lists:foldr(fun({Key, Default}, Res) ->
@@ -77,6 +84,7 @@ keys(Keys, Json) when is_list(Json) ->
 keys(_Keys, _Json) -> [].
 
 
+-spec path([term()], json_doc()) -> term() | undefined.
 path([], Json) -> Json;
 path(Path, {Json}) -> path(Path, Json);
 path([Part | Path], Json) when is_list(Json) ->
@@ -87,6 +95,7 @@ path([Part | Path], Json) when is_list(Json) ->
 path(_Path, _Json) -> undefined.
 
 
+-spec replace_with(json_doc(), json_props()) -> json_props().
 replace_with({PList}, Values) ->
     {replace_with(PList, Values)};
 
@@ -150,6 +159,7 @@ json_post(Target, Headers, Payload, Options) ->
     Result.
 
 
+-spec doc(binary(), json_doc()) -> {json_props()}.
 doc(DocType, {Vs}) ->
     doc(DocType, Vs);
 
@@ -157,6 +167,7 @@ doc(DocType, Values) when is_list(Values) ->
     {[{?MSG_TYPE, DocType} | Values]}.
 
 
+-spec choose_random(nonempty_list()) -> term().
 choose_random([Singleton]) -> Singleton;
 choose_random(Candidates) ->
     Idx = rand:uniform(length(Candidates)),
