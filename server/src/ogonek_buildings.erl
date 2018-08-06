@@ -12,22 +12,24 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 
-[
- % logging configuration
- {lager,
-  [{handlers,
-    [{lager_console_backend, [{level, debug}]}]}
-  ]},
+-module(ogonek_buildings).
 
- % general ogonek configuration
- {ogonek,
-  [{webserver_port, 8000},
-   {couchdb_host, <<"http://localhost:5984">>}
-  ]
- },
+-include("ogonek.hrl").
 
- % building configuration
- "buildings.config"
-].
+-export([definitions/0,
+         definitions_map/0]).
 
-% vim: set ft=erlang:
+
+-spec definitions() -> [bdef()].
+definitions() ->
+    case application:get_env(buildings) of
+        undefined -> [];
+        {ok, Buildings} -> Buildings
+    end.
+
+
+-spec definitions_map() -> #{atom() => bdef()}.
+definitions_map() ->
+    lists:foldl(fun(#bdef{name=Name}=BDef, Bs) ->
+                        maps:put(Name, BDef, Bs)
+                end, maps:new(), definitions()).

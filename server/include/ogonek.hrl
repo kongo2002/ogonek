@@ -70,9 +70,12 @@
 
 -type ws_state() :: #ws_state{}.
 
+
 -type coordinate() :: {integer(), integer(), integer()}.
 
+
 -type planet_type() :: earth | water | fire | ice.
+
 
 -record(planet, {
           id :: binary() | undefined,
@@ -84,3 +87,20 @@
          }).
 
 -type planet() :: #planet{}.
+
+
+-record(bdef, {
+          name :: atom(),
+          workers :: integer(),
+          power :: integer(),
+          iron_ore :: integer(),
+          gold :: integer(),
+          h2o :: integer(),
+          oil :: integer() ,
+          h2 :: integer(),
+          uranium :: integer(),
+          pvc :: integer(),
+          kyanite :: integer()
+         }).
+
+-type bdef() :: #bdef{}.
