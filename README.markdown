@@ -8,18 +8,30 @@
 
 ### Server
 
+#### Requirements
+
+* [rebar3][rebar3]
+* erlang OTP >= 19
+
+
 ```
-$ cd server
-$ rebar3 compile
+$ make server
 ```
 
 
 ### Client
 
+#### Requirements
+
+* [yarn][yarn] (recommended) or [npm][npm]
+
+
 ```
-$ cd client
-$ yarn build
+$ make client
 ```
 
 
 [travis]: https://travis-ci.org/kongo2002/ogonek/
+[rebar3]: https://www.rebar3.org/
+[npm]: https://www.npmjs.com/
+[yarn]: https://yarnpkg.com/
