@@ -43,7 +43,7 @@
 
 -type user_session() :: #user_session{}.
 
--record(state, {sessions :: map()}).
+-record(state, {sessions :: #{binary() => user_session()}}).
 
 %%%===================================================================
 %%% API
@@ -186,7 +186,7 @@ handle_cast({logout, Socket, UserId}, State) ->
 handle_cast({close_socket, Socket, UserId}, State) ->
     UserSessions = State#state.sessions,
 
-    case maps:get(UserId, UserSessions) of
+    case maps:get(UserId, UserSessions, undefined) of
         undefined ->
             {noreply, State};
         Session ->

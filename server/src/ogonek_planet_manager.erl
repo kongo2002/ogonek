@@ -32,7 +32,13 @@
          terminate/2,
          code_change/3]).
 
--record(state, {planets :: map(), user_planets :: map()}).
+
+-type planet_map() :: #{binary() => planet()}.
+
+-record(state, {
+          planets :: planet_map(),
+          user_planets :: #{binary() => planet_map()}
+         }).
 
 %%%===================================================================
 %%% API
