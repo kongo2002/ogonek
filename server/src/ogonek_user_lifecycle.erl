@@ -143,6 +143,11 @@ handle_info({building_finish, Building}, #state{id=Id}=State) ->
     % TODO
     {noreply, State};
 
+handle_info({get_planets, Sender}, State) ->
+    Planets = maps:keys(State#state.planets),
+    Sender ! {planets, Planets},
+    {noreply, State};
+
 handle_info({get_buildings, Planet, Sender}, State) ->
     case maps:get(Planet, State#state.planets, undefined) of
         % unknown, invalid or foreign planet
