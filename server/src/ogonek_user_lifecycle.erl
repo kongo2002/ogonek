@@ -120,7 +120,30 @@ handle_cast(prepare, #state{id=UserId}=State) ->
 
     {noreply, State#state{planets=PlanetMap}};
 
-handle_cast({get_buildings, Planet, Sender}, State) ->
+handle_cast({terminate, Reason}, #state{id=UserId}=State) ->
+    lager:info("user ~s - request to terminate [reason ~p]", [UserId, Reason]),
+    {stop, normal, State};
+
+handle_cast(_Msg, State) ->
+    {noreply, State}.
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Handling all non call/cast messages
+%%
+%% @spec handle_info(Info, State) -> {noreply, State} |
+%%                                   {noreply, State, Timeout} |
+%%                                   {stop, Reason, State}
+%% @end
+%%--------------------------------------------------------------------
+handle_info({building_finish, Building}, #state{id=Id}=State) ->
+    lager:info("user ~s - building finished: ~p", [Id, Building]),
+
+    % TODO
+    {noreply, State};
+
+handle_info({get_buildings, Planet, Sender}, State) ->
     case maps:get(Planet, State#state.planets, undefined) of
         % unknown, invalid or foreign planet
         undefined ->
@@ -145,29 +168,6 @@ handle_cast({get_buildings, Planet, Sender}, State) ->
             Sender ! {buildings, PState#planet_state.buildings},
             {noreply, State}
     end;
-
-handle_cast({terminate, Reason}, #state{id=UserId}=State) ->
-    lager:info("user ~s - request to terminate [reason ~p]", [UserId, Reason]),
-    {stop, normal, State};
-
-handle_cast(_Msg, State) ->
-    {noreply, State}.
-
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Handling all non call/cast messages
-%%
-%% @spec handle_info(Info, State) -> {noreply, State} |
-%%                                   {noreply, State, Timeout} |
-%%                                   {stop, Reason, State}
-%% @end
-%%--------------------------------------------------------------------
-handle_info({building_finish, Building}, #state{id=Id}=State) ->
-    lager:info("user ~s - building finished: ~p", [Id, Building]),
-
-    % TODO
-    {noreply, State};
 
 handle_info(Info, #state{id=Id}=State) ->
     lager:warning("user ~s - unhandled message: ~p", [Id, Info]),
