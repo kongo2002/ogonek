@@ -18,7 +18,7 @@
 
 %% API
 -export([start_link/0,
-         start_user_lifecycle/1]).
+         start_user_lifecycle/2]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -40,9 +40,9 @@ start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 
--spec start_user_lifecycle(binary()) -> supervisor:startchild_ret().
-start_user_lifecycle(UserId) ->
-    supervisor:start_child(?MODULE, [UserId]).
+-spec start_user_lifecycle(binary(), pid()) -> supervisor:startchild_ret().
+start_user_lifecycle(UserId, SessionDispatcher) ->
+    supervisor:start_child(?MODULE, [UserId, SessionDispatcher]).
 
 %%%===================================================================
 %%% Supervisor callbacks

@@ -19,7 +19,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1]).
+-export([start_link/2]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -38,7 +38,8 @@
 
 -record(state, {
           id :: binary(),
-          planets :: #{binary() => planet_state()}
+          planets :: #{binary() => planet_state()},
+          session :: pid()
          }).
 
 %%%===================================================================
@@ -52,8 +53,8 @@
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link(UserId) ->
-    gen_server:start_link(?MODULE, UserId, []).
+start_link(UserId, SessionDispatcher) ->
+    gen_server:start_link(?MODULE, [UserId, SessionDispatcher], []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -70,9 +71,9 @@ start_link(UserId) ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init(UserId) ->
+init([UserId, SessionDispatcher]) ->
     lager:info("initializing user lifecycle of '~s' [~p]", [UserId, self()]),
-    State = #state{id=UserId, planets=maps:new()},
+    State = #state{id=UserId, planets=maps:new(), session=SessionDispatcher},
 
     gen_server:cast(self(), prepare),
 
