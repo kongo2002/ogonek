@@ -147,7 +147,7 @@ handle_cast({get_buildings, Planet, Sender}, State) ->
     end;
 
 handle_cast({terminate, Reason}, #state{id=UserId}=State) ->
-    lager:info("request to terminate user lifecycle of '~s' [reason ~p]", [UserId, Reason]),
+    lager:info("user ~s - request to terminate [reason ~p]", [UserId, Reason]),
     {stop, normal, State};
 
 handle_cast(_Msg, State) ->
