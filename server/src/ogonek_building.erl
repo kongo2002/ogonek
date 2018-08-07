@@ -38,7 +38,7 @@ from_json(Json) ->
 
 -spec to_json(building()) -> tuple().
 to_json(Building) ->
-    Values = [{<<"planet">>, Building#building.id},
+    Values = [{<<"planet">>, Building#building.planet},
               {<<"type">>, Building#building.type},
               {<<"level">>, Building#building.level},
               {<<"created">>, Building#building.created}

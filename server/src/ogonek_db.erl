@@ -34,6 +34,9 @@
          get_user/1,
          get_user/2]).
 
+%% Buildings API
+-export([building_finish/1]).
+
 %% Planet API
 -export([planet_exists/3,
          planet_create/1,
@@ -78,7 +81,7 @@ start_link() ->
     {error, missing_rev}.
 new_session(RemoteIP, Headers) ->
     Headers0 = prepare_headers(Headers),
-    Timestamp = iso8601:format(calendar:universal_time()),
+    Timestamp = ogonek_util:now8601(),
 
     Session = #session{ip=RemoteIP,
                        created=Timestamp,
@@ -171,6 +174,11 @@ get_user(ProviderId, Provider) ->
 -spec update_user(user()) -> ok.
 update_user(User) ->
     gen_server:cast(?MODULE, {update_user, User}).
+
+
+-spec building_finish(building()) -> ok.
+building_finish(Building) ->
+    gen_server:cast(?MODULE, {building_finish, Building, self()}).
 
 
 -spec planet_exists(integer(), integer(), integer()) -> boolean().
@@ -348,7 +356,7 @@ handle_cast(prepare, #state{info=Info}=State) ->
     {noreply, State#state{status=ready}};
 
 handle_cast({refresh_session, Session}, #state{info=Info}=State) ->
-    Now = iso8601:format(calendar:universal_time()),
+    Now = ogonek_util:now8601(),
     Update = fun(_Code, {S}) ->
                      Ts = <<"updated">>,
                      Updated = lists:keyreplace(Ts, 1, S, {Ts, Now}),
@@ -368,7 +376,7 @@ handle_cast({refresh_session, Session}, #state{info=Info}=State) ->
     {noreply, State};
 
 handle_cast({add_user_to_session, UserId, SessionId}, #state{info=Info}=State) ->
-    Now = iso8601:format(calendar:universal_time()),
+    Now = ogonek_util:now8601(),
     NewKeys = [{<<"updated">>, Now}, {<<"user_id">>, UserId}],
     Update = fun(_Code, {S}) ->
                      Updated = ogonek_util:replace_with(S, NewKeys),
@@ -388,7 +396,7 @@ handle_cast({add_user_to_session, UserId, SessionId}, #state{info=Info}=State) -
     {noreply, State};
 
 handle_cast({remove_user_from_session, SessionId}, #state{info=Info}=State) ->
-    Now = iso8601:format(calendar:universal_time()),
+    Now = ogonek_util:now8601(),
     Update = fun(_Code, {S}) ->
                      Ts = <<"updated">>,
                      Updated0 = lists:keyreplace(Ts, 1, S, {Ts, Now}),
@@ -414,6 +422,21 @@ handle_cast({update_user, User}, #state{info=Info}=State) ->
         {ok, 201, _Hs, _Body} -> ok;
         Error ->
             lager:error("failed to update user: ~p", [Error])
+    end,
+    {noreply, State};
+
+handle_cast({building_finish, Building, Sender}, #state{info=Info}=State) ->
+    Json = ogonek_building:to_json(Building),
+
+    % TODO: make sure we don't finish two building of the same type
+    % there must not be multiple buildings of the same definitions
+    % but only increasing levels of the same type
+    case insert(Json, Info) of
+        {ok, Id, _Rev} ->
+            WithId = Building#building{id=Id},
+            Sender ! {building_finish, WithId};
+        _Otherwise ->
+            ok
     end,
     {noreply, State};
 
@@ -589,9 +612,22 @@ db_create_if_not_exists(Db, Info) ->
     end.
 
 
+-spec insert(json_doc(), db_info()) ->
+    {ok, binary(), binary()} |
+    {error, missing_id} |
+    {error, missing_rev} |
+    {error, {status, integer()}} |
+    {error, unexpected}.
 insert(Doc, Info) ->
     insert(?OGONEK_DB_NAME, Doc, Info).
 
+
+-spec insert(binary(), json_doc(), db_info()) ->
+    {ok, binary(), binary()} |
+    {error, missing_id} |
+    {error, missing_rev} |
+    {error, {status, integer()}} |
+    {error, unexpected}.
 insert(Db, Doc, Info) ->
     case post_(<<"/", Db/binary>>, Doc, Info) of
         % created or accepted

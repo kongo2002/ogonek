@@ -126,7 +126,14 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info(_Info, State) ->
+handle_info({building_finish, Building}, #state{id=Id}=State) ->
+    lager:info("user ~s - building finished: ~p", [Id, Building]),
+
+    % TODO
+    {noreply, State};
+
+handle_info(Info, #state{id=Id}=State) ->
+    lager:warning("user ~s - unhandled message: ~p", [Id, Info]),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -166,6 +173,56 @@ fetch_planets(State) ->
         [] ->
             lager:info("user '~s' has no planets yet - assigning a free one now", [UserId]),
             {ok, Planet} = ogonek_planet_manager:claim_free_planet(UserId),
+            bootstrap_free_planet(Planet),
             [Planet];
         Ps -> Ps
     end.
+
+
+-spec bootstrap_free_planet(planet()) -> ok.
+bootstrap_free_planet(Planet) ->
+    lager:info("user '~s' - bootstrapping initial infrastructure on planet ~s",
+               [Planet#planet.owner, Planet#planet.id]),
+
+    % this is a new free planet: let's populate
+    % with initial set of infrastructure
+    PlanetId = Planet#planet.id,
+    InitialBuildings = [construction_center,
+                        oil_rig,
+                        water_rig,
+                        ore_mine,
+                        gold_mine,
+                        oil_tank,
+                        water_tank,
+                        ore_depot,
+                        gold_depot,
+                        power_plant,
+                        apartment_block],
+
+    Build = fun(B) ->
+                    case ogonek_buildings:get_definition(B) of
+                        error ->
+                            lager:error("user ~s: there is no building definition for ~p - skipping",
+                                        [Planet#planet.owner, B]);
+                        Def ->
+                            finish_building(Def, PlanetId)
+                    end
+            end,
+    lists:foreach(Build, InitialBuildings).
+
+
+-spec finish_building(bdef(), binary()) -> ok.
+finish_building(Def, PlanetId) ->
+    finish_building(Def, PlanetId, 1).
+
+
+-spec finish_building(bdef(), binary(), integer()) -> ok.
+finish_building(#bdef{name=Def}, PlanetId, Level) ->
+    Now = ogonek_util:now8601(),
+    Building = #building{planet=PlanetId,
+                         type=Def,
+                         level=Level,
+                         created=Now},
+
+    % TODO: maybe this one should be managed via the planet manager
+    ogonek_db:building_finish(Building).

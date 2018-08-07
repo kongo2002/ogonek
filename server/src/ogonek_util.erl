@@ -35,8 +35,14 @@
          replace_with/2,
          doc/2,
          choose_random/1,
-         if_defined/2
+         if_defined/2,
+         now8601/0
         ]).
+
+
+-spec now8601() -> binary().
+now8601() ->
+    iso8601:format(calendar:universal_time()).
 
 
 -spec lowercase(string() | binary()) -> string() | binary().
