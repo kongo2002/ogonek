@@ -29,9 +29,16 @@
          terminate/2,
          code_change/3]).
 
+-record(planet_state, {
+          planet :: planet(),
+          buildings :: [building()]
+         }).
+
+-type planet_state() :: #planet_state{}.
+
 -record(state, {
           id :: binary(),
-          planets :: [planet()]
+          planets :: #{binary() => planet_state()}
          }).
 
 %%%===================================================================
@@ -65,7 +72,7 @@ start_link(UserId) ->
 %%--------------------------------------------------------------------
 init(UserId) ->
     lager:info("initializing user lifecycle of '~s' [~p]", [UserId, self()]),
-    State = #state{id=UserId, planets=[]},
+    State = #state{id=UserId, planets=maps:new()},
 
     gen_server:cast(self(), prepare),
 
@@ -103,11 +110,41 @@ handle_cast(prepare, #state{id=UserId}=State) ->
     lager:debug("preparing user lifecycle of '~s'", [UserId]),
 
     Planets = fetch_planets(State),
-    PIds = lists:map(fun(#planet{id=Id}) -> Id end, Planets),
+    PlanetMap = lists:foldl(fun(#planet{id=Id}=P, Ps) ->
+                                    PState = #planet_state{planet=P, buildings=[]},
+                                    maps:put(Id, PState, Ps)
+                            end, maps:new(), Planets),
 
-    lager:debug("user '~s' has ~p planets: ~p", [UserId, length(Planets), PIds]),
+    lager:debug("user '~s' has ~p planets: ~p",
+                [UserId, maps:size(PlanetMap), maps:keys(PlanetMap)]),
 
-    {noreply, State#state{planets=Planets}};
+    {noreply, State#state{planets=PlanetMap}};
+
+handle_cast({get_buildings, Planet, Sender}, State) ->
+    case maps:get(Planet, State#state.planets, undefined) of
+        % unknown, invalid or foreign planet
+        undefined ->
+            {noreply, State};
+        % buildings not fetched yet
+        #planet_state{buildings=[]}=PState ->
+            Fetched = ogonek_db:buildings_of_planet(Planet),
+
+            lager:debug("user ~s - fetched building of planet ~s: ~p",
+                        [State#state.id, Planet, Fetched]),
+
+            PState0 = PState#planet_state{buildings=Fetched},
+            Planets0 = maps:put(Planet, PState0, State#state.planets),
+
+            % TODO: send to 'Sender' or via session-manager?
+            Sender ! {buildings, PState0#planet_state.buildings},
+
+            {noreply, State#state{planets=Planets0}};
+        % buildings already present
+        PState ->
+            % TODO: send to 'Sender' or via session-manager?
+            Sender ! {buildings, PState#planet_state.buildings},
+            {noreply, State}
+    end;
 
 handle_cast({terminate, Reason}, #state{id=UserId}=State) ->
     lager:info("request to terminate user lifecycle of '~s' [reason ~p]", [UserId, Reason]),
@@ -224,5 +261,5 @@ finish_building(#bdef{name=Def}, PlanetId, Level) ->
                          level=Level,
                          created=Now},
 
-    % TODO: maybe this one should be managed via the planet manager
+    % maybe this one should be managed via the planet manager
     ogonek_db:building_finish(Building).
