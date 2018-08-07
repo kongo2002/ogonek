@@ -17,7 +17,8 @@
 -include("ogonek.hrl").
 
 -export([definitions/0,
-         definitions_map/0]).
+         definitions_map/0,
+         get_definition/1]).
 
 
 -spec definitions() -> [bdef()].
@@ -33,3 +34,15 @@ definitions_map() ->
     lists:foldl(fun(#bdef{name=Name}=BDef, Bs) ->
                         maps:put(Name, BDef, Bs)
                 end, maps:new(), definitions()).
+
+
+-spec get_definition(atom()) -> bdef() | error.
+get_definition(Name) ->
+    get_definition(Name, definitions()).
+
+
+-spec get_definition(atom(), [bdef()]) -> bdef() | error.
+get_definition(_Name, []) -> error;
+get_definition(Name, [#bdef{name=Name}=Def | _Ds]) -> Def;
+get_definition(Name, [_ | Ds]) ->
+    get_definition(Name, Ds).
