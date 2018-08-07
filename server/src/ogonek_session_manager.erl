@@ -21,6 +21,7 @@
 
 -export([register/2,
          register/3,
+         publish/3,
          close_socket/1,
          close_socket/2,
          logout/1,
@@ -68,6 +69,11 @@ register(UserId, SessionId) ->
 -spec register(pid(), binary(), binary()) -> ok.
 register(Socket, UserId, SessionId) ->
     gen_server:cast(?MODULE, {register, Socket, UserId, SessionId}).
+
+
+-spec publish(binary(), binary(), term()) -> ok.
+publish(UserId, SessionId, Msg) ->
+    gen_server:cast(?MODULE, {publish, UserId, SessionId, Msg}).
 
 
 -spec logout(binary()) -> ok.
@@ -158,6 +164,15 @@ handle_cast({register, Socket, UserId, SessionId}, State) ->
     UserSessions0 = maps:put(UserId, Sessions0, UserSessions),
 
     {noreply, State#state{sessions=UserSessions0}};
+
+handle_cast({publish, UserId, _SessionId, Msg}, State) ->
+    case maps:get(UserId, State#state.sessions, undefined) of
+        undefined -> ok;
+        Session ->
+            Lifecycle = Session#user_session.lifecycle,
+            Lifecycle ! Msg
+    end,
+    {noreply, State};
 
 handle_cast({logout, Socket, UserId}, State) ->
     lager:info("logout for user '~s' requested from ~p", [UserId, Socket]),

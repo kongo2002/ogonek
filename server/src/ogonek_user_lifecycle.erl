@@ -129,7 +129,7 @@ handle_cast({get_buildings, Planet, Sender}, State) ->
         #planet_state{buildings=[]}=PState ->
             Fetched = ogonek_db:buildings_of_planet(Planet),
 
-            lager:debug("user ~s - fetched building of planet ~s: ~p",
+            lager:debug("user ~s - fetched buildings of planet ~s: ~p",
                         [State#state.id, Planet, Fetched]),
 
             PState0 = PState#planet_state{buildings=Fetched},
