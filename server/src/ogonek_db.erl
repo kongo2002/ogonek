@@ -35,7 +35,8 @@
          get_user/2]).
 
 %% Buildings API
--export([building_finish/1]).
+-export([building_finish/1,
+         buildings_of_planet/1]).
 
 %% Planet API
 -export([planet_exists/3,
@@ -179,6 +180,17 @@ update_user(User) ->
 -spec building_finish(building()) -> ok.
 building_finish(Building) ->
     gen_server:cast(?MODULE, {building_finish, Building, self()}).
+
+
+-spec buildings_of_planet(binary()) -> [building()].
+buildings_of_planet(UserId) ->
+    Results = from_view(<<"building">>, <<"by_planet">>, UserId, get_info()),
+    lists:flatmap(fun(Building) ->
+                          case ogonek_building:from_json(Building) of
+                              {ok, B} -> [B];
+                              _Otherwise -> []
+                          end
+                  end, Results).
 
 
 -spec planet_exists(integer(), integer(), integer()) -> boolean().
@@ -349,6 +361,15 @@ handle_cast(prepare, #state{info=Info}=State) ->
     },
     \"by_owner\": {
       \"map\": \"function(doc) { if (doc.t == 'planet' && doc.owner) { emit(doc.owner, doc) } }\"
+    }
+  }
+}">>, Info),
+
+    ok = design_create_if_not_exists(<<"building">>,
+<<"{
+  \"views\": {
+    \"by_planet\": {
+      \"map\": \"function(doc) { if (doc.t == 'building' && doc.planet) { emit(doc.planet, doc) } }\"
     }
   }
 }">>, Info),
