@@ -119,6 +119,8 @@ handle_cast(prepare, #state{id=UserId}=State) ->
     lager:debug("user '~s' has ~p planets: ~p",
                 [UserId, maps:size(PlanetMap), maps:keys(PlanetMap)]),
 
+    json_to_sockets(ogonek_planet, Planets, State),
+
     {noreply, State#state{planets=PlanetMap}};
 
 handle_cast({terminate, Reason}, #state{id=UserId}=State) ->
@@ -142,6 +144,8 @@ handle_info({building_finish, Building}, #state{id=Id}=State) ->
     lager:info("user ~s - building finished: ~p", [Id, Building]),
 
     % TODO
+
+    json_to_sockets(ogonek_building, Building, State),
     {noreply, State};
 
 handle_info({get_planets, Sender}, State) ->
@@ -269,3 +273,9 @@ finish_building(#bdef{name=Def}, PlanetId, Level) ->
 
     % maybe this one should be managed via the planet manager
     ogonek_db:building_finish(Building).
+
+
+-spec json_to_sockets(atom(), tuple(), #state{}) -> ok.
+json_to_sockets(Module, Obj, State) ->
+    Session = State#state.session,
+    gen_server:cast(Session, {json_to_sockets, Module, Obj}).

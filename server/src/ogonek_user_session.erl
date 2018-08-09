@@ -48,6 +48,7 @@
 start_link(UserId) ->
     gen_server:start_link(?MODULE, UserId, []).
 
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -121,6 +122,26 @@ handle_cast({unregister_socket, Socket}, State) ->
             {noreply, State0}
     end;
 
+handle_cast({json_to_sockets, Json}, State) ->
+    publish_to_sockets({json, Json}, State),
+    {noreply, State};
+
+handle_cast({json_to_sockets, Module, Objs}, State) when is_list(Objs) ->
+    lists:foreach(fun(Obj) ->
+                          Json = Module:to_json(Obj),
+                          publish_to_sockets({json, Json}, State)
+                  end, Objs),
+    {noreply, State};
+
+handle_cast({json_to_sockets, Module, Obj}, State) ->
+    Json = Module:to_json(Obj),
+    publish_to_sockets({json, Json}, State),
+    {noreply, State};
+
+handle_cast({publish_to_sockets, Msg}, State) ->
+    publish_to_sockets(Msg, State),
+    {noreply, State};
+
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -165,3 +186,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+-spec publish_to_sockets(term(), #state{}) -> ok.
+publish_to_sockets(Msg, #state{sockets=Sockets}) ->
+    lists:foreach(fun(S) -> S ! Msg end, Sockets).
