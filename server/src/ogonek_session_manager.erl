@@ -21,7 +21,8 @@
 
 -export([register/2,
          register/3,
-         publish/3,
+         publish_to_user/3,
+         publish_to_sockets/2,
          close_socket/1,
          close_socket/2,
          logout/1,
@@ -72,9 +73,14 @@ register(Socket, UserId, SessionId) ->
     gen_server:cast(?MODULE, {register, Socket, UserId, SessionId}).
 
 
--spec publish(binary(), binary(), term()) -> ok.
-publish(UserId, SessionId, Msg) ->
-    gen_server:cast(?MODULE, {publish, UserId, SessionId, Msg}).
+-spec publish_to_user(binary(), binary(), term()) -> ok.
+publish_to_user(UserId, SessionId, Msg) ->
+    gen_server:cast(?MODULE, {publish_to_user, UserId, SessionId, Msg}).
+
+
+-spec publish_to_sockets(binary(), term()) -> ok.
+publish_to_sockets(UserId, Msg) ->
+    gen_server:cast(?MODULE, {publish_to_sockets, UserId, Msg}).
 
 
 -spec logout(binary()) -> ok.
@@ -166,12 +172,20 @@ handle_cast({register, Socket, UserId, SessionId}, State) ->
 
     {noreply, State#state{sessions=UserSessions0}};
 
-handle_cast({publish, UserId, _SessionId, Msg}, State) ->
+handle_cast({publish_to_user, UserId, _SessionId, Msg}, State) ->
     case maps:get(UserId, State#state.sessions, undefined) of
         undefined -> ok;
         Session ->
             Lifecycle = Session#user_session.lifecycle,
             Lifecycle ! Msg
+    end,
+    {noreply, State};
+
+handle_cast({publish_to_sockets, UserId, Msg}, State) ->
+    case maps:get(UserId, State#state.sessions, undefined) of
+        undefined -> ok;
+        Session ->
+            lists:foreach(fun(S) -> S ! Msg end, Session#user_session.sockets)
     end,
     {noreply, State};
 
