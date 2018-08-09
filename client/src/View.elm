@@ -139,11 +139,39 @@ homePlanet active model =
     ]
 
 
+numberSpan : Int -> Html Msg
+numberSpan value =
+  let negative = value < 0
+      range =
+        if negative then
+          "negative"
+        else if value > 0 then
+          "positive"
+        else
+          "zero"
+      strValue = toString value
+      trimmed = if negative then String.dropLeft 1 strValue else strValue
+      splitted = String.join "," (splitThousands trimmed)
+      result = if negative then "-" ++ splitted else splitted
+  in span [ class ("number " ++ range) ] [ text result ]
+
+
+splitThousands : String -> List String
+splitThousands integers =
+    let reversedSplit value =
+          if String.length value > 3 then
+            value
+            |> String.dropRight 3
+            |> reversedSplit
+            |> (::) (String.right 3 value)
+          else
+            [ value ]
+    in integers |> reversedSplit |> List.reverse
+
+
 buildingRow : BuildingInfo -> Html Msg
 buildingRow binfo =
-  let col val =
-      let txt = if val == 0 then "-" else toString val
-      in td [] [ text txt ]
+  let col val = td [] [ numberSpan val ]
   in
     tr []
     [ td [] [ text binfo.name ]
