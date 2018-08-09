@@ -74,6 +74,7 @@ payloadDecoder =
     case t of
       "authinfo" -> JD.map Types.Auth authInfoDecoder
       "user" -> JD.map Types.User userInfoDecoder
+      "planet" -> JD.map Types.Planet planetDecoder
       "error" -> JD.map Types.Error errorDecoder
       _ -> JD.fail ("unexpected message " ++ t))
 
@@ -86,6 +87,37 @@ userInfoDecoder =
     (JD.field "email" JD.string)
     (JD.field "provider" JD.string)
     (JD.field "img" JD.string)
+
+
+planetDecoder : JD.Decoder Types.PlanetInfo
+planetDecoder =
+  JD.map5 Types.PlanetInfo
+    (JD.field "_id" JD.string)
+    (JD.field "pos" coordDecoder)
+    (JD.field "size" JD.int)
+    (JD.field "type" planetTypeDecoder)
+    (JD.field "idx" JD.int)
+
+
+coordDecoder : JD.Decoder (Int, Int, Int)
+coordDecoder =
+  let toCoord input =
+        case input of
+          [x, y, z] -> JD.succeed (x, y, z)
+          _ -> JD.fail "expecting triple of integers"
+  in JD.list JD.int |> JD.andThen toCoord
+
+
+planetTypeDecoder : JD.Decoder Types.PlanetType
+planetTypeDecoder =
+  let mapper input =
+    case input of
+      "earth" -> JD.succeed Types.EarthPlanet
+      "fire" -> JD.succeed Types.FirePlanet
+      "water" -> JD.succeed Types.WaterPlanet
+      "ice" -> JD.succeed Types.IcePlanet
+      invalid -> JD.fail ("invalid planet type: " ++ invalid)
+  in JD.string |> JD.andThen mapper
 
 
 authInfoDecoder : JD.Decoder Types.AuthInformation

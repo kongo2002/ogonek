@@ -15,6 +15,7 @@
 module Main exposing ( main )
 
 import Debug
+import Dict
 import Navigation
 
 import Api
@@ -27,7 +28,7 @@ init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
 init flags location =
   let auth  = AuthInformation "local" "/auth"
       route = Routing.parse location
-      model = Model route Nothing auth flags.websocketHost
+      model = Model route Nothing auth Dict.empty Nothing flags.websocketHost
       actions = routeActions model
   in  model ! actions
 
@@ -94,6 +95,17 @@ update msg model =
     ApiResponse (Auth info) ->
       let _ = Debug.log "auth information received" info
           model0 = { model | authInfo = info }
+      in  model0 ! []
+
+    ApiResponse (Planet info) ->
+      let _ = Debug.log "planet information received" info
+          planets0 = Dict.insert info.id info model.planets
+          current =
+            -- set the current/active planet if none is set already
+            case model.planet of
+              Nothing -> Just info
+              p -> p
+          model0 = { model | planets = planets0, planet = current }
       in  model0 ! []
 
     ApiResponse (User info) ->

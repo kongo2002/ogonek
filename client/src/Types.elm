@@ -14,6 +14,8 @@
 
 module Types exposing (..)
 
+import Dict exposing ( Dict )
+
 import Navigation exposing ( Location )
 
 
@@ -40,6 +42,7 @@ type Route
 type ApiContent
   = Auth AuthInformation
   | User UserInfo
+  | Planet PlanetInfo
   | Error ApiError
 
 
@@ -76,6 +79,22 @@ type alias UserInfo =
   }
 
 
+type PlanetType
+  = EarthPlanet
+  | FirePlanet
+  | WaterPlanet
+  | IcePlanet
+
+
+type alias PlanetInfo =
+  { id : String
+  , position : (Int, Int, Int)
+  , size : Int
+  , planetType : PlanetType
+  , index : Int
+  }
+
+
 type alias Flags =
   { websocketHost : String
   }
@@ -85,6 +104,8 @@ type alias Model =
   { route : Route
   , user : Maybe UserInfo
   , authInfo : AuthInformation
+  , planets : Dict String PlanetInfo
+  , planet : Maybe PlanetInfo
   , websocketHost : String
   }
 
