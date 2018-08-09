@@ -17,7 +17,8 @@
 -include("ogonek.hrl").
 
 -export([from_json/1,
-         to_json/1]).
+         to_json/1,
+         to_json/2]).
 
 
 -spec from_json(json_doc()) -> {ok, building()} | {error, invalid}.
@@ -38,6 +39,10 @@ from_json(Json) ->
 
 -spec to_json(building()) -> tuple().
 to_json(Building) ->
+    to_json(Building, true).
+
+-spec to_json(building(), boolean()) -> tuple().
+to_json(Building, Db) ->
     Values = [{<<"planet">>, Building#building.planet},
               {<<"type">>, Building#building.type},
               {<<"level">>, Building#building.level},
@@ -45,7 +50,14 @@ to_json(Building) ->
              ]
     ++ ogonek_util:if_defined(<<"_id">>, Building#building.id),
 
-    ogonek_util:doc(<<"building">>, Values).
+    Vs = case Db of
+             true -> [];
+             false ->
+                 Def = ogonek_buildings:get_definition(Building#building.type),
+                 json_from_definition(Def)
+         end,
+
+    ogonek_util:doc(<<"building">>, Values ++ Vs).
 
 
 -spec to_building_type(binary()) -> atom().
@@ -53,3 +65,19 @@ to_building_type(TypeName) when is_binary(TypeName) ->
     % this looks scary but the valid list of building types
     % should be already existing via configuration initialization
     erlang:binary_to_existing_atom(TypeName, utf8).
+
+
+-spec json_from_definition(bdef() | error) -> [{binary(), integer()}].
+json_from_definition(error) -> [];
+json_from_definition(Def) ->
+    [{<<"workers">>, Def#bdef.workers},
+     {<<"power">>, Def#bdef.power},
+     {<<"iron_ore">>, Def#bdef.iron_ore},
+     {<<"gold">>, Def#bdef.gold},
+     {<<"h2o">>, Def#bdef.h2o},
+     {<<"oil">>, Def#bdef.oil},
+     {<<"h2">>, Def#bdef.h2},
+     {<<"uranium">>, Def#bdef.uranium},
+     {<<"pvc">>, Def#bdef.pvc},
+     {<<"kyanite">>, Def#bdef.kyanite}
+    ].

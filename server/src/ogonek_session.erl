@@ -18,6 +18,7 @@
 
 -export([from_json/1,
          to_json/1,
+         to_json/2,
          has_user_id/1]).
 
 
@@ -43,6 +44,11 @@ from_json(Json) ->
 
 -spec to_json(session()) -> tuple().
 to_json(Session) ->
+    to_json(Session, true).
+
+
+-spec to_json(session(), boolean()) -> tuple().
+to_json(Session, _Db) ->
     Values = [{<<"ip">>, Session#session.ip},
               {<<"created">>, Session#session.created},
               {<<"updated">>, Session#session.updated},

@@ -43,6 +43,7 @@ type ApiContent
   = Auth AuthInformation
   | User UserInfo
   | Planet PlanetInfo
+  | Building BuildingInfo
   | Error ApiError
 
 
@@ -102,6 +103,7 @@ type alias Flags =
 
 type alias BuildingInfo =
   { name : String
+  , planetId : String
   , level : Int
   , workers : Int
   , power : Int

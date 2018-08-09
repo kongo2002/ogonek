@@ -128,13 +128,13 @@ handle_cast({json_to_sockets, Json}, State) ->
 
 handle_cast({json_to_sockets, Module, Objs}, State) when is_list(Objs) ->
     lists:foreach(fun(Obj) ->
-                          Json = Module:to_json(Obj),
+                          Json = Module:to_json(Obj, false),
                           publish_to_sockets({json, Json}, State)
                   end, Objs),
     {noreply, State};
 
 handle_cast({json_to_sockets, Module, Obj}, State) ->
-    Json = Module:to_json(Obj),
+    Json = Module:to_json(Obj, false),
     publish_to_sockets({json, Json}, State),
     {noreply, State};
 

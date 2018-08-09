@@ -97,6 +97,22 @@ update msg model =
           model0 = { model | authInfo = info }
       in  model0 ! []
 
+    ApiResponse (Building info) ->
+      let _ = Debug.log "building information received" info
+          current =
+            -- set the current/active planet if none is set already
+            case model.planet of
+              Just ap ->
+                if ap.planet.id == info.planetId then
+                  -- TODO: get rid of possible duplicates - maybe dict?
+                  let bs = info :: ap.buildings
+                  in  Just { ap | buildings = bs }
+                else
+                  Just ap
+              p -> p
+          model0 = { model | planet = current }
+      in  model0 ! []
+
     ApiResponse (Planet info) ->
       let _ = Debug.log "planet information received" info
           planets0 = Dict.insert info.id info model.planets

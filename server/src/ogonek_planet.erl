@@ -18,6 +18,7 @@
 
 -export([from_json/1,
          to_json/1,
+         to_json/2,
          exists/1,
          exists/3]).
 
@@ -47,6 +48,11 @@ from_json(Planet) ->
 
 -spec to_json(planet()) -> tuple().
 to_json(Planet) ->
+    to_json(Planet, true).
+
+
+-spec to_json(planet(), boolean()) -> tuple().
+to_json(Planet, _Db) ->
     {X, Y, Z} = Planet#planet.position,
     Values = [{<<"type">>, Planet#planet.type},
               {<<"size">>, Planet#planet.size},

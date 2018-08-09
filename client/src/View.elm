@@ -142,7 +142,7 @@ homePlanet active model =
 buildingRow : BuildingInfo -> Html Msg
 buildingRow binfo =
   let col val =
-      let txt = if val <= 0 then "-" else toString val
+      let txt = if val == 0 then "-" else toString val
       in td [] [ text txt ]
   in
     tr []

@@ -72,9 +72,10 @@ payloadDecoder =
   (JD.field "t" JD.string)
   |> JD.andThen (\t ->
     case t of
+      "building" -> JD.map Types.Building buildingInfoDecoder
+      "planet" -> JD.map Types.Planet planetDecoder
       "authinfo" -> JD.map Types.Auth authInfoDecoder
       "user" -> JD.map Types.User userInfoDecoder
-      "planet" -> JD.map Types.Planet planetDecoder
       "error" -> JD.map Types.Error errorDecoder
       _ -> JD.fail ("unexpected message " ++ t))
 
@@ -97,6 +98,24 @@ planetDecoder =
     (JD.field "size" JD.int)
     (JD.field "type" planetTypeDecoder)
     (JD.field "idx" JD.int)
+
+
+buildingInfoDecoder : JD.Decoder Types.BuildingInfo
+buildingInfoDecoder =
+  JD.succeed Types.BuildingInfo
+    |: (JD.field "type" JD.string)
+    |: (JD.field "planet" JD.string)
+    |: (JD.field "level" JD.int)
+    |: (JD.field "workers" JD.int)
+    |: (JD.field "power" JD.int)
+    |: (JD.field "iron_ore" JD.int)
+    |: (JD.field "gold" JD.int)
+    |: (JD.field "h2o" JD.int)
+    |: (JD.field "oil" JD.int)
+    |: (JD.field "h2" JD.int)
+    |: (JD.field "uranium" JD.int)
+    |: (JD.field "pvc" JD.int)
+    |: (JD.field "kyanite" JD.int)
 
 
 coordDecoder : JD.Decoder (Int, Int, Int)
@@ -132,6 +151,16 @@ errorDecoder =
   JD.map2 Types.ApiError
     (JD.field "error" JD.bool)
     (JD.field "message" JD.string)
+
+
+
+apply : JD.Decoder (a -> b) -> JD.Decoder a -> JD.Decoder b
+apply f aDecoder =
+  f |> JD.andThen (\f0 -> JD.map f0 aDecoder)
+
+
+(|:) : JD.Decoder (a -> b) -> JD.Decoder a -> JD.Decoder b
+(|:) = apply
 
 
 -- vim: et sw=2 sts=2

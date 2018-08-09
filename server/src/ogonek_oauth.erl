@@ -17,7 +17,8 @@
 -include("ogonek.hrl").
 
 -export([from_json/1,
-         to_json/1]).
+         to_json/1,
+         to_json/2]).
 
 
 -spec from_json(json_doc()) -> {ok, oauth_access()} | {error, invalid}.
@@ -37,7 +38,12 @@ from_json(Json) ->
 
 
 -spec to_json(oauth_access()) -> tuple().
-to_json(#oauth_access{}=OAuth) ->
+to_json(OAuth) ->
+    to_json(OAuth, true).
+
+
+-spec to_json(oauth_access(), boolean()) -> tuple().
+to_json(OAuth, _Db) ->
     {[{<<"atoken">>, OAuth#oauth_access.access_token},
       {<<"id_token">>, OAuth#oauth_access.id_token},
       {<<"rtoken">>, OAuth#oauth_access.refresh_token},

@@ -121,6 +121,10 @@ handle_cast(prepare, #state{id=UserId}=State) ->
 
     json_to_sockets(ogonek_planet, Planets, State),
 
+    lists:foreach(fun(P) ->
+                          self() ! {get_buildings, P, undefined}
+                  end, maps:keys(PlanetMap)),
+
     {noreply, State#state{planets=PlanetMap}};
 
 handle_cast({terminate, Reason}, #state{id=UserId}=State) ->
@@ -168,14 +172,14 @@ handle_info({get_buildings, Planet, Sender}, State) ->
             PState0 = PState#planet_state{buildings=Fetched},
             Planets0 = maps:put(Planet, PState0, State#state.planets),
 
-            % TODO: send to 'Sender' or via session-manager?
-            Sender ! {buildings, PState0#planet_state.buildings},
+            % TODO: send to 'Sender' instead/only?
+            json_to_sockets(ogonek_building, PState0#planet_state.buildings, State),
 
             {noreply, State#state{planets=Planets0}};
         % buildings already present
         PState ->
-            % TODO: send to 'Sender' or via session-manager?
-            Sender ! {buildings, PState#planet_state.buildings},
+            % TODO: send to 'Sender' instead/only?
+            json_to_sockets(ogonek_building, PState#planet_state.buildings, State),
             {noreply, State}
     end;
 
@@ -275,7 +279,7 @@ finish_building(#bdef{name=Def}, PlanetId, Level) ->
     ogonek_db:building_finish(Building).
 
 
--spec json_to_sockets(atom(), tuple(), #state{}) -> ok.
+-spec json_to_sockets(atom(), term(), #state{}) -> ok.
 json_to_sockets(Module, Obj, State) ->
     Session = State#state.session,
     gen_server:cast(Session, {json_to_sockets, Module, Obj}).

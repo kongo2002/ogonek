@@ -18,6 +18,7 @@
 
 -export([from_json/1,
          to_json/1,
+         to_json/2,
          has_oauth/1]).
 
 
@@ -43,6 +44,11 @@ from_json(UserJson) ->
 
 -spec to_json(user()) -> tuple().
 to_json(User) ->
+    to_json(User, true).
+
+
+-spec to_json(user(), boolean()) -> tuple().
+to_json(User, _Db) ->
     Values = [{<<"_id">>, User#user.id},
               {<<"provider">>, User#user.provider},
               {<<"pid">>, User#user.provider_id},
