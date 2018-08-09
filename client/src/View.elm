@@ -112,7 +112,7 @@ homePlanet : ActivePlanet -> Model -> Html Msg
 homePlanet active model =
   let planet = active.planet
       name = "Planet at " ++ coordStr planet.position
-      header name = td [] [ text name ]
+      header name = th [] [ text name ]
   in
     div [ class "row" ]
     [ h2 [] [ text name ]
