@@ -100,12 +100,34 @@ type alias Flags =
   }
 
 
+type alias BuildingInfo =
+  { name : String
+  , level : Int
+  , workers : Int
+  , power : Int
+  , ironOre : Int
+  , gold : Int
+  , h2o : Int
+  , oil : Int
+  , h2 : Int
+  , uranium : Int
+  , pvc : Int
+  , kyanite : Int
+  }
+
+
+type alias ActivePlanet =
+  { planet : PlanetInfo
+  , buildings : List BuildingInfo
+  }
+
+
 type alias Model =
   { route : Route
   , user : Maybe UserInfo
   , authInfo : AuthInformation
   , planets : Dict String PlanetInfo
-  , planet : Maybe PlanetInfo
+  , planet : Maybe ActivePlanet
   , websocketHost : String
   }
 

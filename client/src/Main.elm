@@ -103,7 +103,7 @@ update msg model =
           current =
             -- set the current/active planet if none is set already
             case model.planet of
-              Nothing -> Just info
+              Nothing -> Just (ActivePlanet info [])
               p -> p
           model0 = { model | planets = planets0, planet = current }
       in  model0 ! []

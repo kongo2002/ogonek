@@ -28,7 +28,7 @@ view model =
   let content =
         case model.route of
           LoginRoute -> login
-          _ -> body
+          _ -> home
   in
     div [ class "container" ]
     [ navigation model
@@ -83,13 +83,12 @@ login model =
       login = model.authInfo.loginUrl
   in
     div [ class "row" ]
-    [ h1 [] [ text "login" ]
+    [ h2 [] [ text "login" ]
     , h3 [] [ text ("via " ++ provider) ]
     , p []
       [ a [ class "button button-primary", href login ] [ text "login" ]
       ]
     ]
-
 
 
 numbClick : a -> Attribute a
@@ -102,8 +101,76 @@ toRight : Attribute a
 toRight = class "u-pull-right"
 
 
-body : Model -> Html Msg
-body model =
+home : Model -> Html Msg
+home model =
+  case model.planet of
+    Just planet -> homePlanet planet model
+    Nothing -> noPlanet
+
+
+homePlanet : ActivePlanet -> Model -> Html Msg
+homePlanet active model =
+  let planet = active.planet
+      name = "Planet at " ++ coordStr planet.position
+      header name = td [] [ text name ]
+  in
+    div [ class "row" ]
+    [ h2 [] [ text name ]
+    , h3 [] [ text "Buildings" ]
+    , table [ id "buildings" ]
+      [ thead []
+        [ header "building"
+        , header "level"
+        , header "workers"
+        , header "power"
+        , header "iron ore"
+        , header "gold"
+        , header "H2O"
+        , header "oil"
+        , header "H2"
+        , header "uranium"
+        , header "PVC"
+        , header "kyanite"
+        -- TODO: operations column
+        , header ""
+        ]
+      , tbody [] (List.map buildingRow active.buildings)
+      ]
+    ]
+
+
+buildingRow : BuildingInfo -> Html Msg
+buildingRow binfo =
+  let col val =
+      let txt = if val <= 0 then "-" else toString val
+      in td [] [ text txt ]
+  in
+    tr []
+    [ td [] [ text binfo.name ]
+    , col binfo.level
+    , col binfo.workers
+    , col binfo.power
+    , col binfo.ironOre
+    , col binfo.gold
+    , col binfo.h2o
+    , col binfo.oil
+    , col binfo.h2
+    , col binfo.uranium
+    , col binfo.pvc
+    , col binfo.kyanite
+    -- TODO: operations
+    , td [] []
+    ]
+
+
+coordStr : (Int, Int, Int) -> String
+coordStr coord =
+  let (x, y, z) = coord
+  in  "(" ++ toString x ++ "," ++ toString y ++ "," ++ toString z ++ ")"
+
+
+noPlanet : Html Msg
+noPlanet =
   div [ class "row" ]
   [ p [] [ text "welcome to ogonek!" ]
   ]
