@@ -163,7 +163,7 @@ handle_info(create_planet, State) ->
         true -> ok
     end,
 
-    erlang:send_after(60 * 1000, self(), create_planet),
+    erlang:send_after(60 * 60 * 1000, self(), create_planet),
 
     {noreply, State};
 
