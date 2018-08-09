@@ -23,3 +23,7 @@
 #brand a {
   text-decoration: none;
 }
+
+#buildings thead {
+  text-transform: uppercase;
+}
