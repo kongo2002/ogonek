@@ -44,6 +44,7 @@ type ApiContent
   | User UserInfo
   | Planet PlanetInfo
   | Building BuildingInfo
+  | Resources ResourceInfo
   | Error ApiError
 
 
@@ -102,10 +103,7 @@ type alias Flags =
 
 
 type alias BuildingInfo =
-  { name : String
-  , planetId : String
-  , level : Int
-  , workers : Int
+  { workers : Int
   , power : Int
   , ironOre : Int
   , gold : Int
@@ -115,6 +113,24 @@ type alias BuildingInfo =
   , uranium : Int
   , pvc : Int
   , kyanite : Int
+  , name : String
+  , planetId : String
+  , level : Int
+  }
+
+
+type alias ResourceInfo =
+  { workers : Int
+  , power : Int
+  , ironOre : Int
+  , gold : Int
+  , h2o : Int
+  , oil : Int
+  , h2 : Int
+  , uranium : Int
+  , pvc : Int
+  , kyanite : Int
+  , planetId: String
   }
 
 

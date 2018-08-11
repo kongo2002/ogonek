@@ -72,6 +72,7 @@ payloadDecoder =
   (JD.field "t" JD.string)
   |> JD.andThen (\t ->
     case t of
+      "resources" -> JD.map Types.Resources resourceInfoDecoder
       "building" -> JD.map Types.Building buildingInfoDecoder
       "planet" -> JD.map Types.Planet planetDecoder
       "authinfo" -> JD.map Types.Auth authInfoDecoder
@@ -102,20 +103,30 @@ planetDecoder =
 
 buildingInfoDecoder : JD.Decoder Types.BuildingInfo
 buildingInfoDecoder =
-  JD.succeed Types.BuildingInfo
+  resources Types.BuildingInfo
     |: (JD.field "type" JD.string)
     |: (JD.field "planet" JD.string)
     |: (JD.field "level" JD.int)
-    |: (JD.field "workers" JD.int)
-    |: (JD.field "power" JD.int)
-    |: (JD.field "iron_ore" JD.int)
-    |: (JD.field "gold" JD.int)
-    |: (JD.field "h2o" JD.int)
-    |: (JD.field "oil" JD.int)
-    |: (JD.field "h2" JD.int)
-    |: (JD.field "uranium" JD.int)
-    |: (JD.field "pvc" JD.int)
-    |: (JD.field "kyanite" JD.int)
+
+
+resourceInfoDecoder : JD.Decoder Types.ResourceInfo
+resourceInfoDecoder =
+  resources Types.ResourceInfo
+    |: (JD.field "planet" JD.string)
+
+
+resources : (Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> a) -> JD.Decoder a
+resources f =
+  JD.map f (JD.field "workers" JD.int)
+  |: (JD.field "power" JD.int)
+  |: (JD.field "iron_ore" JD.int)
+  |: (JD.field "gold" JD.int)
+  |: (JD.field "h2o" JD.int)
+  |: (JD.field "oil" JD.int)
+  |: (JD.field "h2" JD.int)
+  |: (JD.field "uranium" JD.int)
+  |: (JD.field "pvc" JD.int)
+  |: (JD.field "kyanite" JD.int)
 
 
 coordDecoder : JD.Decoder (Int, Int, Int)
