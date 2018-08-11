@@ -207,7 +207,7 @@ translateBuilding binfo =
     "power_plant" -> "power plant"
     "wind_turbine" -> "wind turbine"
     "apartment" -> "apartment"
-    "apartment_block" -> "apartment_block"
+    "apartment_block" -> "apartment block"
     unknown -> unknown
 
 
