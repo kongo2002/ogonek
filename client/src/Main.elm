@@ -113,13 +113,20 @@ update msg model =
           model0 = { model | planet = current }
       in  model0 ! []
 
+    ApiResponse (Resources info) ->
+      let _ = Debug.log "resource information received" info
+          model0 = updateResources model info
+      in  model0 ! []
+
     ApiResponse (Planet info) ->
       let _ = Debug.log "planet information received" info
-          planets0 = Dict.insert info.id info model.planets
+          planetId = info.id
+          resources = emptyResources planetId
+          planets0 = Dict.insert planetId info model.planets
           current =
             -- set the current/active planet if none is set already
             case model.planet of
-              Nothing -> Just (ActivePlanet info [])
+              Nothing -> Just (ActivePlanet info [] resources)
               p -> p
           model0 = { model | planets = planets0, planet = current }
       in  model0 ! []
@@ -132,6 +139,24 @@ update msg model =
     ApiResponse cnt ->
       let _ = Debug.log "api content received" cnt
       in  model ! []
+
+
+emptyResources : String -> ResourceInfo
+emptyResources planet =
+  ResourceInfo 0 0 0 0 0 0 0 0 0 0 planet
+
+
+updateResources : Model -> ResourceInfo -> Model
+updateResources model info =
+  case model.planet of
+    Just active ->
+      if active.planet.id == info.planetId then
+        let updated = { active | resources = info }
+        in  { model | planet = Just updated }
+      else
+        model
+    Nothing ->
+      model
 
 
 main : Program Flags Model Msg
