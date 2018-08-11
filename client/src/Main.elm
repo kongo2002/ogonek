@@ -99,18 +99,7 @@ update msg model =
 
     ApiResponse (Building info) ->
       let _ = Debug.log "building information received" info
-          current =
-            -- set the current/active planet if none is set already
-            case model.planet of
-              Just ap ->
-                if ap.planet.id == info.planetId then
-                  -- TODO: get rid of possible duplicates - maybe dict?
-                  let bs = info :: ap.buildings
-                  in  Just { ap | buildings = bs }
-                else
-                  Just ap
-              p -> p
-          model0 = { model | planet = current }
+          model0 = updateBuilding model info
       in  model0 ! []
 
     ApiResponse (Resources info) ->
@@ -120,13 +109,11 @@ update msg model =
 
     ApiResponse (Planet info) ->
       let _ = Debug.log "planet information received" info
-          planetId = info.id
-          resources = emptyResources planetId
-          planets0 = Dict.insert planetId info model.planets
+          planets0 = Dict.insert info.id info model.planets
           current =
             -- set the current/active planet if none is set already
             case model.planet of
-              Nothing -> Just (ActivePlanet info [] resources)
+              Nothing -> Just (initialPlanet info)
               p -> p
           model0 = { model | planets = planets0, planet = current }
       in  model0 ! []
@@ -139,6 +126,28 @@ update msg model =
     ApiResponse cnt ->
       let _ = Debug.log "api content received" cnt
       in  model ! []
+
+
+initialPlanet : PlanetInfo -> ActivePlanet
+initialPlanet info =
+  let planetId = info.id
+      resources = emptyResources planetId
+  in  ActivePlanet info Dict.empty resources
+
+
+updateBuilding : Model -> BuildingInfo -> Model
+updateBuilding model info =
+  case model.planet of
+    Just active ->
+      if active.planet.id == info.planetId then
+        let buildings = active.buildings
+            buildings0 = Dict.insert info.name info buildings
+            updated = { active | buildings = buildings0 }
+        in  { model | planet = Just updated }
+      else
+        model
+    Nothing ->
+      model
 
 
 emptyResources : String -> ResourceInfo

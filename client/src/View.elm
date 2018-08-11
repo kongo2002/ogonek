@@ -14,6 +14,7 @@
 
 module View exposing ( view )
 
+import Dict
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing ( onClick, onWithOptions )
@@ -113,6 +114,7 @@ homePlanet active model =
   let planet = active.planet
       name = "Planet at " ++ coordStr planet.position
       header name = th [] [ text name ]
+      buildings = Dict.values active.buildings
   in
     div [ class "row" ]
     [ h2 [] [ text name ]
@@ -134,7 +136,7 @@ homePlanet active model =
         -- TODO: operations column
         , header ""
         ]
-      , tbody [] (List.map buildingRow active.buildings)
+      , tbody [] (List.map buildingRow buildings)
       ]
     ]
 
