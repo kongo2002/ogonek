@@ -172,6 +172,9 @@ splitThousands integers =
 buildingRow : BuildingInfo -> Html Msg
 buildingRow binfo =
   let col val = td [] [ numberSpan val ]
+      -- TODO: proper building operation
+      build = a [ href "#", class "icon" ] [ icon "cog" ]
+      ops = [ build ]
   in
     tr []
     [ td [] [ text (translateBuilding binfo) ]
@@ -186,9 +189,14 @@ buildingRow binfo =
     , col binfo.uranium
     , col binfo.pvc
     , col binfo.kyanite
-    -- TODO: operations
-    , td [] []
+    , td [] ops
     ]
+
+
+icon : String -> Html Msg
+icon name =
+  let clazz = "fas fa-" ++ name
+  in  i [ class clazz ] []
 
 
 translateBuilding : BuildingInfo -> String

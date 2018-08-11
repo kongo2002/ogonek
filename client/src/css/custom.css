@@ -27,3 +27,14 @@
 #buildings thead {
   text-transform: uppercase;
 }
+
+a.icon {
+  padding: 3px 5px;
+  border: solid 1px;
+  border-radius: 4px;
+}
+
+a.icon.inactive {
+  cursor: not-allowed;
+  color: #bfbfbf;
+}
