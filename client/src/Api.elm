@@ -45,15 +45,26 @@ requestEncoder req =
   case req of
     Types.AuthorizeRequest auth ->
       JE.object
-        [ ("t", JE.string "authorize")
+        [ requestType "authorize"
         , ("code", JE.string auth.code)
         , ("state", JE.string auth.state)
         , ("scope", JE.string auth.scope)
         ]
+    Types.BuildBuildingRequest building level ->
+      JE.object
+        [ requestType "build_building"
+        , ("type", JE.string building)
+        , ("level", JE.int level)
+        ]
     Types.LogoutRequest ->
       JE.object
-        [ ("t", JE.string "logout")
+        [ requestType "logout"
         ]
+
+
+requestType : String -> (String, JE.Value)
+requestType typ =
+  ("t", JE.string typ)
 
 
 parseWsJson : String -> Types.Msg

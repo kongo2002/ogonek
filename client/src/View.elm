@@ -174,8 +174,10 @@ splitThousands integers =
 buildingRow : BuildingInfo -> Html Msg
 buildingRow binfo =
   let col val = td [] [ numberSpan val ]
-      -- TODO: proper building operation
-      build = a [ href "#", class "icon" ] [ icon "cog" ]
+      -- TODO: check for sufficient resources
+      buildReq = BuildBuildingRequest binfo.name (binfo.level + 1)
+      request = ApiRequest buildReq
+      build = a [ href "#", class "icon", numbClick request ] [ icon "cog" ]
       ops = [ build ]
   in
     tr []
