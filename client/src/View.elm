@@ -174,7 +174,7 @@ buildingRow binfo =
   let col val = td [] [ numberSpan val ]
   in
     tr []
-    [ td [] [ text binfo.name ]
+    [ td [] [ text (translateBuilding binfo) ]
     , col binfo.level
     , col binfo.workers
     , col binfo.power
@@ -189,6 +189,26 @@ buildingRow binfo =
     -- TODO: operations
     , td [] []
     ]
+
+
+translateBuilding : BuildingInfo -> String
+translateBuilding binfo =
+  case binfo.name of
+    "construction_center" -> "construction center"
+    "research_lab" -> "research lab"
+    "oil_rig" -> "oil rig"
+    "water_rig" -> "water rig"
+    "ore_mine" -> "ore mine"
+    "gold_mine" -> "gold mine"
+    "oil_tank" -> "oil tank"
+    "water_tank" -> "water tank"
+    "ore_depot" -> "ore depot"
+    "gold_depot" -> "gold depot"
+    "power_plant" -> "power plant"
+    "wind_turbine" -> "wind turbine"
+    "apartment" -> "apartment"
+    "apartment_block" -> "apartment_block"
+    unknown -> unknown
 
 
 coordStr : (Int, Int, Int) -> String
