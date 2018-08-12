@@ -41,6 +41,8 @@
 
 -record(state, {enabled, client_id, client_secret, redirect_uri}).
 
+-type state() :: #state{}.
+
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -271,7 +273,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
--spec auth_info(#state{}) -> json_doc().
+-spec auth_info(state()) -> json_doc().
 auth_info(#state{client_id=ClientId, redirect_uri=RedirectUri}) ->
     Url = <<"https://id.twitch.tv/oauth2/authorize",
             "?client_id=", ClientId/binary,
@@ -285,7 +287,7 @@ auth_info(#state{client_id=ClientId, redirect_uri=RedirectUri}) ->
      ]}.
 
 
--spec build_auth_request(binary(), #state{}) -> binary().
+-spec build_auth_request(binary(), state()) -> binary().
 build_auth_request(Code, State) ->
     ClientId = State#state.client_id,
     ClientSecret = State#state.client_secret,
@@ -302,7 +304,7 @@ build_auth_request(Code, State) ->
     Target.
 
 
--spec build_refresh_token_request(user(), #state{}) -> binary().
+-spec build_refresh_token_request(user(), state()) -> binary().
 build_refresh_token_request(User, State) ->
     ClientId = State#state.client_id,
     ClientSecret = State#state.client_secret,

@@ -34,6 +34,8 @@
           sockets :: [pid()]
          }).
 
+-type state() :: #state{}.
+
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -187,6 +189,6 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
--spec publish_to_sockets(term(), #state{}) -> ok.
+-spec publish_to_sockets(term(), state()) -> ok.
 publish_to_sockets(Msg, #state{sockets=Sockets}) ->
     lists:foreach(fun(S) -> S ! Msg end, Sockets).

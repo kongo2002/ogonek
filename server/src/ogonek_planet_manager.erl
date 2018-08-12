@@ -40,6 +40,8 @@
           user_planets :: #{binary() => planet_map()}
          }).
 
+-type state() :: #state{}.
+
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -200,13 +202,13 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
--spec track_planet(planet(), #state{}) -> #state{}.
+-spec track_planet(planet(), state()) -> state().
 track_planet(Planet, State) ->
     Planets = maps:put(Planet#planet.id, Planet, State#state.planets),
     track_user_planet(Planet, State#state{planets=Planets}).
 
 
--spec track_user_planet(planet(), #state{}) -> #state{}.
+-spec track_user_planet(planet(), state()) -> state().
 track_user_planet(#planet{owner=undefined}, State) -> State;
 track_user_planet(#planet{owner=UserId}=Planet, State) ->
     Id = Planet#planet.id,

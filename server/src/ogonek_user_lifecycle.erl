@@ -42,6 +42,8 @@
           session :: pid()
          }).
 
+-type state() :: #state{}.
+
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -315,7 +317,7 @@ finish_building(#bdef{name=Def}, PlanetId, Level) ->
     ogonek_db:building_finish(Building).
 
 
--spec json_to_sockets(atom(), term(), #state{}) -> ok.
+-spec json_to_sockets(atom(), term(), state()) -> ok.
 json_to_sockets(Module, Obj, State) ->
     Session = State#state.session,
     gen_server:cast(Session, {json_to_sockets, Module, Obj}).
