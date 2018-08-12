@@ -54,27 +54,27 @@ get_definition(Name, [_ | Ds]) ->
 -spec calculate_power([building()]) -> integer().
 calculate_power(Buildings) ->
     Defs = definitions_map(),
-    lists:foldl(fun(#building{type=T}, Power) ->
+    lists:foldl(fun(#building{type=T, level=Lvl}, Power) ->
                         Def = maps:get(T, Defs),
-                        Power - Def#bdef.power
+                        Power - Def#bdef.power * Lvl
                 end, 0, Buildings).
 
 
 -spec calculate_workers([building()]) -> integer().
 calculate_workers(Buildings) ->
     Defs = definitions_map(),
-    lists:foldl(fun(#building{type=T}, Workers) ->
+    lists:foldl(fun(#building{type=T, level=Lvl}, Workers) ->
                         Def = maps:get(T, Defs),
-                        Workers - Def#bdef.workers
+                        Workers - Def#bdef.workers * Lvl
                 end, 0, Buildings).
 
 
 -spec calculate_power_workers([building()]) -> {integer(), integer()}.
 calculate_power_workers(Buildings) ->
     Defs = definitions_map(),
-    lists:foldl(fun(#building{type=T}, {Power, Workers}) ->
+    lists:foldl(fun(#building{type=T, level=Lvl}, {Power, Workers}) ->
                         Def = maps:get(T, Defs),
-                        Power0 = Power - Def#bdef.power,
-                        Workers0 = Workers - Def#bdef.workers,
+                        Power0 = Power - Def#bdef.power * Lvl,
+                        Workers0 = Workers - Def#bdef.workers * Lvl,
                         {Power0, Workers0}
                 end, {0, 0}, Buildings).
