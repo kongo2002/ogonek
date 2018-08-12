@@ -216,7 +216,7 @@ buildingRow res binfo =
   in
     tr []
     [ td [] [ text (translateBuilding binfo) ]
-    , col binfo.level 0
+    , col binfo.level -1
     , col binfo.workers res.workers
     , col binfo.power res.power
     , col binfo.ironOre res.ironOre
