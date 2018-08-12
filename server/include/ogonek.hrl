@@ -79,6 +79,23 @@
 -type ws_state() :: #ws_state{}.
 
 
+-record(resources, {
+          planet :: maybe_unset_id(),
+          workers :: integer(),
+          power :: integer(),
+          iron_ore :: integer(),
+          gold :: integer(),
+          h2o :: integer(),
+          oil :: integer() ,
+          h2 :: integer(),
+          uranium :: integer(),
+          pvc :: integer(),
+          kyanite :: integer()
+         }).
+
+-type resources() :: #resources{}.
+
+
 -type coordinate() :: {integer(), integer(), integer()}.
 
 
