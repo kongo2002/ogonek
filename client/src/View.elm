@@ -115,9 +115,31 @@ homePlanet active model =
       name = "Planet at " ++ coordStr planet.position
       header name = th [] [ text name ]
       buildings = Dict.values active.buildings
+      res = active.resources
+      desc (name, value) =
+        li []
+          [ span [ class "resource" ] [ text name, text ": " ]
+          , numberSpan value
+          ]
+      resources =
+        [ ("workers", res.workers)
+        , ("power", res.power)
+        , ("iron ore", res.ironOre)
+        , ("gold", res.gold)
+        , ("H2O", res.h2o)
+        , ("oil", res.oil)
+        , ("H2", res.h2)
+        , ("uranium", res.uranium)
+        , ("pvc", res.pvc)
+        , ("kyanite", res.kyanite)
+        ]
   in
     div [ class "row" ]
     [ h2 [] [ text name ]
+    , h3 [] [ text "Resources" ]
+    , div [ id "resources" ]
+      [ ul [ class "inline" ] (List.map desc resources)
+      ]
     , h3 [] [ text "Buildings" ]
     , table [ id "buildings" ]
       [ thead []

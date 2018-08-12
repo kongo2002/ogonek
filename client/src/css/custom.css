@@ -38,3 +38,16 @@ a.icon.inactive {
   cursor: not-allowed;
   color: #bfbfbf;
 }
+
+ul.inline li {
+  display: inline-block;
+  padding-left: 1em;
+}
+
+ul.inline li:first-child {
+  padding-left: 0;
+}
+
+#resources span.resource {
+  text-transform: capitalize;
+}
