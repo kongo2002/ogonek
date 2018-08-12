@@ -51,7 +51,7 @@ info(_Request, {session_login, SessionId, User}, #ws_state{session_id=SessionId}
     UserId = User#user.id,
     lager:info("user '~s' successfully logged in via session '~s'", [UserId, SessionId]),
 
-    ogonek_session_manager:register(UserId, SessionId),
+    ogonek_session_manager:register_socket(UserId, SessionId),
 
     {reply, json(ogonek_user:to_json(User)), State#ws_state{user_id=UserId}};
 
@@ -148,7 +148,7 @@ handle_request(<<"authorize">>, _Request, Json, State) ->
                 {ok, User} ->
                     % on success we are going to connect this session with the
                     % user that is associated with the authorized user
-                    ogonek_session_manager:register(User#user.id, State#ws_state.session_id),
+                    ogonek_session_manager:register_socket(User#user.id, State#ws_state.session_id),
 
                     State0 = State#ws_state{user_id=User#user.id},
                     {reply, json(ogonek_user:to_json(User)), State0};

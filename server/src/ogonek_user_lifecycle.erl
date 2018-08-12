@@ -195,7 +195,7 @@ handle_info({calc_resources, PlanetId}, State) ->
             {noreply, State0}
     end;
 
-handle_info({get_buildings, Planet, Sender}, State) ->
+handle_info({get_buildings, Planet, _Sender}, State) ->
     case maps:get(Planet, State#state.planets, undefined) of
         % unknown, invalid or foreign planet
         undefined ->

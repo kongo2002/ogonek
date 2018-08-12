@@ -19,8 +19,8 @@
 %% API
 -export([start_link/0]).
 
--export([register/2,
-         register/3,
+-export([register_socket/2,
+         register_socket/3,
          publish_to_user/3,
          publish_to_sockets/2,
          close_socket/1,
@@ -39,7 +39,6 @@
 -record(user_session, {
           user_id :: binary(),
           session_id :: binary(),
-          sockets :: [pid()],
           lifecycle :: pid(),
           dispatcher :: pid()
          }).
@@ -63,14 +62,14 @@ start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 
--spec register(binary(), binary()) -> ok.
-register(UserId, SessionId) ->
-    register(self(), UserId, SessionId).
+-spec register_socket(binary(), binary()) -> ok.
+register_socket(UserId, SessionId) ->
+    register_socket(self(), UserId, SessionId).
 
 
--spec register(pid(), binary(), binary()) -> ok.
-register(Socket, UserId, SessionId) ->
-    gen_server:cast(?MODULE, {register, Socket, UserId, SessionId}).
+-spec register_socket(pid(), binary(), binary()) -> ok.
+register_socket(Socket, UserId, SessionId) ->
+    gen_server:cast(?MODULE, {register_socket, Socket, UserId, SessionId}).
 
 
 -spec publish_to_user(binary(), binary(), term()) -> ok.
@@ -150,23 +149,17 @@ handle_call(_Request, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_cast({register, Socket, UserId, SessionId}, State) ->
+handle_cast({register_socket, Socket, UserId, SessionId}, State) ->
     UserSessions = State#state.sessions,
     Sessions = maps:get(UserId, UserSessions, undefined),
 
-    {ToClose, OldSession, Sessions0} = record_session(UserId, SessionId, Socket, Sessions),
-
-    % close existing sockets of old/replaced session
-    logout_sockets(ToClose, replaced_session),
+    {OldSession, Sessions0} = record_session(UserId, SessionId, Socket, Sessions),
 
     % moreover we are going to remove any user-id from the old session
     ogonek_db:remove_user_from_session(OldSession),
 
     % and associate the user-id with the new session instead
     ogonek_db:add_user_to_session(UserId, SessionId),
-
-    lager:info("registered ~p sockets at session '~s' for user '~s'",
-               [length(Sessions0#user_session.sockets), SessionId, UserId]),
 
     UserSessions0 = maps:put(UserId, Sessions0, UserSessions),
 
@@ -185,7 +178,8 @@ handle_cast({publish_to_sockets, UserId, Msg}, State) ->
     case maps:get(UserId, State#state.sessions, undefined) of
         undefined -> ok;
         Session ->
-            lists:foreach(fun(S) -> S ! Msg end, Session#user_session.sockets)
+            Dispatcher = Session#user_session.dispatcher,
+            gen_server:cast(Dispatcher, {publish_to_sockets, Msg})
     end,
     {noreply, State};
 
@@ -200,10 +194,7 @@ handle_cast({logout, Socket, UserId}, State) ->
             ok;
         Session ->
             % close connected sockets
-            logout_sockets(Session#user_session.sockets, user_logout),
-
-            % unregister remaining sockets from user's session dispatcher
-            unregister_dispatcher_sockets(Session),
+            logout_sockets(Session, user_logout),
 
             % and remove user association from session
             ogonek_db:remove_user_from_session(Session#user_session.session_id),
@@ -223,27 +214,17 @@ handle_cast({close_socket, Socket, UserId}, State) ->
         undefined ->
             {noreply, State};
         Session ->
+            SessionId = Session#user_session.session_id,
             lager:debug("remove socket ~p from user '~s'", [Socket, UserId]),
 
             % unregister socket at user's session dispatcher as well
-            gen_server:cast(Session#user_session.dispatcher, {unregister_socket, Socket}),
+            gen_server:cast(Session#user_session.dispatcher, {unregister_socket, Socket, SessionId}),
 
-            Sockets0 = lists:delete(Socket, Session#user_session.sockets),
-            UserSessions0 = case Sockets0 of
-                                [] ->
-                                    % there are no more sockets associated with this user's session
-                                    % let's remove the stored session and terminate its lifecycle
-                                    terminate_lifecycle(Session, connection_close),
-                                    maps:remove(UserId, UserSessions);
-                                _ ->
-                                    % update user session as there are still open sockets registered
-                                    Session0 = Session#user_session{sockets=Sockets0},
-                                    maps:put(UserId, Session0, UserSessions)
-                            end,
-            {noreply, State#state{sessions=UserSessions0}}
+            {noreply, State}
     end;
 
-handle_cast(_Msg, State) ->
+handle_cast(Msg, State) ->
+    lager:warning("session-manager - unhandled cast message: ~p", [Msg]),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -256,7 +237,8 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info(_Info, State) ->
+handle_info(Info, State) ->
+    lager:warning("session-manager - unhandled message: ~p", [Info]),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -288,6 +270,9 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
+-spec record_session(binary(), binary(), pid(), user_session() | undefined) ->
+    {binary() | undefined, user_session()}.
+
 % no recorded session at all
 record_session(UserId, SessionId, Socket, undefined) ->
     {ok, SessionDispatcher} = ogonek_user_session:start_link(UserId),
@@ -296,61 +281,56 @@ record_session(UserId, SessionId, Socket, undefined) ->
     NewSession = #user_session{user_id=UserId,
                                session_id=SessionId,
                                lifecycle=NewLifecycle,
-                               dispatcher=SessionDispatcher,
-                               sockets=[Socket]},
+                               dispatcher=SessionDispatcher},
 
     % register new socket with user's session dispatcher as well
-    gen_server:cast(SessionDispatcher, {register_socket, Socket}),
+    dispatch_register_socket(NewSession, Socket, SessionId),
 
-    {[], undefined, NewSession};
+    {undefined, NewSession};
 
 % there are senders registered to the same session-id already
 record_session(_UserId, SessionId, Socket, #user_session{session_id=SessionId}=Session) ->
-    Sockets = Session#user_session.sockets,
-    Sockets0 = lists:usort([Socket | Sockets]),
-    Session0 = Session#user_session{sockets=Sockets0},
-
     % register new socket with user's session dispatcher
-    gen_server:cast(Session#user_session.dispatcher, {register_socket, Socket}),
+    dispatch_register_socket(Session, Socket, SessionId),
 
-    {[], undefined, Session0};
+    {undefined, Session};
 
 % a different session is registered already
 % -> drop the existing senders and replace with the new one
 record_session(_UserId, SessionId, Socket, Session) ->
-    OldSockets = Session#user_session.sockets,
     OldSession = Session#user_session.session_id,
-    NewSession = Session#user_session{session_id=SessionId,
-                                      sockets=[Socket]},
+    NewSession = Session#user_session{session_id=SessionId},
 
     % register new socket at user's session dispatcher
-    Dispatcher = Session#user_session.dispatcher,
-    gen_server:cast(Dispatcher, {register_socket, Socket}),
+    dispatch_register_socket(Session, Socket, SessionId),
 
-    % unregister all old sockets from user's session dispatcher
-    lists:foreach(fun(S) ->
-                          gen_server:cast(Dispatcher, {unregister_socket, S})
-                  end, OldSockets),
+    % unregister old session at user's session dispatcher
+    unregister_session(NewSession, OldSession, replaced_session),
 
-    {OldSockets, OldSession, NewSession}.
+    {OldSession, NewSession}.
 
 
-logout_sockets(Sockets, Reason) ->
-    lists:foreach(fun(Socket) ->
-                          lager:info("sending close to socket [~p] due to ~p", [Socket, Reason]),
-                          Socket ! {logout, Reason}
-                  end,
-                  Sockets).
+-spec dispatch_register_socket(user_session(), pid(), binary()) -> ok.
+dispatch_register_socket(Session, Socket, SessionId) ->
+    to_dispatcher(Session, {register_socket, Socket, SessionId}).
 
 
--spec unregister_dispatcher_sockets(user_session()) -> ok.
-unregister_dispatcher_sockets(Session) ->
-    Dispatcher = Session#user_session.dispatcher,
-    lists:foreach(fun(S) ->
-                          gen_server:cast(Dispatcher, {unregister_socket, S})
-                  end, Session#user_session.sockets).
+-spec unregister_session(user_session(), binary(), atom()) -> ok.
+unregister_session(Session, SessionId, Reason) ->
+    to_dispatcher(Session, {unregister_session, SessionId, Reason}).
+
+
+-spec logout_sockets(user_session(), atom()) -> ok.
+logout_sockets(Session, Reason) ->
+    to_dispatcher(Session, {logout, Reason}).
 
 
 -spec terminate_lifecycle(user_session(), atom()) -> ok.
 terminate_lifecycle(#user_session{lifecycle=Pid}, Reason) ->
     gen_server:cast(Pid, {terminate, Reason}).
+
+
+-spec to_dispatcher(user_session(), term()) -> ok.
+to_dispatcher(Session, Msg) ->
+    Dispatcher = Session#user_session.dispatcher,
+    gen_server:cast(Dispatcher, Msg).

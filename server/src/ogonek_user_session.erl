@@ -29,9 +29,11 @@
          terminate/2,
          code_change/3]).
 
+-type socket_info() :: {binary(), pid()}.
+
 -record(state, {
           id :: binary(),
-          sockets :: [pid()]
+          sockets :: [socket_info()]
          }).
 
 -type state() :: #state{}.
@@ -97,32 +99,56 @@ handle_call(_Request, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_cast({register_socket, Socket}, State) ->
+handle_cast({register_socket, Socket, SessionId}, State) ->
     Sockets = State#state.sockets,
-    Sockets0 = lists:usort([Socket | Sockets]),
+    Sockets0 = lists:usort([{SessionId, Socket} | Sockets]),
 
     lager:debug("user-session ~s: ~p connections registered",
                 [State#state.id, length(Sockets0)]),
 
     {noreply, State#state{sockets=Sockets0}};
 
-handle_cast({unregister_socket, Socket}, State) ->
+handle_cast({unregister_session, SessionId, Reason}, State) ->
+    UserId = State#state.id,
+
+    Logout = {logout, Reason},
+    Sockets0 =
+    lists:foldl(fun({Sess, Pid}, Ss) when Sess == SessionId ->
+                        lager:debug("user-session ~s: unregistering socket ~p [~s] due to ~p",
+                                    [UserId, Pid, SessionId, Reason]),
+                        Pid ! Logout,
+                        Ss;
+                   (SessSock, Ss) ->
+                        [SessSock | Ss]
+                end, [], State#state.sockets),
+
+    % TODO: check on remaining sockets and possible termination timer
+
+    {noreply, State#state{sockets=Sockets0}};
+
+handle_cast({unregister_socket, Socket, SessionId}, State) ->
     UserId = State#state.id,
     Sockets = State#state.sockets,
-    Sockets0 = lists:delete(Socket, Sockets),
+    Sockets0 = lists:delete({SessionId, Socket}, Sockets),
     State0 = State#state{sockets=Sockets0},
 
     case Sockets0 of
         [] ->
-            % TODO: delay termination?
-            lager:debug("user-session ~s: no remaining sockets - terminating", [UserId]),
+            lager:debug("user-session ~s: no remaining sockets", [UserId]),
 
-            {stop, normal, State0};
+            % TODO: check on remaining sockets and possible termination timer
+
+            {noreply, State0};
         _NonEmpty ->
             lager:debug("user-session ~s: ~p connections registered",
                         [UserId, length(Sockets0)]),
             {noreply, State0}
     end;
+
+handle_cast({logout, Reason}, State) ->
+    lager:info("user-session ~s: sending close to sockets due to ~p", [State#state.id, Reason]),
+    publish_to_sockets({logout, Reason}, State),
+    {noreply, State#state{sockets=[]}};
 
 handle_cast({json_to_sockets, Json}, State) ->
     publish_to_sockets({json, Json}, State),
@@ -144,7 +170,8 @@ handle_cast({publish_to_sockets, Msg}, State) ->
     publish_to_sockets(Msg, State),
     {noreply, State};
 
-handle_cast(_Msg, State) ->
+handle_cast(Msg, State) ->
+    lager:warning("user-session ~s - unhandled cast message: ~p", [State#state.id, Msg]),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -191,4 +218,4 @@ code_change(_OldVsn, State, _Extra) ->
 
 -spec publish_to_sockets(term(), state()) -> ok.
 publish_to_sockets(Msg, #state{sockets=Sockets}) ->
-    lists:foreach(fun(S) -> S ! Msg end, Sockets).
+    lists:foreach(fun({_SessionId, Socket}) -> Socket ! Msg end, Sockets).
