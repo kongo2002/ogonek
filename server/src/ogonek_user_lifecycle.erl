@@ -182,6 +182,8 @@ handle_info({calc_resources, PlanetId}, State) ->
 
             % TODO: actually *do* calculate resources in here
 
+            ogonek_db:planet_update_resources(PlanetId, Res0),
+
             Planet0 = Planet#planet{resources=Res0},
             PState0 = PState#planet_state{planet=Planet0},
             Planets0 = maps:put(PlanetId, PState0, State#state.planets),

@@ -43,7 +43,8 @@
          planet_create/1,
          planet_claim/2,
          planet_free/0,
-         planets_of_user/1]).
+         planets_of_user/1,
+         planet_update_resources/2]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -256,6 +257,11 @@ planets_of_user(UserId) ->
                   end, Results).
 
 
+-spec planet_update_resources(binary(), resources()) -> ok.
+planet_update_resources(PlanetId, Resources) ->
+    gen_server:cast(?MODULE, {planet_update_resources, PlanetId, Resources}).
+
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -432,6 +438,29 @@ handle_cast({remove_user_from_session, SessionId}, #state{info=Info}=State) ->
             error;
         Error ->
             lager:error("remove_user_from_session failed: ~p", [Error]),
+            error
+    end,
+
+    {noreply, State};
+
+handle_cast({planet_update_resources, PlanetId, Resources}, #state{info=Info}=State) ->
+    Now = ogonek_util:now8601(),
+    Resources0 = Resources#resources{updated=Now},
+    ResourceJson = ogonek_resources:to_json(Resources0),
+
+    Update = fun(_Code, {P}) ->
+                     Rs = <<"resources">>,
+                     Updated = lists:keyreplace(Rs, 1, P, {Rs, ResourceJson}),
+                     {Updated}
+             end,
+
+    case update(PlanetId, Update, Info) of
+        {ok, Code, _Hs, _Body} when Code == 200 orelse Code == 201 -> ok;
+        {ok, Code, _Hs, Body} ->
+            lager:error("planet_update_resources failed [~p]: ~p", [Code, Body]),
+            error;
+        Error ->
+            lager:error("planet_update_resources failed: ~p", [Error]),
             error
     end,
 
