@@ -43,11 +43,12 @@ from_json(Resources) ->
             {<<"power">>, 0},
             <<"iron_ore">>, <<"gold">>, <<"h2o">>, <<"oil">>,
             <<"h2">>, <<"uranium">>, <<"pvc">>, <<"kyanite">>,
-            {<<"planet">>, undefined}
+            {<<"planet">>, undefined},
+            {<<"updated">>, undefined}
            ],
 
     case ogonek_util:keys(Keys, Resources) of
-        [Workers, Power, Iron, Gold, H2O, Oil, H2, Uranium, Pvc, Kyanite, Planet] ->
+        [Workers, Power, Iron, Gold, H2O, Oil, H2, Uranium, Pvc, Kyanite, Planet, Upd] ->
             {ok, #resources{planet=Planet,
                             workers=Workers,
                             power=Power,
@@ -58,7 +59,8 @@ from_json(Resources) ->
                             h2=H2,
                             uranium=Uranium,
                             pvc=Pvc,
-                            kyanite=Kyanite}};
+                            kyanite=Kyanite,
+                            updated=Upd}};
         _Otherwise ->
             {error, invalid}
     end.
@@ -81,7 +83,7 @@ to_json(Resources, Db) ->
               {<<"uranium">>, Resources#resources.uranium},
               {<<"pvc">>, Resources#resources.pvc},
               {<<"kyanite">>, Resources#resources.kyanite}
-             ],
+             ] ++ ogonek_util:if_defined(<<"updated">>, Resources#resources.updated),
 
     case Db of
         true -> {Values};

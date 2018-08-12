@@ -28,8 +28,8 @@
 -record(session, {
           id :: maybe_unset_id(),
           ip :: binary(),
-          created :: binary(),
-          updated :: binary(),
+          created :: timestamp(),
+          updated :: timestamp(),
           headers :: [kvalue()],
           user_id :: maybe_unset_id()
          }).
@@ -90,7 +90,8 @@
           h2 :: integer(),
           uranium :: integer(),
           pvc :: integer(),
-          kyanite :: integer()
+          kyanite :: integer(),
+          updated :: timestamp() | undefined
          }).
 
 -type resources() :: #resources{}.
