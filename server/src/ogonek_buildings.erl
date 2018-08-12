@@ -18,7 +18,10 @@
 
 -export([definitions/0,
          definitions_map/0,
-         get_definition/1]).
+         get_definition/1,
+         calculate_power/1,
+         calculate_workers/1,
+         calculate_power_workers/1]).
 
 
 -spec definitions() -> [bdef()].
@@ -46,3 +49,32 @@ get_definition(_Name, []) -> error;
 get_definition(Name, [#bdef{name=Name}=Def | _Ds]) -> Def;
 get_definition(Name, [_ | Ds]) ->
     get_definition(Name, Ds).
+
+
+-spec calculate_power([building()]) -> integer().
+calculate_power(Buildings) ->
+    Defs = definitions_map(),
+    lists:foldl(fun(#building{type=T}, Power) ->
+                        Def = maps:get(T, Defs),
+                        Power - Def#bdef.power
+                end, 0, Buildings).
+
+
+-spec calculate_workers([building()]) -> integer().
+calculate_workers(Buildings) ->
+    Defs = definitions_map(),
+    lists:foldl(fun(#building{type=T}, Workers) ->
+                        Def = maps:get(T, Defs),
+                        Workers - Def#bdef.workers
+                end, 0, Buildings).
+
+
+-spec calculate_power_workers([building()]) -> {integer(), integer()}.
+calculate_power_workers(Buildings) ->
+    Defs = definitions_map(),
+    lists:foldl(fun(#building{type=T}, {Power, Workers}) ->
+                        Def = maps:get(T, Defs),
+                        Power0 = Power - Def#bdef.power,
+                        Workers0 = Workers - Def#bdef.workers,
+                        {Power0, Workers0}
+                end, {0, 0}, Buildings).

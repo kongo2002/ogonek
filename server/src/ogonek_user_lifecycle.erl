@@ -172,12 +172,23 @@ handle_info({calc_resources, PlanetId}, State) ->
             {noreply, State};
         PState ->
             Planet = PState#planet_state.planet,
+            Buildings = PState#planet_state.buildings,
             Res =  Planet#planet.resources,
 
-            % TODO: actually *do* calculate in here
+            % TODO: re-calculate power/workers only if necessary
+            {Power, Workers} = ogonek_buildings:calculate_power_workers(Buildings),
 
-            json_to_sockets(ogonek_resources, Res, State),
-            {noreply, State}
+            Res0 = Res#resources{power=Power, workers=Workers},
+
+            % TODO: actually *do* calculate resources in here
+
+            Planet0 = Planet#planet{resources=Res0},
+            PState0 = PState#planet_state{planet=Planet0},
+            Planets0 = maps:put(PlanetId, PState0, State#state.planets),
+            State0 = State#state{planets=Planets0},
+
+            json_to_sockets(ogonek_resources, Res0, State0),
+            {noreply, State0}
     end;
 
 handle_info({get_buildings, Planet, Sender}, State) ->
