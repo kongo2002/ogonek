@@ -128,7 +128,7 @@ handle_cast(prepare, #state{id=UserId}=State) ->
     % trigger initialization of all planets
     lists:foreach(fun(P) ->
                           % get buildings of planet
-                          Self ! {get_buildings, P, undefined},
+                          Self ! {get_buildings, P},
 
                           % calculate resources after that
                           Self ! {calc_resources, P}
@@ -195,7 +195,26 @@ handle_info({calc_resources, PlanetId}, State) ->
             {noreply, State0}
     end;
 
-handle_info({get_buildings, Planet, _Sender}, State) ->
+handle_info(planet_info, State) ->
+    lists:foreach(fun(P) -> self() ! {planet_info, P} end,
+                  maps:keys(State#state.planets)),
+    {noreply, State};
+
+handle_info({planet_info, PlanetId}, State) ->
+    case maps:get(PlanetId, State#state.planets, undefined) of
+        undefined -> ok;
+        PState ->
+            % push planet at first
+            json_to_sockets(ogonek_planet, PState#planet_state.planet, State),
+
+            % trigger building and resource information after that
+            Self = self(),
+            Self ! {get_buildings, PlanetId},
+            Self ! {calc_resources, PlanetId}
+    end,
+    {noreply, State};
+
+handle_info({get_buildings, Planet}, State) ->
     case maps:get(Planet, State#state.planets, undefined) of
         % unknown, invalid or foreign planet
         undefined ->
@@ -210,13 +229,11 @@ handle_info({get_buildings, Planet, _Sender}, State) ->
             PState0 = PState#planet_state{buildings=Fetched},
             Planets0 = maps:put(Planet, PState0, State#state.planets),
 
-            % TODO: send to 'Sender' instead/only?
             json_to_sockets(ogonek_building, PState0#planet_state.buildings, State),
 
             {noreply, State#state{planets=Planets0}};
         % buildings already present
         PState ->
-            % TODO: send to 'Sender' instead/only?
             json_to_sockets(ogonek_building, PState#planet_state.buildings, State),
             {noreply, State}
     end;

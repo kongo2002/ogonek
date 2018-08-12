@@ -52,6 +52,7 @@ info(_Request, {session_login, SessionId, User}, #ws_state{session_id=SessionId}
     lager:info("user '~s' successfully logged in via session '~s'", [UserId, SessionId]),
 
     ogonek_session_manager:register_socket(UserId, SessionId),
+    ogonek_session_manager:publish_to_user(UserId, SessionId, planet_info),
 
     {reply, json(ogonek_user:to_json(User)), State#ws_state{user_id=UserId}};
 
