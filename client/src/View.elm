@@ -115,6 +115,7 @@ homePlanet active model =
       header name = th [] [ text name ]
       buildings = Dict.values active.buildings
       res = active.resources
+      toRow = buildingRow res
       desc (name, value) =
         li []
           [ span [ class "resource" ] [ text name, text ": " ]
@@ -157,10 +158,9 @@ homePlanet active model =
           , header "uranium"
           , header "PVC"
           , header "kyanite"
-          -- TODO: operations column
           , header ""
           ]
-        , tbody [] (List.map buildingRow buildings)
+        , tbody [] (List.map toRow buildings)
         ]
       ]
     ]
@@ -196,13 +196,16 @@ splitThousands integers =
     in integers |> reversedSplit |> List.reverse
 
 
-buildingRow : BuildingInfo -> Html Msg
-buildingRow binfo =
+buildingRow : ResourceInfo -> BuildingInfo -> Html Msg
+buildingRow res binfo =
   let col val = td [] [ numberSpan val ]
-      -- TODO: check for sufficient resources
+      possible = buildPossible res binfo
       buildReq = BuildBuildingRequest binfo.name (binfo.level + 1)
       request = ApiRequest buildReq
-      build = a [ href "#", class "icon", numbClick request ] [ icon "cog" ]
+      buildCls =
+        if possible then [ href "#", numbClick request ]
+        else [ class "inactive" ]
+      build = a (class "icon" :: buildCls) [ icon "cog" ]
       ops = [ build ]
   in
     tr []
@@ -220,6 +223,20 @@ buildingRow binfo =
     , col binfo.kyanite
     , td [] ops
     ]
+
+
+buildPossible : ResourceInfo -> BuildingInfo -> Bool
+buildPossible res info =
+  res.workers >= info.workers &&
+  res.power >= info.power &&
+  res.ironOre >= info.ironOre &&
+  res.gold >= info.gold &&
+  res.h2o >= info.h2o &&
+  res.oil >= info.oil &&
+  res.h2 >= info.h2 &&
+  res.uranium >= info.uranium &&
+  res.pvc >= info.pvc &&
+  res.kyanite >= info.kyanite
 
 
 icon : String -> Html Msg
