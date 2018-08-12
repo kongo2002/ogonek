@@ -30,11 +30,9 @@ view model =
         case model.route of
           LoginRoute -> login
           _ -> home
+      rows = navigation model :: content model
   in
-    div [ class "container" ]
-    [ navigation model
-    , content model
-    ]
+    div [ class "container" ] rows
 
 
 navigation : Model -> Html Msg
@@ -78,16 +76,17 @@ navigation model =
      ]
 
 
-login : Model -> Html Msg
+login : Model -> List (Html Msg)
 login model =
   let provider = model.authInfo.provider
       login = model.authInfo.loginUrl
   in
-    div [ class "row" ]
-    [ h2 [] [ text "login" ]
-    , h3 [] [ text ("via " ++ provider) ]
-    , p []
-      [ a [ class "button button-primary", href login ] [ text "login" ]
+    [ div [ class "row" ]
+      [ h2 [] [ text "login" ]
+      , h3 [] [ text ("via " ++ provider) ]
+      , p []
+        [ a [ class "button button-primary", href login ] [ text "login" ]
+        ]
       ]
     ]
 
@@ -102,14 +101,14 @@ toRight : Attribute a
 toRight = class "u-pull-right"
 
 
-home : Model -> Html Msg
+home : Model -> List (Html Msg)
 home model =
   case model.planet of
     Just planet -> homePlanet planet model
     Nothing -> noPlanet
 
 
-homePlanet : ActivePlanet -> Model -> Html Msg
+homePlanet : ActivePlanet -> Model -> List (Html Msg)
 homePlanet active model =
   let planet = active.planet
       name = "Planet at " ++ coordStr planet.position
@@ -134,31 +133,35 @@ homePlanet active model =
         , ("kyanite", res.kyanite)
         ]
   in
-    div [ class "row" ]
-    [ h2 [] [ text name ]
-    , h3 [] [ text "Resources" ]
-    , div [ id "resources" ]
-      [ ul [ class "inline" ] (List.map desc resources)
-      ]
-    , h3 [] [ text "Buildings" ]
-    , table [ id "buildings" ]
-      [ thead []
-        [ header "building"
-        , header "level"
-        , header "workers"
-        , header "power"
-        , header "iron ore"
-        , header "gold"
-        , header "H2O"
-        , header "oil"
-        , header "H2"
-        , header "uranium"
-        , header "PVC"
-        , header "kyanite"
-        -- TODO: operations column
-        , header ""
+    [ div [ class "row" ]
+      [ h2 [] [ text name ] ]
+    , div [ class "row" ]
+      [ h3 [] [ text "Resources" ]
+      , div [ id "resources" ]
+        [ ul [ class "inline" ] (List.map desc resources)
         ]
-      , tbody [] (List.map buildingRow buildings)
+      ]
+    , div [ class "row" ]
+      [ h3 [] [ text "Buildings" ]
+      , table [ id "buildings" ]
+        [ thead []
+          [ header "building"
+          , header "level"
+          , header "workers"
+          , header "power"
+          , header "iron ore"
+          , header "gold"
+          , header "H2O"
+          , header "oil"
+          , header "H2"
+          , header "uranium"
+          , header "PVC"
+          , header "kyanite"
+          -- TODO: operations column
+          , header ""
+          ]
+        , tbody [] (List.map buildingRow buildings)
+        ]
       ]
     ]
 
@@ -251,10 +254,11 @@ coordStr coord =
   in  "(" ++ toString x ++ "," ++ toString y ++ "," ++ toString z ++ ")"
 
 
-noPlanet : Html Msg
+noPlanet : List (Html Msg)
 noPlanet =
-  div [ class "row" ]
-  [ p [] [ text "welcome to ogonek!" ]
+  [ div [ class "row" ]
+    [ p [] [ text "welcome to ogonek!" ]
+    ]
   ]
 
 
