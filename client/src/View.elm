@@ -167,12 +167,18 @@ homePlanet active model =
 
 
 numberSpan : Int -> Html Msg
-numberSpan value =
+numberSpan = numberSpanTo -1
+
+
+numberSpanTo : Int -> Int -> Html Msg
+numberSpanTo relativeTo value =
   let negative = value < 0
       range =
-        if negative then
+        if relativeTo < 0 then
+          "zero"
+        else if value > relativeTo then
           "negative"
-        else if value > 0 then
+        else if value < relativeTo then
           "positive"
         else
           "zero"
@@ -198,7 +204,7 @@ splitThousands integers =
 
 buildingRow : ResourceInfo -> BuildingInfo -> Html Msg
 buildingRow res binfo =
-  let col val = td [] [ numberSpan val ]
+  let col val relative = td [] [ numberSpanTo relative val ]
       possible = buildPossible res binfo
       buildReq = BuildBuildingRequest binfo.name (binfo.level + 1)
       request = ApiRequest buildReq
@@ -210,17 +216,17 @@ buildingRow res binfo =
   in
     tr []
     [ td [] [ text (translateBuilding binfo) ]
-    , col binfo.level
-    , col binfo.workers
-    , col binfo.power
-    , col binfo.ironOre
-    , col binfo.gold
-    , col binfo.h2o
-    , col binfo.oil
-    , col binfo.h2
-    , col binfo.uranium
-    , col binfo.pvc
-    , col binfo.kyanite
+    , col binfo.level 0
+    , col binfo.workers res.workers
+    , col binfo.power res.power
+    , col binfo.ironOre res.ironOre
+    , col binfo.gold res.gold
+    , col binfo.h2o res.h2o
+    , col binfo.oil res.oil
+    , col binfo.h2 res.h2
+    , col binfo.uranium res.uranium
+    , col binfo.pvc res.pvc
+    , col binfo.kyanite res.kyanite
     , td [] ops
     ]
 

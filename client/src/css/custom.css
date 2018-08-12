@@ -51,3 +51,11 @@ ul.inline li:first-child {
 #resources span.resource {
   text-transform: capitalize;
 }
+
+span.number.positive {
+  color: #4a4;
+}
+
+span.number.negative {
+  color: #c44;
+}
