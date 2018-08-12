@@ -156,7 +156,8 @@ handle_info(create_planet, State) ->
     Planet = #planet{type=Type,
                      size=Size,
                      position={X, Y, Z},
-                     index=Index},
+                     index=Index,
+                     resources=ogonek_resources:empty()},
 
     case ogonek_db:planet_exists(X, Y, Z) of
         false -> ogonek_db:planet_create(Planet);

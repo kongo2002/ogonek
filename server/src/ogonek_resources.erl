@@ -18,7 +18,23 @@
 
 -export([from_json/1,
          to_json/1,
-         to_json/2]).
+         to_json/2,
+         empty/0]).
+
+
+-spec empty() -> resources().
+empty() ->
+    #resources{planet=undefined,
+               workers=0,
+               power=0,
+               iron_ore=0,
+               gold=0,
+               h2o=0,
+               oil=0,
+               h2=0,
+               uranium=0,
+               pvc=0,
+               kyanite=0}.
 
 
 -spec from_json(json_doc()) -> {ok, resources()} | {error, invalid}.
@@ -54,7 +70,7 @@ to_json(Resources) ->
 
 
 -spec to_json(resources(), boolean()) -> tuple().
-to_json(Resources, _Db) ->
+to_json(Resources, Db) ->
     Values = [{<<"workers">>, Resources#resources.workers},
               {<<"power">>, Resources#resources.power},
               {<<"iron_ore">>, Resources#resources.iron_ore},
@@ -65,7 +81,12 @@ to_json(Resources, _Db) ->
               {<<"uranium">>, Resources#resources.uranium},
               {<<"pvc">>, Resources#resources.pvc},
               {<<"kyanite">>, Resources#resources.kyanite}
-             ]
-    ++ ogonek_util:if_defined(<<"planet">>, Resources#resources.planet),
+             ],
 
-    ogonek_util:doc(<<"resources">>, Values).
+    case Db of
+        true -> {Values};
+        false ->
+            % no need to store type and planet in the database
+            Vs = Values ++ ogonek_util:if_defined(<<"planet">>, Resources#resources.planet),
+            ogonek_util:doc(<<"resources">>, Vs)
+    end.

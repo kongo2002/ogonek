@@ -108,7 +108,8 @@
           size :: integer(),
           position :: coordinate(),
           index :: integer(),
-          owner :: maybe_unset_id()
+          owner :: maybe_unset_id(),
+          resources :: resources()
          }).
 
 -type planet() :: #planet{}.
