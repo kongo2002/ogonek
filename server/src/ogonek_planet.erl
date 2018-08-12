@@ -35,13 +35,15 @@ from_json(Planet) ->
             case parse_type(Type) of
                 error -> {error, invalid};
                 Type0 ->
+                    % set resources' planet-id for consistency's sake
+                    Res0 = Res#resources{planet=Id},
                     {ok, #planet{id=Id,
                                  type=Type0,
                                  size=Size,
                                  position={X, Y, Z},
                                  index=Idx,
                                  owner=Owner,
-                                 resources=Res}}
+                                 resources=Res0}}
             end;
         _Otherwise ->
             {error, invalid}

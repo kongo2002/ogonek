@@ -110,6 +110,7 @@ handle_call(_Request, _From, State) ->
 handle_cast(prepare, #state{id=UserId}=State) ->
     lager:debug("preparing user lifecycle of '~s'", [UserId]),
 
+    Self = self(),
     Planets = fetch_planets(State),
     PlanetMap = lists:foldl(fun(#planet{id=Id}=P, Ps) ->
                                     PState = #planet_state{planet=P, buildings=[]},
@@ -119,10 +120,16 @@ handle_cast(prepare, #state{id=UserId}=State) ->
     lager:debug("user '~s' has ~p planets: ~p",
                 [UserId, maps:size(PlanetMap), maps:keys(PlanetMap)]),
 
+    % push all user's planets first
     json_to_sockets(ogonek_planet, Planets, State),
 
+    % trigger initialization of all planets
     lists:foreach(fun(P) ->
-                          self() ! {get_buildings, P, undefined}
+                          % get buildings of planet
+                          Self ! {get_buildings, P, undefined},
+
+                          % calculate resources after that
+                          Self ! {calc_resources, P}
                   end, maps:keys(PlanetMap)),
 
     {noreply, State#state{planets=PlanetMap}};
@@ -156,6 +163,22 @@ handle_info({get_planets, Sender}, State) ->
     Planets = maps:keys(State#state.planets),
     Sender ! {planets, Planets},
     {noreply, State};
+
+handle_info({calc_resources, PlanetId}, State) ->
+    lager:debug("user ~s - calculating resources for ~s", [State#state.id, PlanetId]),
+
+    case maps:get(PlanetId, State#state.planets, undefined) of
+        undefined ->
+            {noreply, State};
+        PState ->
+            Planet = PState#planet_state.planet,
+            Res =  Planet#planet.resources,
+
+            % TODO: actually *do* calculate in here
+
+            json_to_sockets(ogonek_resources, Res, State),
+            {noreply, State}
+    end;
 
 handle_info({get_buildings, Planet, Sender}, State) ->
     case maps:get(Planet, State#state.planets, undefined) of
