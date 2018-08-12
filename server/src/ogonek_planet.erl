@@ -32,11 +32,12 @@ from_json(Planet) ->
 
     case ogonek_util:keys(Keys, Planet) of
         [Id, Type, Size, [X, Y, Z], Idx, Owner, Res] ->
-            case parse_type(Type) of
-                error -> {error, invalid};
-                Type0 ->
+            case {parse_type(Type), ogonek_resources:from_json(Res)} of
+                {error, _} -> {error, invalid};
+                {_, {error, _}} -> {error, invalid};
+                {Type0, {ok, Resources}} ->
                     % set resources' planet-id for consistency's sake
-                    Res0 = Res#resources{planet=Id},
+                    Res0 = Resources#resources{planet=Id},
                     {ok, #planet{id=Id,
                                  type=Type0,
                                  size=Size,
