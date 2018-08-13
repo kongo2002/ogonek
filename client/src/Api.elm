@@ -56,6 +56,8 @@ requestEncoder req =
         , ("type", JE.string building)
         , ("level", JE.int level)
         ]
+    Types.PlanetInfoRequest ->
+      JE.object [ requestType "planet_info" ]
     Types.LogoutRequest ->
       JE.object
         [ requestType "logout"

@@ -122,16 +122,13 @@ handle_cast(prepare, #state{id=UserId}=State) ->
     lager:debug("user '~s' has ~p planets: ~p",
                 [UserId, maps:size(PlanetMap), maps:keys(PlanetMap)]),
 
-    % push all user's planets first
-    json_to_sockets(ogonek_planet, Planets, State),
-
     % trigger initialization of all planets
     lists:foreach(fun(P) ->
                           % get buildings of planet
-                          Self ! {get_buildings, P},
+                          Self ! {get_buildings, P, true},
 
                           % calculate resources after that
-                          Self ! {calc_resources, P}
+                          Self ! {calc_resources, P, true}
                   end, maps:keys(PlanetMap)),
 
     {noreply, State#state{planets=PlanetMap}};
@@ -166,7 +163,7 @@ handle_info({get_planets, Sender}, State) ->
     Sender ! {planets, Planets},
     {noreply, State};
 
-handle_info({calc_resources, PlanetId}, State) ->
+handle_info({calc_resources, PlanetId, Silent}, State) ->
     lager:debug("user ~s - calculating resources for ~s", [State#state.id, PlanetId]),
 
     case maps:get(PlanetId, State#state.planets, undefined) of
@@ -191,7 +188,12 @@ handle_info({calc_resources, PlanetId}, State) ->
             Planets0 = maps:put(PlanetId, PState0, State#state.planets),
             State0 = State#state{planets=Planets0},
 
-            json_to_sockets(ogonek_resources, Res1, State0),
+            if Silent == false ->
+                   json_to_sockets(ogonek_resources, Res1, State0);
+               true ->
+                   ok
+            end,
+
             {noreply, State0}
     end;
 
@@ -209,12 +211,12 @@ handle_info({planet_info, PlanetId}, State) ->
 
             % trigger building and resource information after that
             Self = self(),
-            Self ! {get_buildings, PlanetId},
-            Self ! {calc_resources, PlanetId}
+            Self ! {get_buildings, PlanetId, false},
+            Self ! {calc_resources, PlanetId, false}
     end,
     {noreply, State};
 
-handle_info({get_buildings, Planet}, State) ->
+handle_info({get_buildings, Planet, Silent}, State) ->
     case maps:get(Planet, State#state.planets, undefined) of
         % unknown, invalid or foreign planet
         undefined ->
@@ -229,12 +231,20 @@ handle_info({get_buildings, Planet}, State) ->
             PState0 = PState#planet_state{buildings=Fetched},
             Planets0 = maps:put(Planet, PState0, State#state.planets),
 
-            json_to_sockets(ogonek_building, PState0#planet_state.buildings, State),
+            if Silent == false ->
+                   json_to_sockets(ogonek_building, PState0#planet_state.buildings, State);
+               true ->
+                   ok
+            end,
 
             {noreply, State#state{planets=Planets0}};
         % buildings already present
         PState ->
-            json_to_sockets(ogonek_building, PState#planet_state.buildings, State),
+            if Silent == false ->
+                   json_to_sockets(ogonek_building, PState#planet_state.buildings, State);
+               true ->
+                   ok
+            end,
             {noreply, State}
     end;
 

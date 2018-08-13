@@ -121,11 +121,19 @@ update msg model =
     ApiResponse (User info) ->
       let _ = Debug.log "user information received" info
           model0 = { model | user = Just info}
-      in  model0 ! []
+          actions = requestPlanetInfo model0
+      in  model0 ! actions
 
     ApiResponse cnt ->
       let _ = Debug.log "api content received" cnt
       in  model ! []
+
+
+requestPlanetInfo : Model -> List (Cmd Msg)
+requestPlanetInfo model =
+  case model.planet of
+    Nothing -> [ Api.send model PlanetInfoRequest ]
+    _ -> []
 
 
 initialPlanet : PlanetInfo -> ActivePlanet

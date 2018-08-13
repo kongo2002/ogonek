@@ -52,7 +52,6 @@ info(_Request, {session_login, SessionId, User}, #ws_state{session_id=SessionId}
     lager:info("user '~s' successfully logged in via session '~s'", [UserId, SessionId]),
 
     ogonek_session_manager:register_socket(UserId, SessionId),
-    ogonek_session_manager:publish_to_user(UserId, SessionId, planet_info),
 
     {reply, json(ogonek_user:to_json(User)), State#ws_state{user_id=UserId}};
 
@@ -161,6 +160,15 @@ handle_request(<<"authorize">>, _Request, Json, State) ->
             % TODO: more specific error response for the client
             {reply, error_json(<<"invalid authorize request">>), State}
     end;
+
+handle_request(<<"planet_info">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
+    {reply, error_json(<<"not logged in at all">>), State};
+
+handle_request(<<"planet_info">>, _Request, _Json, State) ->
+    UserId = State#ws_state.user_id,
+    SessionId = State#ws_state.session_id,
+    ogonek_session_manager:publish_to_user(UserId, SessionId, planet_info),
+    {ok, State};
 
 handle_request(<<"logout">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
     {reply, error_json(<<"not logged in at all">>), State};

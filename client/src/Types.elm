@@ -51,6 +51,7 @@ type ApiContent
 type Request
   = AuthorizeRequest Authorize
   | BuildBuildingRequest String Int
+  | PlanetInfoRequest
   | LogoutRequest
 
 
