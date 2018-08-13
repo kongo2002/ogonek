@@ -127,7 +127,8 @@ base_production(ice) ->
 size_factor(1) -> 0.5;
 size_factor(2) -> 0.7;
 size_factor(3) -> 1.0;
-size_factor(4) -> 1.3.
+size_factor(4) -> 1.3;
+size_factor(_) -> 0.
 
 
 %%%===================================================================
