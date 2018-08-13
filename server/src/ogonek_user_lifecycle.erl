@@ -175,23 +175,23 @@ handle_info({calc_resources, PlanetId}, State) ->
         PState ->
             Planet = PState#planet_state.planet,
             Buildings = PState#planet_state.buildings,
-            Res =  Planet#planet.resources,
 
             % TODO: re-calculate power/workers only if necessary
+            % that is if there are buildings that were finished since
+            % the last time we calculated power/workers
             {Power, Workers} = ogonek_buildings:calculate_power_workers(Buildings),
 
-            Res0 = Res#resources{power=Power, workers=Workers},
+            Res0 = calculate_resources(Planet, Buildings),
+            Res1 = Res0#resources{power=Power, workers=Workers},
 
-            % TODO: actually *do* calculate resources in here
+            ogonek_db:planet_update_resources(PlanetId, Res1),
 
-            ogonek_db:planet_update_resources(PlanetId, Res0),
-
-            Planet0 = Planet#planet{resources=Res0},
+            Planet0 = Planet#planet{resources=Res1},
             PState0 = PState#planet_state{planet=Planet0},
             Planets0 = maps:put(PlanetId, PState0, State#state.planets),
             State0 = State#state{planets=Planets0},
 
-            json_to_sockets(ogonek_resources, Res0, State0),
+            json_to_sockets(ogonek_resources, Res1, State0),
             {noreply, State0}
     end;
 
@@ -277,7 +277,7 @@ fetch_planets(State) ->
 
     case Planets of
         [] ->
-            lager:info("user '~s' has no planets yet - assigning a free one now", [UserId]),
+            lager:info("user ~s has no planets yet - assigning a free one now", [UserId]),
             {ok, Planet} = ogonek_planet_manager:claim_free_planet(UserId),
             bootstrap_free_planet(Planet),
             [Planet];
@@ -287,7 +287,7 @@ fetch_planets(State) ->
 
 -spec bootstrap_free_planet(planet()) -> ok.
 bootstrap_free_planet(Planet) ->
-    lager:info("user '~s' - bootstrapping initial infrastructure on planet ~s",
+    lager:info("user ~s - bootstrapping initial infrastructure on planet ~s",
                [Planet#planet.owner, Planet#planet.id]),
 
     % this is a new free planet: let's populate
@@ -308,13 +308,56 @@ bootstrap_free_planet(Planet) ->
     Build = fun(B) ->
                     case ogonek_buildings:get_definition(B) of
                         error ->
-                            lager:error("user ~s: there is no building definition for ~p - skipping",
+                            lager:error("user ~s - there is no building definition for ~p - skipping",
                                         [Planet#planet.owner, B]);
                         Def ->
                             finish_building(Def, PlanetId)
                     end
             end,
     lists:foreach(Build, InitialBuildings).
+
+
+-spec seconds_since(resources()) -> integer().
+seconds_since(Resources) ->
+    Now = calendar:universal_time(),
+    Since = iso8601:parse(Resources#resources.updated),
+    calendar:datetime_to_gregorian_seconds(Now) - calendar:datetime_to_gregorian_seconds(Since).
+
+
+-spec seconds_to_simulated_hours(integer()) -> float().
+seconds_to_simulated_hours(Seconds) ->
+    % 1 hour simulated time == 30 minutes real-time
+    Seconds / 1800.
+
+
+-spec calculate_resources(planet(), [building()]) -> resources().
+calculate_resources(Planet, Buildings) ->
+    UserId = Planet#planet.owner,
+    Resources = Planet#planet.resources,
+
+    SecondsSince = seconds_since(Resources),
+
+    if SecondsSince >= 60 ->
+           % the production capabilities of the planet's buildings are the
+           % base of the overall resource production
+           % that productivity is calculated in relation to the planet's base resources
+           Production = ogonek_buildings:calculate_building_production(Buildings),
+           PlanetResources = ogonek_planet:production(Planet),
+           CombinedProduction = ogonek_resources:multiply(Production, PlanetResources),
+           lager:debug("user ~s - production: ~p", [UserId, CombinedProduction]),
+
+           SimulatedHours = seconds_to_simulated_hours(SecondsSince),
+
+           Produced = ogonek_resources:with_factor(SimulatedHours, CombinedProduction),
+           lager:debug("user ~s - produced since ~s: ~p", [UserId, Resources#resources.updated, Produced]),
+
+           Summed = ogonek_resources:sum(Resources, Produced),
+           Summed#resources{updated=ogonek_util:now8601()};
+       true ->
+           lager:debug("user ~s - skipping resources calculation [~p sec ago]",
+                       [UserId, SecondsSince]),
+           Resources
+    end.
 
 
 -spec finish_building(bdef(), binary()) -> ok.

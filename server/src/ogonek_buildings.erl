@@ -21,7 +21,8 @@
          get_definition/1,
          calculate_power/1,
          calculate_workers/1,
-         calculate_power_workers/1]).
+         calculate_power_workers/1,
+         calculate_building_production/1]).
 
 
 -spec definitions() -> [bdef()].
@@ -78,3 +79,18 @@ calculate_power_workers(Buildings) ->
                         Workers0 = Workers - Def#bdef.workers * Lvl,
                         {Power0, Workers0}
                 end, {0, 0}, Buildings).
+
+
+-spec calculate_building_production([building()]) -> resources().
+calculate_building_production(Buildings) ->
+    % TODO: we need a proper distribution from level to production
+    lists:foldl(fun(#building{type=ore_mine, level=L}, R) ->
+                        R#resources{iron_ore=L};
+                   (#building{type=gold_mine, level=L}, R) ->
+                        R#resources{gold=L};
+                   (#building{type=water_rig, level=L}, R) ->
+                        R#resources{h2o=L};
+                   (#building{type=oil_rig, level=L}, R) ->
+                        R#resources{oil=L};
+                   (_OtherBuilding, R) -> R
+                end, ogonek_resources:empty(), Buildings).

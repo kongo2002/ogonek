@@ -19,7 +19,10 @@
 -export([from_json/1,
          to_json/1,
          to_json/2,
-         empty/0]).
+         empty/0,
+         multiply/2,
+         sum/2,
+         with_factor/2]).
 
 
 -spec empty() -> resources().
@@ -92,3 +95,45 @@ to_json(Resources, Db) ->
             Vs = Values ++ ogonek_util:if_defined(<<"planet">>, Resources#resources.planet),
             ogonek_util:doc(<<"resources">>, Vs)
     end.
+
+
+-spec multiply(resources(), resources()) -> resources().
+multiply(ResA, ResB) ->
+    ResA#resources{
+      iron_ore=ResA#resources.iron_ore * ResB#resources.iron_ore,
+      gold=ResA#resources.gold * ResB#resources.gold,
+      h2o=ResA#resources.h2o * ResB#resources.h2o,
+      oil=ResA#resources.oil * ResB#resources.oil,
+      h2=ResA#resources.h2 * ResB#resources.h2,
+      uranium=ResA#resources.uranium * ResB#resources.uranium,
+      pvc=ResA#resources.pvc * ResB#resources.pvc,
+      kyanite=ResA#resources.kyanite * ResB#resources.kyanite
+     }.
+
+
+-spec sum(resources(), resources()) -> resources().
+sum(ResA, ResB) ->
+    ResA#resources{
+      iron_ore=ResA#resources.iron_ore + ResB#resources.iron_ore,
+      gold=ResA#resources.gold + ResB#resources.gold,
+      h2o=ResA#resources.h2o + ResB#resources.h2o,
+      oil=ResA#resources.oil + ResB#resources.oil,
+      h2=ResA#resources.h2 + ResB#resources.h2,
+      uranium=ResA#resources.uranium + ResB#resources.uranium,
+      pvc=ResA#resources.pvc + ResB#resources.pvc,
+      kyanite=ResA#resources.kyanite + ResB#resources.kyanite
+     }.
+
+
+-spec with_factor(float(), resources()) -> resources().
+with_factor(Factor, Resources) ->
+    Resources#resources{
+      iron_ore=round(Resources#resources.iron_ore * Factor),
+      gold=round(Resources#resources.gold * Factor),
+      h2o=round(Resources#resources.h2o * Factor),
+      oil=round(Resources#resources.oil * Factor),
+      h2=round(Resources#resources.h2 * Factor),
+      uranium=round(Resources#resources.uranium * Factor),
+      pvc=round(Resources#resources.pvc * Factor),
+      kyanite=round(Resources#resources.kyanite * Factor)
+     }.
