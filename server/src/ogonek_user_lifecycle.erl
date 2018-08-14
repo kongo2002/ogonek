@@ -31,7 +31,8 @@
 
 -record(planet_state, {
           planet :: planet(),
-          buildings :: [building()]
+          buildings :: [building()],
+          constructions :: [construction()]
          }).
 
 -type planet_state() :: #planet_state{}.
@@ -115,7 +116,9 @@ handle_cast(prepare, #state{id=UserId}=State) ->
     Self = self(),
     Planets = fetch_planets(State),
     PlanetMap = lists:foldl(fun(#planet{id=Id}=P, Ps) ->
-                                    PState = #planet_state{planet=P, buildings=[]},
+                                    PState = #planet_state{planet=P,
+                                                           buildings=[],
+                                                           constructions=[]},
                                     maps:put(Id, PState, Ps)
                             end, maps:new(), Planets),
 
@@ -126,6 +129,9 @@ handle_cast(prepare, #state{id=UserId}=State) ->
     lists:foreach(fun(P) ->
                           % get buildings of planet
                           Self ! {get_buildings, P, true},
+
+                          % get open construction orders of planet
+                          Self ! {get_constructions, P, true},
 
                           % calculate resources after that
                           Self ! {calc_resources, P, true}
@@ -242,6 +248,40 @@ handle_info({get_buildings, Planet, Silent}, State) ->
         PState ->
             if Silent == false ->
                    json_to_sockets(ogonek_building, PState#planet_state.buildings, State);
+               true ->
+                   ok
+            end,
+            {noreply, State}
+    end;
+
+handle_info({get_constructions, Planet, Silent}, State) ->
+    case maps:get(Planet, State#state.planets, undefined) of
+        % unknown, invalid or foreign planet
+        undefined ->
+            {noreply, State};
+        % constructions not fetched yet
+        #planet_state{constructions=[]}=PState ->
+            Fetched = ogonek_db:constructions_of_planet(Planet),
+
+            lager:debug("user ~s - fetched constructions of planet ~s: ~p",
+                        [State#state.id, Planet, Fetched]),
+
+            % TODO: handle finished constructions
+
+            PState0 = PState#planet_state{constructions=Fetched},
+            Planets0 = maps:put(Planet, PState0, State#state.planets),
+
+            if Silent == false ->
+                   json_to_sockets(ogonek_construction, PState0#planet_state.constructions, State);
+               true ->
+                   ok
+            end,
+
+            {noreply, State#state{planets=Planets0}};
+        % constructions already present
+        PState ->
+            if Silent == false ->
+                   json_to_sockets(ogonek_construction, PState#planet_state.constructions, State);
                true ->
                    ok
             end,

@@ -38,6 +38,10 @@
 -export([building_finish/1,
          buildings_of_planet/1]).
 
+%% Construction API
+-export([construction_create/1,
+         constructions_of_planet/1]).
+
 %% Planet API
 -export([planet_exists/3,
          planet_create/1,
@@ -184,11 +188,27 @@ building_finish(Building) ->
 
 
 -spec buildings_of_planet(binary()) -> [building()].
-buildings_of_planet(UserId) ->
-    Results = from_view(<<"building">>, <<"by_planet">>, UserId, get_info()),
+buildings_of_planet(PlanetId) ->
+    Results = from_view(<<"building">>, <<"by_planet">>, PlanetId, get_info()),
     lists:flatmap(fun(Building) ->
                           case ogonek_building:from_json(Building) of
                               {ok, B} -> [B];
+                              _Otherwise -> []
+                          end
+                  end, Results).
+
+
+-spec construction_create(construction()) -> ok.
+construction_create(Construction) ->
+    gen_server:cast(?MODULE, {construction_create, Construction, self()}).
+
+
+-spec constructions_of_planet(binary()) -> [construction()].
+constructions_of_planet(PlanetId) ->
+    Results = from_view(<<"construction">>, <<"by_planet">>, PlanetId, get_info()),
+    lists:flatmap(fun(Construction) ->
+                          case ogonek_construction:from_json(Construction) of
+                              {ok, C} -> [C];
                               _Otherwise -> []
                           end
                   end, Results).
