@@ -59,3 +59,98 @@ span.number.positive {
 span.number.negative {
   color: #c44;
 }
+
+a.icon {
+  text-decoration: none;
+}
+
+/* mobile-first table layout */
+
+table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+table thead {
+  clip: rect(0 0 0 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+}
+
+table tr {
+  display: block;
+}
+
+table td {
+  display: block;
+  text-align: right;
+}
+
+table td::before {
+  content: attr(data-label);
+  float: left;
+}
+
+table td.operations {
+  text-align: center;
+}
+
+/* large device table layout */
+
+@media (min-width: 750px) {
+  table {
+    width: inherit;
+    table-layout: inherit;
+  }
+
+  table thead {
+    clip: inherit;
+    height: inherit;
+    margin: inherit;
+    overflow: inherit;
+    padding: inherit;
+    position: inherit;
+    width: inherit;
+  }
+
+  table tr {
+    display: table-row;
+  }
+
+  table td {
+    display: table-cell;
+    text-align: left;
+    padding: 12px 5px;
+  }
+
+  table th {
+    padding: 12px 5px;
+  }
+
+  table td::before {
+    content: unset;
+    float: none;
+  }
+
+  a.icon span.description {
+    display: none;
+  }
+}
+
+@media (min-width: 1000px) {
+  table td, table th {
+    padding: 12px 8px;
+  }
+}
+
+@media (min-width: 1200px) {
+  table td, table th {
+    padding: 12px 15px;
+  }
+}
+
+/* vim: set et sw=2 sts=2: */

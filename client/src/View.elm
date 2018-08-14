@@ -206,30 +206,31 @@ splitThousands integers =
 
 buildingRow : ResourceInfo -> BuildingInfo -> Html Msg
 buildingRow res binfo =
-  let col val relative = td [] [ numberSpanTo relative val ]
+  let col label val relative = td [ attribute "data-label" label ] [ numberSpanTo relative val ]
       possible = buildPossible res binfo
       buildReq = BuildBuildingRequest binfo.name (binfo.level + 1)
       request = ApiRequest buildReq
       buildCls =
         if possible then [ href "#", numbClick request ]
         else [ class "inactive" ]
-      build = a (class "icon" :: buildCls) [ icon "cog" ]
+      desc = span [ class "description" ] [ text "Build " ]
+      build = a (class "icon" :: buildCls) [ desc, icon "cog" ]
       ops = [ build ]
   in
     tr []
     [ td [] [ text (translateBuilding binfo) ]
-    , col binfo.level -1
-    , col binfo.workers res.workers
-    , col binfo.power res.power
-    , col binfo.ironOre res.ironOre
-    , col binfo.gold res.gold
-    , col binfo.h2o res.h2o
-    , col binfo.oil res.oil
-    , col binfo.h2 res.h2
-    , col binfo.uranium res.uranium
-    , col binfo.pvc res.pvc
-    , col binfo.kyanite res.kyanite
-    , td [] ops
+    , col "level" binfo.level -1
+    , col "workers" binfo.workers res.workers
+    , col "power" binfo.power res.power
+    , col "iron ore" binfo.ironOre res.ironOre
+    , col "gold" binfo.gold res.gold
+    , col "H2O" binfo.h2o res.h2o
+    , col "oil" binfo.oil res.oil
+    , col "H2" binfo.h2 res.h2
+    , col "uranium" binfo.uranium res.uranium
+    , col "PVC" binfo.pvc res.pvc
+    , col "kyanite" binfo.kyanite res.kyanite
+    , td [ class "operations" ] ops
     ]
 
 
