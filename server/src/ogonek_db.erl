@@ -380,6 +380,15 @@ handle_cast(prepare, #state{info=Info}=State) ->
   }
 }">>, Info),
 
+    ok = design_create_if_not_exists(<<"construction">>,
+<<"{
+  \"views\": {
+    \"by_planet\": {
+      \"map\": \"function(doc) { if (doc.t == 'construction' && doc.planet) { emit(doc.planet, doc) } }\"
+    }
+  }
+}">>, Info),
+
     {noreply, State#state{status=ready}};
 
 handle_cast({refresh_session, Session}, #state{info=Info}=State) ->
