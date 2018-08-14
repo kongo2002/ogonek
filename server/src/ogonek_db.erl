@@ -519,6 +519,18 @@ handle_cast({building_finish, Building, Sender}, #state{info=Info}=State) ->
     end,
     {noreply, State};
 
+handle_cast({construction_create, Construction, Sender}, #state{info=Info}=State) ->
+    Json = ogonek_construction:to_json(Construction),
+
+    case insert(Json, Info) of
+        {ok, Id, _Rev} ->
+            WithId = Construction#construction{id=Id},
+            Sender ! {construction_create, WithId};
+        _Otherwise ->
+            ok
+    end,
+    {noreply, State};
+
 handle_cast({planet_create, Planet}, #state{info=Info}=State) ->
     Json = ogonek_planet:to_json(Planet),
     insert(Json, Info),
@@ -533,7 +545,8 @@ handle_cast({planet_update, Planet}, #state{info=Info}=State) ->
     end,
     {noreply, State};
 
-handle_cast(_Msg, State) ->
+handle_cast(Msg, State) ->
+    lager:warning("db - unhandled cast message: ~p", [Msg]),
     {noreply, State}.
 
 %%--------------------------------------------------------------------

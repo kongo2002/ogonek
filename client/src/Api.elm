@@ -50,9 +50,10 @@ requestEncoder req =
         , ("state", JE.string auth.state)
         , ("scope", JE.string auth.scope)
         ]
-    Types.BuildBuildingRequest building level ->
+    Types.BuildBuildingRequest planet building level ->
       JE.object
         [ requestType "build_building"
+        , ("planet", JE.string planet)
         , ("type", JE.string building)
         , ("level", JE.int level)
         ]

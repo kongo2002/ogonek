@@ -222,6 +222,49 @@ handle_info({planet_info, PlanetId}, State) ->
     end,
     {noreply, State};
 
+handle_info({build_building, Planet, Type, Level}=Req, State) ->
+    case maps:get(Planet, State#state.planets, undefined) of
+        undefined ->
+            % TODO: respond with error?
+            {noreply, State};
+        #planet_state{buildings=Bs, constructions=Cs} ->
+            case {get_building(Bs, Type), get_construction(Cs, Type)} of
+                % no building of this available
+                {undefined, _} ->
+                    lager:info("user ~s - build-building rejected, building not available [request ~p]",
+                               [State#state.id, Req]),
+                    error;
+                % already construction ongoing of this type
+                {_, {ok, _Construction}} ->
+                    lager:info("user ~s - build-building rejected, same construction ongoing [request ~p]",
+                               [State#state.id, Req]),
+                    error;
+                % building available and no construction ongoing
+                {{ok, Building}, undefined} ->
+                    if Building#building.level + 1 == Level ->
+                           % TODO: check and claim resources
+
+                           Duration = ogonek_buildings:calculate_construction_duration(Type, Level),
+                           FinishedAt = finished_at(Duration),
+
+                           Construction = #construction{
+                                             planet=Planet,
+                                             building=Type,
+                                             level=Level,
+                                             created=ogonek_util:now8601(),
+                                             finish=FinishedAt
+                                            },
+                           ogonek_db:construction_create(Construction),
+                           ok;
+                       true ->
+                           lager:info("user ~s - build-building rejected [current ~p, request ~p]",
+                                      [State#state.id, Building, Req]),
+                           error
+                    end
+            end,
+            {noreply, State}
+    end;
+
 handle_info({get_buildings, Planet, Silent}, State) ->
     case maps:get(Planet, State#state.planets, undefined) of
         % unknown, invalid or foreign planet
@@ -380,6 +423,14 @@ seconds_to_simulated_hours(Seconds) ->
     Seconds / 1800.
 
 
+-spec finished_at(integer()) -> timestamp().
+finished_at(DurationSeconds) ->
+    Now = calendar:universal_time(),
+    GregorianNow = calendar:datetime_to_gregorian_seconds(Now),
+    FinishedAt = GregorianNow + DurationSeconds,
+    iso8601:format(calendar:gregorian_seconds_to_datetime(FinishedAt)).
+
+
 -spec calculate_resources(planet(), [building()]) -> resources().
 calculate_resources(Planet, Buildings) ->
     UserId = Planet#planet.owner,
@@ -431,3 +482,19 @@ finish_building(#bdef{name=Def}, PlanetId, Level) ->
 json_to_sockets(Module, Obj, State) ->
     Session = State#state.session,
     gen_server:cast(Session, {json_to_sockets, Module, Obj}).
+
+
+-spec get_building([building()], atom()) -> {ok, building()} | undefined.
+get_building(Buildings, Type) ->
+    case lists:keyfind(Type, 4, Buildings) of
+        false -> undefined;
+        Building -> {ok, Building}
+    end.
+
+
+-spec get_construction([construction()], atom()) -> {ok, construction()} | undefined.
+get_construction(Constructions, Type) ->
+    case lists:keyfind(Type, 3, Constructions) of
+        false -> undefined;
+        Construction -> {ok, Construction}
+    end.

@@ -208,7 +208,7 @@ buildingRow : ResourceInfo -> BuildingInfo -> Html Msg
 buildingRow res binfo =
   let col label val relative = td [ attribute "data-label" label ] [ numberSpanTo relative val ]
       possible = buildPossible res binfo
-      buildReq = BuildBuildingRequest binfo.name (binfo.level + 1)
+      buildReq = BuildBuildingRequest res.planetId binfo.name (binfo.level + 1)
       request = ApiRequest buildReq
       buildCls =
         if possible then [ href "#", numbClick request ]

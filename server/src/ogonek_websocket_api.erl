@@ -177,17 +177,18 @@ handle_request(<<"build_building">>, _Request, Json, State) ->
     UserId = State#ws_state.user_id,
     SessionId = State#ws_state.session_id,
 
-    case ogonek_util:keys([<<"type">>, <<"level">>], Json) of
-        [Type, Level] when is_integer(Level) ->
+    case ogonek_util:keys([<<"planet">>, <<"type">>, <<"level">>], Json) of
+        [Planet, Type, Level] when is_integer(Level) ->
             case ogonek_buildings:try_building_type(Type) of
                 {error, invalid} ->
                     {reply, error_json(<<"build_building: invalid type">>), State};
                 Type0 ->
-                    ogonek_session_manager:publish_to_user(UserId, SessionId, {build_building, Type0, Level}),
+                    Msg = {build_building, Planet, Type0, Level},
+                    ogonek_session_manager:publish_to_user(UserId, SessionId, Msg),
                     {ok, State}
             end;
         _Otherwise ->
-            {reply, error_json(<<"build_building: expecting type and level">>), State}
+            {reply, error_json(<<"build_building: expecting planet, type and level">>), State}
     end;
 
 handle_request(<<"logout">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
