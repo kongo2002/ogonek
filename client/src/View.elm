@@ -146,19 +146,21 @@ homePlanet active model =
       [ h3 [] [ text "Buildings" ]
       , table [ id "buildings" ]
         [ thead []
-          [ header "building"
-          , header "level"
-          , header "workers"
-          , header "power"
-          , header "iron ore"
-          , header "gold"
-          , header "H2O"
-          , header "oil"
-          , header "H2"
-          , header "uranium"
-          , header "PVC"
-          , header "kyanite"
-          , header ""
+          [ tr []
+            [ header "building"
+            , header "level"
+            , header "workers"
+            , header "power"
+            , header "iron ore"
+            , header "gold"
+            , header "H2O"
+            , header "oil"
+            , header "H2"
+            , header "uranium"
+            , header "PVC"
+            , header "kyanite"
+            , header ""
+            ]
           ]
         , tbody [] (List.map toRow buildings)
         ]
