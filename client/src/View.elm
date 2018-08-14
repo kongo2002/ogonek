@@ -218,7 +218,7 @@ buildingRow res binfo =
       ops = [ build ]
   in
     tr []
-    [ td [] [ text (translateBuilding binfo) ]
+    [ td [ class "building" ] [ text (translateBuilding binfo) ]
     , col "level" binfo.level -1
     , col "workers" binfo.workers res.workers
     , col "power" binfo.power res.power
