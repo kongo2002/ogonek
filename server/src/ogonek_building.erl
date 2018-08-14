@@ -29,7 +29,7 @@ from_json(Json) ->
         [Id, Planet, Type, Level, Created] ->
             {ok, #building{id=Id,
                            planet=Planet,
-                           type=to_building_type(Type),
+                           type=ogonek_buildings:to_building_type(Type),
                            level=Level,
                            created=Created}};
         _Otherwise ->
@@ -40,6 +40,7 @@ from_json(Json) ->
 -spec to_json(building()) -> tuple().
 to_json(Building) ->
     to_json(Building, true).
+
 
 -spec to_json(building(), boolean()) -> tuple().
 to_json(Building, Db) ->
@@ -58,13 +59,6 @@ to_json(Building, Db) ->
          end,
 
     ogonek_util:doc(<<"building">>, Values ++ Vs).
-
-
--spec to_building_type(binary()) -> atom().
-to_building_type(TypeName) when is_binary(TypeName) ->
-    % this looks scary but the valid list of building types
-    % should be already existing via configuration initialization
-    erlang:binary_to_existing_atom(TypeName, utf8).
 
 
 -spec json_from_definition(bdef() | error) -> [{binary(), integer()}].

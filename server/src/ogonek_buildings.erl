@@ -19,6 +19,7 @@
 -export([definitions/0,
          definitions_map/0,
          get_definition/1,
+         to_building_type/1,
          calculate_power/1,
          calculate_workers/1,
          calculate_power_workers/1,
@@ -50,6 +51,13 @@ get_definition(_Name, []) -> error;
 get_definition(Name, [#bdef{name=Name}=Def | _Ds]) -> Def;
 get_definition(Name, [_ | Ds]) ->
     get_definition(Name, Ds).
+
+
+-spec to_building_type(binary()) -> atom().
+to_building_type(TypeName) when is_binary(TypeName) ->
+    % this looks scary but the valid list of building types
+    % should be already existing via configuration initialization
+    erlang:binary_to_existing_atom(TypeName, utf8).
 
 
 -spec calculate_power([building()]) -> integer().

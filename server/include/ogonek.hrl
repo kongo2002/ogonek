@@ -142,3 +142,15 @@
          }).
 
 -type building() :: #building{}.
+
+
+-record(construction, {
+          id :: maybe_unset_id(),
+          building :: atom(),
+          level :: integer(),
+          planet :: binary(),
+          created :: timestamp(),
+          finish :: timestamp()
+         }).
+
+-type construction() :: #construction{}.
