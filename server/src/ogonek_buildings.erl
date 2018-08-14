@@ -20,10 +20,13 @@
          definitions_map/0,
          get_definition/1,
          to_building_type/1,
+         try_building_type/1,
          calculate_power/1,
          calculate_workers/1,
          calculate_power_workers/1,
-         calculate_building_production/1]).
+         calculate_building_production/1,
+         calculate_construction_duration/1,
+         calculate_construction_duration/2]).
 
 
 -spec definitions() -> [bdef()].
@@ -58,6 +61,18 @@ to_building_type(TypeName) when is_binary(TypeName) ->
     % this looks scary but the valid list of building types
     % should be already existing via configuration initialization
     erlang:binary_to_existing_atom(TypeName, utf8).
+
+
+-spec try_building_type(binary()) -> atom() | {error, invalid}.
+try_building_type(Type) when is_binary(Type) ->
+    try
+        to_building_type(Type)
+    catch
+        _Error -> {error, invalid}
+    end;
+
+try_building_type(_Type) ->
+    {error, invalid}.
 
 
 -spec calculate_power([building()]) -> integer().
@@ -102,3 +117,33 @@ calculate_building_production(Buildings) ->
                         R#resources{oil=L};
                    (_OtherBuilding, R) -> R
                 end, ogonek_resources:empty(), Buildings).
+
+
+-spec calculate_construction_duration(building()) -> integer().
+calculate_construction_duration(#building{type=Type, level=Level}) ->
+    calculate_construction_duration(Type, Level).
+
+
+-spec calculate_construction_duration(atom(), integer()) -> integer().
+calculate_construction_duration(Type, Level) ->
+    % TODO: we need a proper distribution from level to duration
+    BaseDuration = base_construction_duration(Type),
+    LevelDuration = 50 * math:pow(Level, 1.5),
+    round(BaseDuration + LevelDuration).
+
+
+-spec base_construction_duration(atom()) -> integer().
+base_construction_duration(construction_center) -> 2000;
+base_construction_duration(research_lab) -> 1500;
+base_construction_duration(oil_rig) -> 1000;
+base_construction_duration(water_rig) -> 1000;
+base_construction_duration(ore_mine) -> 1000;
+base_construction_duration(gold_mine) -> 1000;
+base_construction_duration(oil_tank) -> 800;
+base_construction_duration(water_tank) -> 800;
+base_construction_duration(ore_depot) -> 800;
+base_construction_duration(gold_depot) -> 800;
+base_construction_duration(power_plant) -> 1000;
+base_construction_duration(wind_turbine) -> 1200;
+base_construction_duration(apartment) -> 600;
+base_construction_duration(apartment_block) -> 1100.
