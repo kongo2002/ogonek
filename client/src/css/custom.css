@@ -5,7 +5,6 @@
 #nav ul li {
   display: inline;
   margin: 0 20px 0 0;
-  margin-bottom: 80px;
 }
 
 #nav a {
@@ -29,14 +28,14 @@
 }
 
 a.icon {
-  padding: 3px 5px;
   border: solid 1px;
   border-radius: 4px;
+  padding: 3px 5px;
 }
 
 a.icon.inactive {
-  cursor: not-allowed;
   color: #bfbfbf;
+  cursor: not-allowed;
 }
 
 ul.inline li {
@@ -67,8 +66,8 @@ a.icon {
 /* mobile-first table layout */
 
 table {
-  width: 100%;
   table-layout: fixed;
+  width: 100%;
 }
 
 table thead {
@@ -100,16 +99,16 @@ table td.operations {
 }
 
 table td.building {
-  text-transform: uppercase;
   font-weight: bold;
+  text-transform: uppercase;
 }
 
 /* large device table layout */
 
 @media (min-width: 750px) {
   table {
-    width: inherit;
     table-layout: inherit;
+    width: inherit;
   }
 
   table thead {
@@ -128,8 +127,8 @@ table td.building {
 
   table td {
     display: table-cell;
-    text-align: left;
     padding: 12px 5px;
+    text-align: left;
   }
 
   table th {
@@ -142,8 +141,8 @@ table td.building {
   }
 
   table td.building {
-    text-transform: none;
     font-weight: inherit;
+    text-transform: none;
   }
 
   a.icon span.description {
