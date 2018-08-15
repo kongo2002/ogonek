@@ -36,6 +36,10 @@
 
 -type session() :: #session{}.
 
+-type auth_provider() :: twitch | local.
+
+-type auth_provider_module() :: ogonek_twitch | ogonek_auth_local.
+
 
 -record(oauth_access, {
           access_token :: binary(),
