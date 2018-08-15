@@ -49,6 +49,7 @@ requestEncoder req =
         , ("code", JE.string auth.code)
         , ("state", JE.string auth.state)
         , ("scope", JE.string auth.scope)
+        , ("provider", JE.string auth.provider)
         ]
     Types.BuildBuildingRequest planet building level ->
       JE.object

@@ -34,8 +34,8 @@ type Route
   = HomeRoute
   | LoginRoute
   | LogoutRoute
-  -- auth (code, state, scope)
-  | AuthRoute (Maybe String) (Maybe String) (Maybe String)
+  -- auth (code, state, scope, provider)
+  | AuthRoute (Maybe String) (Maybe String) (Maybe String) (Maybe String)
   | HelpRoute
 
 
@@ -65,6 +65,7 @@ type alias Authorize =
   { code : String
   , state : String
   , scope : String
+  , provider : String
   }
 
 
@@ -146,7 +147,7 @@ type alias ActivePlanet =
 type alias Model =
   { route : Route
   , user : Maybe UserInfo
-  , authInfo : AuthInformation
+  , authInfo : List AuthInformation
   , planets : Dict String PlanetInfo
   , planet : Maybe ActivePlanet
   , websocketHost : String

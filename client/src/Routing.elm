@@ -46,7 +46,7 @@ routeToPath route =
     Types.HomeRoute -> home
     Types.LoginRoute -> login
     Types.LogoutRoute -> logout
-    Types.AuthRoute _ _ _ -> auth
+    Types.AuthRoute _ _ _ _ -> auth
     Types.HelpRoute -> help
 
 
@@ -56,7 +56,7 @@ routeToName route =
     Types.HomeRoute -> "Home"
     Types.LoginRoute -> "Login"
     Types.LogoutRoute -> "Logout"
-    Types.AuthRoute _ _ _ -> "Authorization"
+    Types.AuthRoute _ _ _ _ -> "Authorization"
     Types.HelpRoute -> "Help"
 
 
@@ -71,7 +71,7 @@ matchers : Parser (Types.Route -> a) a
 matchers =
   oneOf
     [ map Types.HomeRoute top
-    , map Types.AuthRoute (s "auth" <?> stringParam "code" <?> stringParam "state" <?> stringParam "scope")
+    , map Types.AuthRoute (s "auth" <?> stringParam "code" <?> stringParam "state" <?> stringParam "scope" <?> stringParam "provider")
     , map Types.LoginRoute (s "login")
     , map Types.LogoutRoute (s "logout")
     , map Types.HelpRoute (s "help")

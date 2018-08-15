@@ -26,9 +26,8 @@ import View
 
 init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
 init flags location =
-  let auth  = AuthInformation "local" "/auth"
-      route = Routing.parse location
-      model = Model route Nothing auth Dict.empty Nothing flags.websocketHost
+  let route = Routing.parse location
+      model = Model route Nothing [] Dict.empty Nothing flags.websocketHost
       actions = routeActions model
   in  model ! actions
 
@@ -36,10 +35,10 @@ init flags location =
 routeActions : Model -> List (Cmd Msg)
 routeActions model =
   case model.route of
-    AuthRoute (Just code) state scope ->
-      let auth = Authorize code (orEmpty state) (orEmpty scope)
+    AuthRoute (Just code) state scope provider ->
+      let auth = Authorize code (orEmpty state) (orEmpty scope) (orEmpty provider)
           req = AuthorizeRequest auth
-          emptyAuth = AuthRoute Nothing Nothing Nothing
+          emptyAuth = AuthRoute Nothing Nothing Nothing Nothing
           -- we want to immediately reset the url query parameters:
           -- this makes for a cleaner impression and is more robust
           -- against accidential 'reloading' of the site that
@@ -59,7 +58,7 @@ orEmpty value =
 atAuth : Route -> Bool
 atAuth route =
   case route of
-    AuthRoute _ _ _ -> True
+    AuthRoute _ _ _ _ -> True
     _ -> False
 
 
@@ -94,7 +93,8 @@ update msg model =
 
     ApiResponse (Auth info) ->
       let _ = Debug.log "auth information received" info
-          model0 = { model | authInfo = info }
+          auths = model.authInfo
+          model0 = { model | authInfo = info :: auths }
       in  model0 ! []
 
     ApiResponse (Building info) ->

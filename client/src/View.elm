@@ -78,17 +78,19 @@ navigation model =
 
 login : Model -> List (Html Msg)
 login model =
-  let provider = model.authInfo.provider
-      login = model.authInfo.loginUrl
-  in
-    [ div [ class "row" ]
-      [ h2 [] [ text "login" ]
-      , h3 [] [ text ("via " ++ provider) ]
-      , p []
-        [ a [ class "button button-primary", href login ] [ text "login" ]
-        ]
-      ]
-    ]
+  let fromAuth auth =
+        let provider = auth.provider
+            login = auth.loginUrl
+        in div [ class "row" ]
+           [ h3 [] [ text ("via " ++ provider) ]
+           , p []
+             [ a [ class "button button-primary", href login ] [ text "login" ]
+             ]
+           ]
+      providers = List.map fromAuth model.authInfo
+  in [ div [ class "row" ]
+       [ h2 [] [ text "login" ] ]
+     ] ++ providers
 
 
 numbClick : a -> Attribute a
