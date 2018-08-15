@@ -91,8 +91,9 @@ update msg model =
 
     LocalLogin ->
       let get key = Dict.get key model.formContents |> orEmpty
-          code = (get "localUserInput") ++ ":" ++ (get "localPasswordInput")
-          auth = Authorize code "" "" "local"
+          user = get "localUserInput"
+          code = get "localPasswordInput"
+          auth = Authorize user code "" "local"
           req = AuthorizeRequest auth
       in  model ! [ Api.send model req ]
 
