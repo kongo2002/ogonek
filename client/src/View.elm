@@ -17,7 +17,7 @@ module View exposing ( view )
 import Dict
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing ( onClick, onWithOptions )
+import Html.Events exposing ( onClick, onWithOptions, onInput, onSubmit )
 import Json.Decode
 
 import Types exposing (..)
@@ -87,7 +87,26 @@ login model =
              [ a [ class "button button-primary", href login ] [ text "login" ]
              ]
            ]
-      providers = List.map fromAuth model.authInfo
+      localAuth =
+        [ h3 [] [ text "local login" ]
+        , Html.form [ onSubmit LocalLogin ]
+          [ div [ class "row" ]
+            [ label [ for "localUserInput" ] [ text "user" ]
+            , input [ type_ "email", id "localUserInput", placeholder "user@email.com", onInput (FormContent "localUserInput") ] []
+            ]
+          , div [ class "row" ]
+            [ label [ for "localPasswordInput" ] [ text "password" ]
+            , input [ type_ "password", id "localPasswordInput", placeholder "password", onInput (FormContent "localPasswordInput") ] []
+            ]
+          , div [ class "row" ]
+            [ input [ class "button-primary", type_ "submit", value "login" ] []
+            ]
+          ]
+        ]
+      providers =
+        case model.authInfo of
+          [] -> localAuth
+          auths -> List.map fromAuth auths
   in [ div [ class "row" ]
        [ h2 [] [ text "login" ] ]
      ] ++ providers

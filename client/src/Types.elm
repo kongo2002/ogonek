@@ -24,6 +24,9 @@ type Msg
   -- internals
   | NavigationChange Location
   | NewUrl Route
+  -- forms
+  | FormContent String String
+  | LocalLogin
   -- API
   | ApiResponseError String
   | ApiResponse ApiContent
@@ -151,6 +154,7 @@ type alias Model =
   , planets : Dict String PlanetInfo
   , planet : Maybe ActivePlanet
   , websocketHost : String
+  , formContents : Dict String String
   }
 
 

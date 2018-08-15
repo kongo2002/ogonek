@@ -27,7 +27,7 @@ import View
 init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
 init flags location =
   let route = Routing.parse location
-      model = Model route Nothing [] Dict.empty Nothing flags.websocketHost
+      model = Model route Nothing [] Dict.empty Nothing flags.websocketHost Dict.empty
       actions = routeActions model
   in  model ! actions
 
@@ -83,6 +83,18 @@ update msg model =
 
     NewUrl url ->
       model ! [ Navigation.newUrl (Routing.routeToPath url) ]
+
+    FormContent key value ->
+      let forms = Dict.insert key value model.formContents
+          model0 = { model | formContents = forms }
+      in  model0 ! []
+
+    LocalLogin ->
+      let get key = Dict.get key model.formContents |> orEmpty
+          code = (get "localUserInput") ++ ":" ++ (get "localPasswordInput")
+          auth = Authorize code "" "" "local"
+          req = AuthorizeRequest auth
+      in  model ! [ Api.send model req ]
 
     ApiRequest msg ->
       model ! [ Api.send model msg ]
