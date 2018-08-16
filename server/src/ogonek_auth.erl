@@ -23,6 +23,18 @@
         ]).
 
 
+-callback get_info(pid()) -> ok.
+
+-callback auth_user(Code :: binary(), Scope :: binary(), State :: binary()) ->
+    {ok, user()} |
+    {error, invalid} |
+    {error, missing_id} |
+    {error, missing_rev} |
+    {error, authorization_failed}.
+
+-callback validate_login(SessionId :: binary(), user()) -> {ok, user()} | error.
+
+
 -spec send_auth_infos(pid()) -> ok.
 send_auth_infos(Socket) ->
     lists:foreach(fun(Module) ->

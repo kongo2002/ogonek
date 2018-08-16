@@ -16,7 +16,9 @@
 
 -include("ogonek.hrl").
 
-%% Auth behavior
+-behaviour(ogonek_auth).
+
+%% ogonek_auth behavior
 -export([get_info/1,
          auth_user/3,
          validate_login/2]).
@@ -41,7 +43,7 @@ auth_user(Code, Scope, StateStr) ->
     {error, invalid}.
 
 
--spec validate_login(binary(), user()) -> {ok, user} | error.
+-spec validate_login(binary(), user()) -> {ok, user()} | error.
 validate_login(_SessionId, _User) ->
     % TODO: implement local auth
     error.

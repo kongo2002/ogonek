@@ -21,11 +21,12 @@
 -include("ogonek.hrl").
 
 -behaviour(gen_server).
+-behaviour(ogonek_auth).
 
 %% API
 -export([start_link/0]).
 
-%% Auth behavior
+%% ogonek_auth behavior
 -export([get_info/1,
          auth_user/3,
          validate_login/2]).
@@ -94,7 +95,7 @@ auth_user(Code, Scope, StateStr) ->
     end.
 
 
--spec validate_login(binary(), user()) -> {ok, user} | error.
+-spec validate_login(binary(), user()) -> {ok, user()} | error.
 validate_login(_SessionId, User) ->
     OAuth = User#user.oauth,
     ProviderId = User#user.provider_id,
