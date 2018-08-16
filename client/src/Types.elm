@@ -153,6 +153,7 @@ type alias ResourceInfo =
 type alias ActivePlanet =
   { planet : PlanetInfo
   , buildings : Dict String BuildingInfo
+  , constructions : Dict String ConstructionInfo
   , resources : ResourceInfo
   }
 
