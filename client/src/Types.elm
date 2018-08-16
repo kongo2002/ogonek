@@ -132,7 +132,7 @@ type alias ConstructionInfo =
   , building : String
   , level : Int
   , created : Time.DateTime.DateTime
-  , finished : Time.DateTime.DateTime
+  , finish : Time.DateTime.DateTime
   }
 
 

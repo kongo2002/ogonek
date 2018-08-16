@@ -19,6 +19,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing ( onClick, onWithOptions, onInput, onSubmit )
 import Json.Decode
+import Time.Iso8601
 
 import Types exposing (..)
 import Routing
@@ -136,7 +137,7 @@ homePlanet active model =
       header name = th [] [ text name ]
       buildings = Dict.values active.buildings
       res = active.resources
-      toRow = buildingRow res
+      toRow = buildingRow active
       desc (name, value) =
         li []
           [ span [ class "resource" ] [ text name, text ": " ]
@@ -225,18 +226,15 @@ splitThousands integers =
     in integers |> reversedSplit |> List.reverse
 
 
-buildingRow : ResourceInfo -> BuildingInfo -> Html Msg
-buildingRow res binfo =
+buildingRow : ActivePlanet -> BuildingInfo -> Html Msg
+buildingRow planet binfo =
   let col label val relative = td [ attribute "data-label" label ] [ numberSpanTo relative val ]
-      possible = buildPossible res binfo
-      buildReq = BuildBuildingRequest res.planetId binfo.name (binfo.level + 1)
-      request = ApiRequest buildReq
-      buildCls =
-        if possible then [ href "#", numbClick request ]
-        else [ class "inactive" ]
-      desc = span [ class "description" ] [ text "Build " ]
-      build = a (class "icon" :: buildCls) [ desc, icon "cog" ]
-      ops = [ build ]
+      res = planet.resources
+      construction = Dict.get binfo.name planet.constructions
+      ops =
+        case construction of
+          Just constr -> [ constructionOperation constr ]
+          Nothing -> [ buildOperation res binfo ]
   in
     tr []
     [ td [ class "building" ] [ text (translateBuilding binfo) ]
@@ -253,6 +251,28 @@ buildingRow res binfo =
     , col "kyanite" binfo.kyanite res.kyanite
     , td [ class "operations" ] ops
     ]
+
+
+constructionOperation : ConstructionInfo -> Html Msg
+constructionOperation constr =
+  let finishStr = Time.Iso8601.fromDateTime constr.finish
+      finish = title ("finished: " ++ finishStr)
+  in  a [ class "icon inactive construction", finish ]
+      [ span [ class "mobile" ] [ text "in construction " ]
+      , span [] [ icon "gavel" ]
+      ]
+
+
+buildOperation : ResourceInfo -> BuildingInfo -> Html Msg
+buildOperation res binfo =
+  let possible = buildPossible res binfo
+      buildReq = BuildBuildingRequest res.planetId binfo.name (binfo.level + 1)
+      request = ApiRequest buildReq
+      buildCls =
+        if possible then [ href "#", numbClick request ]
+        else [ class "inactive" ]
+      desc = span [ class "description" ] [ text "Build " ]
+  in  a (class "icon" :: buildCls) [ desc, icon "cog" ]
 
 
 buildPossible : ResourceInfo -> BuildingInfo -> Bool
