@@ -168,12 +168,28 @@ updateBuilding model info =
       if active.planet.id == info.planetId then
         let buildings = active.buildings
             buildings0 = Dict.insert info.name info buildings
-            updated = { active | buildings = buildings0 }
+            -- any building information with a greater or equal level
+            -- will remove any pending construction entries
+            constructions0 = removeConstruction active info
+            updated = { active | buildings = buildings0, constructions = constructions0 }
         in  { model | planet = Just updated }
       else
         model
     Nothing ->
       model
+
+
+removeConstruction : ActivePlanet -> BuildingInfo -> Dict.Dict String ConstructionInfo
+removeConstruction planet info =
+  let btype = info.name
+      constr = Dict.get btype planet.constructions
+  in case constr of
+      Just c ->
+        if c.level <= info.level then
+          Dict.remove btype planet.constructions
+        else
+          planet.constructions
+      Nothing -> planet.constructions
 
 
 updateConstruction : Model -> ConstructionInfo -> Model

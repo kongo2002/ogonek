@@ -504,18 +504,40 @@ handle_cast({update_user, User}, #state{info=Info}=State) ->
     end,
     {noreply, State};
 
-handle_cast({building_finish, Building, Sender}, #state{info=Info}=State) ->
-    Json = ogonek_building:to_json(Building),
+% this is the creation of a *new* building since no 'id' set yet
+handle_cast({building_finish, #building{id=undefined}=B, Sender}, #state{info=Info}=State) ->
+    Json = ogonek_building:to_json(B),
 
     % TODO: make sure we don't finish two building of the same type
     % there must not be multiple buildings of the same definitions
     % but only increasing levels of the same type
     case insert(Json, Info) of
         {ok, Id, _Rev} ->
-            WithId = Building#building{id=Id},
+            WithId = B#building{id=Id},
             Sender ! {building_finish, WithId};
         _Otherwise ->
             ok
+    end,
+    {noreply, State};
+
+% this is the update of an existing building
+handle_cast({building_finish, Building, Sender}, #state{info=Info}=State) ->
+    Level = Building#building.level,
+    Update = fun(_Code, {B}) ->
+                     Lvl = <<"level">>,
+                     Updated = lists:keyreplace(Lvl, 1, B, {Lvl, Level}),
+                     {Updated}
+             end,
+
+    case update(Building#building.id, Update, Info) of
+        {ok, Code, _Hs, _Body} when Code == 200 orelse Code == 201 ->
+            Sender ! {building_finish, Building};
+        {ok, Code, _Hs, Body} ->
+            lager:error("building_finish failed [~p]: ~p", [Code, Body]),
+            error;
+        Error ->
+            lager:error("building_finish failed: ~p", [Error]),
+            error
     end,
     {noreply, State};
 

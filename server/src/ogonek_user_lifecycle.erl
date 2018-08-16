@@ -298,9 +298,10 @@ handle_info({get_constructions, Planet, Silent}, State) ->
             lager:debug("user ~s - fetched constructions of planet ~s: ~p",
                         [State#state.id, Planet, Fetched]),
 
-            % TODO: handle finished constructions
+            Buildings = PState#planet_state.buildings,
+            RemainingConstructions = process_constructions(Fetched, Buildings),
 
-            PState0 = PState#planet_state{constructions=Fetched},
+            PState0 = PState#planet_state{constructions=RemainingConstructions},
             Planets0 = maps:put(Planet, PState0, State#state.planets),
 
             json_to_sockets(ogonek_construction, PState0#planet_state.constructions, State, Silent),
@@ -457,6 +458,32 @@ finish_building(#bdef{name=Def}, PlanetId, Level) ->
 
     % maybe this one should be managed via the planet manager
     ogonek_db:building_finish(Building).
+
+
+-spec process_constructions([construction()], [building()]) -> [construction()].
+process_constructions([], _Buildings) -> [];
+process_constructions(Constructions, Buildings) ->
+    Now = ogonek_util:now8601(),
+    lists:foldl(fun(#construction{finish=F}=C, Cs) when F < Now ->
+                        Type = C#construction.building,
+                        case get_building(Buildings, Type) of
+                            {ok, B} ->
+                                CLevel = C#construction.level,
+                                BLevel = B#building.level,
+                                if BLevel + 1 == CLevel ->
+                                       Update = B#building{level=CLevel},
+                                       ogonek_db:building_finish(Update),
+                                       Cs;
+                                   true ->
+                                       lager:warning("invalid construction building level: ~p", [C]),
+                                       [C | Cs]
+                                end;
+                            undefined ->
+                                lager:warning("construction finished for unknown building: ~p", [C]),
+                                [C | Cs]
+                        end;
+                   (C, Cs) -> [C | Cs]
+                end, [], Constructions).
 
 
 -spec json_to_sockets(atom(), term(), state()) -> ok.
