@@ -218,6 +218,7 @@ handle_info({planet_info, PlanetId}, State) ->
             % trigger building and resource information after that
             Self = self(),
             Self ! {get_buildings, PlanetId, false},
+            Self ! {get_constructions, PlanetId, false},
             Self ! {calc_resources, PlanetId, false}
     end,
     {noreply, State};
