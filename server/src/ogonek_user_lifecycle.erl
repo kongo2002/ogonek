@@ -194,11 +194,7 @@ handle_info({calc_resources, PlanetId, Silent}, State) ->
             Planets0 = maps:put(PlanetId, PState0, State#state.planets),
             State0 = State#state{planets=Planets0},
 
-            if Silent == false ->
-                   json_to_sockets(ogonek_resources, Res1, State0);
-               true ->
-                   ok
-            end,
+            json_to_sockets(ogonek_resources, Res1, State0, Silent),
 
             {noreply, State0}
     end;
@@ -281,20 +277,12 @@ handle_info({get_buildings, Planet, Silent}, State) ->
             PState0 = PState#planet_state{buildings=Fetched},
             Planets0 = maps:put(Planet, PState0, State#state.planets),
 
-            if Silent == false ->
-                   json_to_sockets(ogonek_building, PState0#planet_state.buildings, State);
-               true ->
-                   ok
-            end,
+            json_to_sockets(ogonek_building, PState0#planet_state.buildings, State, Silent),
 
             {noreply, State#state{planets=Planets0}};
         % buildings already present
         PState ->
-            if Silent == false ->
-                   json_to_sockets(ogonek_building, PState#planet_state.buildings, State);
-               true ->
-                   ok
-            end,
+            json_to_sockets(ogonek_building, PState#planet_state.buildings, State, Silent),
             {noreply, State}
     end;
 
@@ -315,20 +303,12 @@ handle_info({get_constructions, Planet, Silent}, State) ->
             PState0 = PState#planet_state{constructions=Fetched},
             Planets0 = maps:put(Planet, PState0, State#state.planets),
 
-            if Silent == false ->
-                   json_to_sockets(ogonek_construction, PState0#planet_state.constructions, State);
-               true ->
-                   ok
-            end,
+            json_to_sockets(ogonek_construction, PState0#planet_state.constructions, State, Silent),
 
             {noreply, State#state{planets=Planets0}};
         % constructions already present
         PState ->
-            if Silent == false ->
-                   json_to_sockets(ogonek_construction, PState#planet_state.constructions, State);
-               true ->
-                   ok
-            end,
+            json_to_sockets(ogonek_construction, PState#planet_state.constructions, State, Silent),
             {noreply, State}
     end;
 
@@ -483,6 +463,12 @@ finish_building(#bdef{name=Def}, PlanetId, Level) ->
 json_to_sockets(Module, Obj, State) ->
     Session = State#state.session,
     gen_server:cast(Session, {json_to_sockets, Module, Obj}).
+
+
+-spec json_to_sockets(atom(), term(), state(), boolean()) -> ok.
+json_to_sockets(_Module, _Obj, _State, true) -> ok;
+json_to_sockets(Module, Obj, State, _) ->
+    json_to_sockets(Module, Obj, State).
 
 
 -spec get_building([building()], atom()) -> {ok, building()} | undefined.
