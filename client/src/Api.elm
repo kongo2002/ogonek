@@ -89,6 +89,7 @@ payloadDecoder =
     case t of
       "resources" -> JD.map Types.Resources resourceInfoDecoder
       "building" -> JD.map Types.Building buildingInfoDecoder
+      "construction" -> JD.map Types.Construction constructionDecoder
       "planet" -> JD.map Types.Planet planetDecoder
       "authinfo" -> JD.map Types.Auth authInfoDecoder
       "user" -> JD.map Types.User userInfoDecoder
@@ -114,6 +115,16 @@ planetDecoder =
     (JD.field "size" JD.int)
     (JD.field "type" planetTypeDecoder)
     (JD.field "idx" JD.int)
+
+
+constructionDecoder : JD.Decoder Types.ConstructionInfo
+constructionDecoder =
+  JD.map5 Types.ConstructionInfo
+    (JD.field "planet" JD.string)
+    (JD.field "building" JD.string)
+    (JD.field "level" JD.int)
+    (JD.field "created" JD.string)
+    (JD.field "finish" JD.string)
 
 
 buildingInfoDecoder : JD.Decoder Types.BuildingInfo

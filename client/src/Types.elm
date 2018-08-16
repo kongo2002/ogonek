@@ -47,6 +47,7 @@ type ApiContent
   | User UserInfo
   | Planet PlanetInfo
   | Building BuildingInfo
+  | Construction ConstructionInfo
   | Resources ResourceInfo
   | Error ApiError
 
@@ -122,6 +123,15 @@ type alias BuildingInfo =
   , name : String
   , planetId : String
   , level : Int
+  }
+
+
+type alias ConstructionInfo =
+  { planetId : String
+  , building : String
+  , level : Int
+  , created : String
+  , finished : String
   }
 
 
