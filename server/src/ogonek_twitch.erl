@@ -25,11 +25,10 @@
 %% API
 -export([start_link/0]).
 
--export([get_info/0,
-         get_auth_token/1,
-         get_user/1,
-         validate_token/1,
-         refresh_token/1]).
+%% Auth behavior
+-export([get_info/1,
+         auth_user/3,
+         validate_login/2]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -58,79 +57,63 @@ start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 
--spec get_info() -> {ok, json_doc()} | {error, inactive}.
-get_info() ->
-    gen_server:call(?MODULE, get_info).
+-spec get_info(pid()) -> ok.
+get_info(Socket) ->
+    gen_server:cast(?MODULE, {get_info, Socket}).
 
 
--spec get_auth_token(binary()) -> {ok, oauth_access()} | {error, inactive} | error.
-get_auth_token(AuthCode) ->
-    case gen_server:call(?MODULE, {auth_token_request, AuthCode}) of
-        {ok, Target} ->
-            case ogonek_util:json_post(Target) of
-                {ok, 200, _Hs, Body} ->
-                    extract_oauth_access(Body);
+-spec auth_user(binary(), binary(), binary()) ->
+    {ok, user()} |
+    {error, invalid} |
+    {error, missing_id} |
+    {error, missing_rev} |
+    {error, authorization_failed}.
+auth_user(Code, Scope, StateStr) ->
+    lager:debug("twitch - trying to authorize with: [code ~p; scope ~p; state ~p]", [Code, Scope, StateStr]),
+
+    case get_auth_token(Code) of
+        {ok, Token} ->
+            Provider = <<"twitch">>,
+            case get_user(Token) of
+                {ok, TwitchUser} ->
+                    case ogonek_db:get_user(TwitchUser#twitch_user.id, Provider) of
+                        {ok, Existing} ->
+                            WithAuth = Existing#user{oauth=Token},
+                            ogonek_db:update_user(WithAuth),
+                            {ok, WithAuth};
+                        {error, not_found} ->
+                            ogonek_db:create_user_from_twitch(TwitchUser, Provider)
+                    end;
                 Error ->
-                    lager:warning("twitch get_auth_token failed: ~p", [Error]),
-                    error
+                    lager:warning("twitch user request failed: ~p", [Error]),
+                    {error, authorization_failed}
             end;
-        _Error ->
-            {error, inactive}
-    end.
-
-
--spec get_user(oauth_access()) -> {ok, twitch_user()} | {error, authorization_failed} | error.
-get_user(#oauth_access{access_token=Token}) ->
-    Target = <<"https://api.twitch.tv/helix/users">>,
-    Headers = [{<<"Accept">>, <<"application/json">>},
-               {<<"Authorization">>, <<"Bearer ", Token/binary>>}],
-
-    case ogonek_util:json_get(Target, Headers) of
-        {ok, 200, _Hs, Json} ->
-            extract_user(Json);
-        _Error ->
+        Error ->
+            lager:warning("twitch authorization failed: ~p", [Error]),
             {error, authorization_failed}
     end.
 
 
--spec validate_token(binary()) -> {ok, binary()} | error.
-validate_token(AccessToken) ->
-    case gen_server:call(?MODULE, get_client_id) of
-        {ok, ClientId} ->
-            Target = <<"https://id.twitch.tv/oauth2/validate">>,
-            Headers = [{<<"Authorization">>, <<"OAuth ", AccessToken/binary>>}],
-            case ogonek_util:json_get(Target, Headers) of
-                {ok, 200, _Hs, Body} ->
-                    case ogonek_util:keys([<<"user_id">>, <<"client_id">>], Body) of
-                        [UserId, ClientId] -> {ok, UserId};
-                        _Otherwise ->
-                            lager:info("twitch access-token validation of '~s' failed: ~p", [AccessToken, Body]),
-                            error
-                    end;
-                Error ->
-                    lager:info("twitch access-token validation of '~s' failed: ~p", [AccessToken, Error]),
-                    error
-            end;
-        _Error ->
-            error
+-spec validate_login(binary(), user()) -> {ok, user} | error.
+validate_login(_SessionId, User) ->
+    OAuth = User#user.oauth,
+    ProviderId = User#user.provider_id,
+
+    case validate_token(OAuth#oauth_access.access_token) of
+        {ok, ProviderId} ->
+            % notify owning socket of successful session login
+            % Socket ! {session_login, Id, User},
+            {ok, User};
+        _Otherwise ->
+            case refresh_token(User) of
+                {ok, RefreshOAuth} ->
+                    WithAuth = User#user{oauth=RefreshOAuth},
+                    ogonek_db:update_user(WithAuth),
+                    {ok, WithAuth};
+                error -> error
+            end
     end.
 
-
--spec refresh_token(user()) -> {ok, oauth_access()} | error.
-refresh_token(User) ->
-    case gen_server:call(?MODULE, {refresh_token_request, User}) of
-        {ok, Target} ->
-            case ogonek_util:json_post(Target) of
-                {ok, 200, _Hs, Body} ->
-                    OAuth = User#user.oauth,
-                    extract_refresh_token(Body, OAuth);
-                Error ->
-                    lager:warning("refresh-token failed: ~p", [Error]),
-                    error
-            end;
-        Error ->
-            Error
-    end.
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -166,13 +149,6 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call(get_info, _From, #state{enabled=false}=State) ->
-    {reply, {error, inactive}, State};
-
-handle_call(get_info, _From, State) ->
-    AuthInfo = auth_info(State),
-    {reply, {ok, AuthInfo}, State};
-
 handle_call(get_client_id, _From, #state{enabled=false}=State) ->
     {reply, {error, inactive}, State};
 
@@ -227,6 +203,14 @@ handle_cast(prepare, State) ->
                                   redirect_uri=RedirectUri
                                  }}
     end;
+
+handle_cast({get_info, _Socket}, #state{enabled=false}=State) ->
+    {noreply, State};
+
+handle_cast({get_info, Socket}, State) ->
+    AuthInfo = auth_info(State),
+    Socket ! {json, AuthInfo},
+    {noreply, State};
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -363,6 +347,22 @@ extract_refresh_token(Json, OAuth) ->
     end.
 
 
+-spec get_auth_token(binary()) -> {ok, oauth_access()} | {error, inactive} | error.
+get_auth_token(AuthCode) ->
+    case gen_server:call(?MODULE, {auth_token_request, AuthCode}) of
+        {ok, Target} ->
+            case ogonek_util:json_post(Target) of
+                {ok, 200, _Hs, Body} ->
+                    extract_oauth_access(Body);
+                Error ->
+                    lager:warning("twitch get_auth_token failed: ~p", [Error]),
+                    error
+            end;
+        _Error ->
+            {error, inactive}
+    end.
+
+
 -spec extract_user(json_doc()) -> {ok, twitch_user()} | error.
 extract_user({Json}) ->
     Data = proplists:get_value(<<"data">>, Json, []),
@@ -379,6 +379,60 @@ extract_user({Json}) ->
                     error
             end;
         _ -> error
+    end.
+
+
+-spec get_user(oauth_access()) -> {ok, twitch_user()} | {error, authorization_failed} | error.
+get_user(#oauth_access{access_token=Token}) ->
+    Target = <<"https://api.twitch.tv/helix/users">>,
+    Headers = [{<<"Accept">>, <<"application/json">>},
+               {<<"Authorization">>, <<"Bearer ", Token/binary>>}],
+
+    case ogonek_util:json_get(Target, Headers) of
+        {ok, 200, _Hs, Json} ->
+            extract_user(Json);
+        _Error ->
+            {error, authorization_failed}
+    end.
+
+
+-spec validate_token(binary()) -> {ok, binary()} | error.
+validate_token(AccessToken) ->
+    case gen_server:call(?MODULE, get_client_id) of
+        {ok, ClientId} ->
+            Target = <<"https://id.twitch.tv/oauth2/validate">>,
+            Headers = [{<<"Authorization">>, <<"OAuth ", AccessToken/binary>>}],
+            case ogonek_util:json_get(Target, Headers) of
+                {ok, 200, _Hs, Body} ->
+                    case ogonek_util:keys([<<"user_id">>, <<"client_id">>], Body) of
+                        [UserId, ClientId] -> {ok, UserId};
+                        _Otherwise ->
+                            lager:info("twitch access-token validation of '~s' failed: ~p", [AccessToken, Body]),
+                            error
+                    end;
+                Error ->
+                    lager:info("twitch access-token validation of '~s' failed: ~p", [AccessToken, Error]),
+                    error
+            end;
+        _Error ->
+            error
+    end.
+
+
+-spec refresh_token(user()) -> {ok, oauth_access()} | error.
+refresh_token(User) ->
+    case gen_server:call(?MODULE, {refresh_token_request, User}) of
+        {ok, Target} ->
+            case ogonek_util:json_post(Target) of
+                {ok, 200, _Hs, Body} ->
+                    OAuth = User#user.oauth,
+                    extract_refresh_token(Body, OAuth);
+                Error ->
+                    lager:warning("refresh-token failed: ~p", [Error]),
+                    error
+            end;
+        Error ->
+            Error
     end.
 
 

@@ -29,7 +29,7 @@ init(Request, Opts) ->
                     undefined ->
                         % there is no session stored at all
                         % so we have to send auth-info to the client for sure
-                        send_auth_info(self()),
+                        ogonek_auth:send_auth_infos(self()),
 
                         % moreover create a new session
                         request_session(Request);
@@ -114,16 +114,6 @@ get_cookie_session(Request) ->
     end.
 
 
-send_auth_info(Target) ->
-    case ogonek_twitch:get_info() of
-        {ok, AuthInfo} ->
-            Target ! {json, AuthInfo};
-        _Otherwise ->
-            % do nothing
-            ok
-    end.
-
-
 handle_json(Request, {Json}, State) ->
     case proplists:get_value(?MSG_TYPE, Json) of
         undefined ->
@@ -140,21 +130,30 @@ handle_request(<<"authorize">>, _Request, Json, State) ->
     % the values 'code', 'scope' and 'state' are passed to the
     % callback uri of the oauth procedure and sent via websocket
     % to this authorize API
-    case ogonek_util:keys([<<"code">>, <<"scope">>, <<"state">>], Json) of
-        [Code, Scope, St] ->
-            % at first we are going to validate the passed values
-            % against the configured auth service (twitch for now)
-            case auth_user(Code, Scope, St) of
-                {ok, User} ->
-                    % on success we are going to connect this session with the
-                    % user that is associated with the authorized user
-                    ogonek_session_manager:register_socket(User#user.id, State#ws_state.session_id),
+    Keys = [<<"code">>, <<"scope">>, <<"state">>,
+            {<<"provider">>, ogonek_auth:default_provider()}],
 
-                    State0 = State#ws_state{user_id=User#user.id},
-                    {reply, json(ogonek_user:to_json(User)), State0};
-                _Error ->
-                    % TODO: more specific error response for the client
-                    {reply, error_json(<<"authorization failed">>), State}
+    case ogonek_util:keys(Keys, Json) of
+        [Code, Scope, St, Provider] ->
+
+            case ogonek_auth:provider_from_binary(Provider) of
+                error ->
+                    {reply, error_json(<<"invalid auth provider">>), State};
+                ProviderModule ->
+                    % at first we are going to validate the passed values
+                    % against the configured auth service
+                    case ProviderModule:auth_user(Code, Scope, St) of
+                        {ok, User} ->
+                            % on success we are going to connect this session with the
+                            % user that is associated with the authorized user
+                            ogonek_session_manager:register_socket(User#user.id, State#ws_state.session_id),
+
+                            State0 = State#ws_state{user_id=User#user.id},
+                            {reply, json(ogonek_user:to_json(User)), State0};
+                        _Error ->
+                            % TODO: more specific error response for the client
+                            {reply, error_json(<<"authorization failed">>), State}
+                    end
             end;
         _Otherwise ->
             % TODO: more specific error response for the client
@@ -221,7 +220,7 @@ process_session_id(CookieSessionId, Request) ->
                     % as soon as possible
                     erlang:spawn(fun() -> try_auth_user(Socket, StoredSession) end);
                 false ->
-                    send_auth_info(Socket)
+                    ogonek_auth:send_auth_infos(Socket)
             end,
 
             CookieSessionId;
@@ -229,7 +228,7 @@ process_session_id(CookieSessionId, Request) ->
             % no session cookie yet:
             % - send auth-info to client
             % - create a new session
-            send_auth_info(self()),
+            ogonek_auth:send_auth_infos(self()),
             request_session(Request)
     end.
 
@@ -243,22 +242,15 @@ try_auth_user(Socket, #session{id=Id, user_id=UserId}) ->
         {ok, #user{oauth=undefined}} ->
             false;
         {ok, User} ->
-            OAuth = User#user.oauth,
-            ProviderId = User#user.provider_id,
-            case ogonek_twitch:validate_token(OAuth#oauth_access.access_token) of
-                {ok, ProviderId} ->
-                    % notify owning socket of successful session login
-                    Socket ! {session_login, Id, User},
+            Provider = User#user.provider,
+            ProviderModule = ogonek_auth:provider_module(ogonek_auth:provider_from_binary(Provider)),
+
+            case ProviderModule:validate_login(Id, User) of
+                {ok, User0} ->
+                    Socket ! {session_login, Id, User0},
                     true;
-                _Otherwise ->
-                    case ogonek_twitch:refresh_token(User) of
-                        {ok, RefreshOAuth} ->
-                            WithAuth = User#user{oauth=RefreshOAuth},
-                            ogonek_db:update_user(WithAuth),
-                            Socket ! {session_login, Id, User},
-                            true;
-                        error -> false
-                    end
+                error ->
+                    false
             end;
         _Otherwise ->
             false
@@ -266,41 +258,8 @@ try_auth_user(Socket, #session{id=Id, user_id=UserId}) ->
 
     % send the auth-info to the client if it wasn't logged in
     case LoggedIn of
-        false -> send_auth_info(Socket);
+        false -> ogonek_auth:send_auth_infos(Socket);
         true -> ok
-    end.
-
-
--spec auth_user(binary(), binary(), binary()) ->
-    {ok, user()} |
-    {error, invalid} |
-    {error, missing_id} |
-    {error, missing_rev} |
-    {error, authorization_failed}.
-auth_user(Code, Scope, StateStr) ->
-    lager:debug("trying to authorize with: [code ~p; scope ~p; state ~p]", [Code, Scope, StateStr]),
-
-    % TODO: abstract twitch specifics into a 'generic' auth-provider
-    case ogonek_twitch:get_auth_token(Code) of
-        {ok, Token} ->
-            Provider = <<"twitch">>,
-            case ogonek_twitch:get_user(Token) of
-                {ok, TwitchUser} ->
-                    case ogonek_db:get_user(TwitchUser#twitch_user.id, Provider) of
-                        {ok, Existing} ->
-                            WithAuth = Existing#user{oauth=Token},
-                            ogonek_db:update_user(WithAuth),
-                            {ok, WithAuth};
-                        {error, not_found} ->
-                            ogonek_db:create_user_from_twitch(TwitchUser, Provider)
-                    end;
-                Error ->
-                    lager:warning("twitch user request failed: ~p", [Error]),
-                    {error, authorization_failed}
-            end;
-        Error ->
-            lager:warning("twitch authorization failed: ~p", [Error]),
-            {error, authorization_failed}
     end.
 
 

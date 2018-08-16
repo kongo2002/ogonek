@@ -18,13 +18,21 @@
 
 -export([default_provider/0,
          provider_module/1,
-         provider_from_binary/1
+         provider_from_binary/1,
+         send_auth_infos/1
         ]).
 
 
--spec default_provider() -> auth_provider().
+-spec send_auth_infos(pid()) -> ok.
+send_auth_infos(Socket) ->
+    lists:foreach(fun(Module) ->
+                          Module:get_info(Socket)
+                  end, all_provider_modules()).
+
+
+-spec default_provider() -> binary().
 default_provider() ->
-    twitch.
+    <<"twitch">>.
 
 
 -spec provider_module(auth_provider()) -> auth_provider_module().
@@ -39,3 +47,8 @@ provider_module(Unknown) ->
 provider_from_binary(<<"twitch">>) -> twitch;
 provider_from_binary(<<"local">>) -> local;
 provider_from_binary(_Unknown) -> error.
+
+
+-spec all_provider_modules() -> [auth_provider_module()].
+all_provider_modules() ->
+    [ogonek_twitch, ogonek_auth_local].
