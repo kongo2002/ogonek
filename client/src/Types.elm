@@ -15,6 +15,7 @@
 module Types exposing (..)
 
 import Dict exposing ( Dict )
+import Time.DateTime
 
 import Navigation exposing ( Location )
 
@@ -130,8 +131,8 @@ type alias ConstructionInfo =
   { planetId : String
   , building : String
   , level : Int
-  , created : String
-  , finished : String
+  , created : Time.DateTime.DateTime
+  , finished : Time.DateTime.DateTime
   }
 
 

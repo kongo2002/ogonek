@@ -16,6 +16,8 @@ module Api exposing ( send, websocket )
 
 import Json.Decode as JD
 import Json.Encode as JE
+import Time.DateTime exposing ( DateTime )
+import Time.Iso8601
 import WebSocket
 
 import Types
@@ -123,8 +125,8 @@ constructionDecoder =
     (JD.field "planet" JD.string)
     (JD.field "building" JD.string)
     (JD.field "level" JD.int)
-    (JD.field "created" JD.string)
-    (JD.field "finish" JD.string)
+    (JD.field "created" dateTimeDecoder)
+    (JD.field "finish" dateTimeDecoder)
 
 
 buildingInfoDecoder : JD.Decoder Types.BuildingInfo
@@ -189,6 +191,14 @@ errorDecoder =
     (JD.field "error" JD.bool)
     (JD.field "message" JD.string)
 
+
+dateTimeDecoder : JD.Decoder DateTime
+dateTimeDecoder =
+  let iso8601 input =
+      case Time.Iso8601.toDateTime input of
+        Ok dt -> JD.succeed dt
+        _ -> JD.fail "invalid ISO8601 datetime given"
+  in JD.string |> JD.andThen iso8601
 
 
 apply : JD.Decoder (a -> b) -> JD.Decoder a -> JD.Decoder b
