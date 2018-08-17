@@ -26,7 +26,9 @@
          calculate_power_workers/1,
          calculate_building_production/1,
          calculate_construction_duration/1,
-         calculate_construction_duration/2]).
+         calculate_construction_duration/2,
+         calculate_building_costs/1,
+         calculate_building_costs/2]).
 
 
 -spec definitions() -> [bdef()].
@@ -147,3 +149,27 @@ base_construction_duration(power_plant) -> 1000;
 base_construction_duration(wind_turbine) -> 1200;
 base_construction_duration(apartment) -> 600;
 base_construction_duration(apartment_block) -> 1100.
+
+
+-spec calculate_building_costs(Building :: building()) -> bdef() | error.
+calculate_building_costs(#building{type=Type, level=Level}) ->
+    case ogonek_buildings:get_definition(Type) of
+        error -> error;
+        Definition -> calculate_building_costs(Definition, Level)
+    end.
+
+
+-spec calculate_building_costs(Definition :: bdef(), Level :: integer()) -> bdef().
+calculate_building_costs(Definition, Level) ->
+    % TODO: we need a proper distribution from level to costs
+    Factor = max(math:pow(Level, 1.2) * 0.5, 1.0),
+    Definition#bdef{
+      iron_ore=round(Definition#bdef.iron_ore * Factor),
+      gold=round(Definition#bdef.gold * Factor),
+      h2o=round(Definition#bdef.h2o * Factor),
+      oil=round(Definition#bdef.oil * Factor),
+      h2=round(Definition#bdef.h2 * Factor),
+      uranium=round(Definition#bdef.uranium * Factor),
+      pvc=round(Definition#bdef.pvc * Factor),
+      kyanite=round(Definition#bdef.kyanite * Factor)
+     }.

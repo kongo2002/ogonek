@@ -54,7 +54,7 @@ to_json(Building, Db) ->
     Vs = case Db of
              true -> [];
              false ->
-                 Def = ogonek_buildings:get_definition(Building#building.type),
+                 Def = ogonek_buildings:calculate_building_costs(Building),
                  json_from_definition(Def)
          end,
 
