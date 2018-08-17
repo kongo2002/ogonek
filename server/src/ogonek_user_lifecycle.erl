@@ -434,12 +434,17 @@ finished_at(DurationSeconds) ->
 
 -spec calculate_resources(planet(), [building()]) -> resources().
 calculate_resources(Planet, Buildings) ->
+    calculate_resources(Planet, Buildings, false).
+
+
+-spec calculate_resources(planet(), [building()], boolean()) -> resources().
+calculate_resources(Planet, Buildings, Force) ->
     UserId = Planet#planet.owner,
     Resources = Planet#planet.resources,
 
     SecondsSince = seconds_since(Resources),
 
-    if SecondsSince >= 60 ->
+    if SecondsSince >= 60 orelse Force == true ->
            % the production capabilities of the planet's buildings are the
            % base of the overall resource production
            % that productivity is calculated in relation to the planet's base resources
