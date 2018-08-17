@@ -169,14 +169,18 @@ handle_info({building_finish, Building}, #state{id=Id}=State) ->
         undefined ->
             {noreply, State};
         PState ->
+            BuildingType = Building#building.type,
+            BuildingLevel = Building#building.level,
             Buildings = PState#planet_state.buildings,
-            Buildings0 = update_building(Buildings, Building),
-            PState0 = PState#planet_state{buildings=Buildings0},
-            Planets0 = maps:put(PlanetId, PState0, State#state.planets),
 
+            Buildings0 = update_building(Buildings, Building),
+            Cs0 = remove_construction(PState#planet_state.constructions, BuildingType, BuildingLevel),
+
+            PState0 = PState#planet_state{buildings=Buildings0, constructions=Cs0},
+            Planets0 = maps:put(PlanetId, PState0, State#state.planets),
             State0 = State#state{planets=Planets0},
 
-            ogonek_db:construction_remove(PlanetId, Building#building.type, Building#building.level),
+            ogonek_db:construction_remove(PlanetId, BuildingType, BuildingLevel),
 
             json_to_sockets(ogonek_building, Building, State0),
 
@@ -590,6 +594,14 @@ update_construction(Constructions, #construction{building=Type}=Construction) ->
     end.
 
 
+-spec remove_construction([construction()], atom(), integer()) -> [construction()].
+remove_construction(Constructions, Type, Level) ->
+    lists:foldl(fun(#construction{building=T, level=Lvl}, Cs)
+                      when T == Type andalso Lvl =< Level -> Cs;
+                   (C, Cs) -> [C | Cs]
+                end, [], Constructions).
+
+
 -spec construction_possible(PlanetState :: planet_state(), Costs :: bdef()) -> boolean().
 construction_possible(PlanetState, Costs) ->
     % TODO: there will be more checks that plain resource requirements
@@ -658,6 +670,18 @@ update_construction_test_() ->
     [?_assertEqual([C1], update_construction([], C1)),
      ?_assertEqual([C1], update_construction([C1], C1)),
      ?_assertEqual([C2], update_construction([C1], C2))
+    ].
+
+remove_construction_test_() ->
+    P = <<"p1">>,
+    Now = ogonek_util:now8601(),
+    C1 = #construction{building=gold_depot, level=1, planet=P, created=Now, finish=Now},
+    C2 = #construction{building=gold_depot, level=2, planet=P, created=Now, finish=Now},
+
+    [?_assertEqual([], remove_construction([], gold_depot, 1)),
+     ?_assertEqual([C1], remove_construction([C1], oil_depot, 1)),
+     ?_assertEqual([C2], remove_construction([C2], gold_depot, 1)),
+     ?_assertEqual([], remove_construction([C2], gold_depot, 2))
     ].
 
 -endif.
