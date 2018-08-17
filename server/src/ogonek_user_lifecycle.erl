@@ -183,6 +183,11 @@ handle_info({building_finish, Building}, #state{id=Id}=State) ->
             {noreply, State0}
     end;
 
+handle_info({construction_create, Construction}, #state{id=Id}=State) ->
+    lager:info("user ~s - construction created: ~p", [Id, Construction]),
+
+    {noreply, State};
+
 handle_info({get_planets, Sender}, State) ->
     Planets = maps:keys(State#state.planets),
     Sender ! {planets, Planets},
@@ -243,18 +248,18 @@ handle_info({build_building, Planet, Type, Level}=Req, State) ->
         undefined ->
             % TODO: respond with error?
             {noreply, State};
-        #planet_state{buildings=Bs, constructions=Cs} ->
+        #planet_state{buildings=Bs, constructions=Cs}=PState ->
             case {get_building(Bs, Type), get_construction(Cs, Type)} of
                 % no building of this available
                 {undefined, _} ->
                     lager:info("user ~s - build-building rejected, building not available [request ~p]",
                                [State#state.id, Req]),
-                    error;
+                    {noreply, State};
                 % already construction ongoing of this type
                 {_, {ok, _Construction}} ->
                     lager:info("user ~s - build-building rejected, same construction ongoing [request ~p]",
                                [State#state.id, Req]),
-                    error;
+                    {noreply, State};
                 % building available and no construction ongoing
                 {{ok, Building}, undefined} ->
                     if Building#building.level + 1 == Level ->
@@ -271,14 +276,23 @@ handle_info({build_building, Planet, Type, Level}=Req, State) ->
                                              finish=FinishedAt
                                             },
                            ogonek_db:construction_create(Construction),
-                           ok;
+
+                           % we keep the new construction in state already although
+                           % the database store might still be ongoing
+                           % however we want to prevent multiple successive constructions
+                           % to be happening
+                           Cs0 = update_construction(Cs, Construction),
+                           PState0 = PState#planet_state{constructions=Cs0},
+                           Planets0 = maps:put(Planet, PState0, State#state.planets),
+
+                           State0 = State#state{planets=Planets0},
+                           {noreply, State0};
                        true ->
                            lager:info("user ~s - build-building rejected [current ~p, request ~p]",
                                       [State#state.id, Building, Req]),
-                           error
+                           {noreply, State}
                     end
-            end,
-            {noreply, State}
+            end
     end;
 
 handle_info({get_buildings, Planet, Silent}, State) ->
@@ -547,6 +561,14 @@ get_construction(Constructions, Type) ->
     end.
 
 
+-spec update_construction([construction()], construction()) -> [construction()].
+update_construction(Constructions, #construction{building=Type}=Construction) ->
+    case get_construction(Constructions, Type) of
+        undefined -> [Construction | Constructions];
+        _Otherwise ->
+            lists:keyreplace(Type, 3, Constructions, Construction)
+    end.
+
 %%
 %% TESTS
 %%
@@ -554,13 +576,25 @@ get_construction(Constructions, Type) ->
 -ifdef(TEST).
 
 update_building_test_() ->
+    P = <<"p1">>,
     Now = ogonek_util:now8601(),
-    B1 = #building{type=gold_depot, level=1, planet=Now, created=Now},
-    B2 = #building{type=gold_depot, level=2, planet=Now, created=Now},
+    B1 = #building{type=gold_depot, level=1, planet=P, created=Now},
+    B2 = #building{type=gold_depot, level=2, planet=P, created=Now},
 
     [?_assertEqual([B1], update_building([], B1)),
      ?_assertEqual([B1], update_building([B1], B1)),
      ?_assertEqual([B2], update_building([B1], B2))
+    ].
+
+update_construction_test_() ->
+    P = <<"p1">>,
+    Now = ogonek_util:now8601(),
+    C1 = #construction{building=gold_depot, level=1, planet=P, created=Now, finish=Now},
+    C2 = #construction{building=gold_depot, level=2, planet=P, created=Now, finish=Now},
+
+    [?_assertEqual([C1], update_construction([], C1)),
+     ?_assertEqual([C1], update_construction([C1], C1)),
+     ?_assertEqual([C2], update_construction([C1], C2))
     ].
 
 -endif.
