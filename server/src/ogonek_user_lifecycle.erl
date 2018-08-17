@@ -186,6 +186,8 @@ handle_info({building_finish, Building}, #state{id=Id}=State) ->
 handle_info({construction_create, Construction}, #state{id=Id}=State) ->
     lager:info("user ~s - construction created: ~p", [Id, Construction]),
 
+    json_to_sockets(ogonek_construction, Construction, State),
+
     {noreply, State};
 
 handle_info({get_planets, Sender}, State) ->
