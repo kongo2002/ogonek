@@ -196,7 +196,7 @@ updateConstruction : Model -> ConstructionInfo -> Model
 updateConstruction model info =
   case model.planet of
     Just active ->
-      if active.planet.id == info.planetId then
+      if active.planet.id == info.planetId && constructionValid active info then
         let constructions = active.constructions
             constructions0 = Dict.insert info.building info constructions
             updated = { active | constructions = constructions0 }
@@ -205,6 +205,19 @@ updateConstruction model info =
         model
     Nothing ->
       model
+
+
+-- this check helps with idempotency of concurrent
+-- building and construction updates
+constructionValid : ActivePlanet -> ConstructionInfo -> Bool
+constructionValid planet info =
+  let binfo = Dict.get info.building planet.buildings
+      level = info.level
+  in case binfo of
+      Just building ->
+        building.level + 1 == level
+      Nothing ->
+        False
 
 
 emptyResources : String -> ResourceInfo
