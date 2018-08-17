@@ -16,6 +16,10 @@
 
 -include("ogonek.hrl").
 
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-endif.
+
 -behaviour(gen_server).
 
 %% API
@@ -159,10 +163,25 @@ handle_cast(_Msg, State) ->
 handle_info({building_finish, Building}, #state{id=Id}=State) ->
     lager:info("user ~s - building finished: ~p", [Id, Building]),
 
-    % TODO
+    PlanetId = Building#building.planet,
 
-    json_to_sockets(ogonek_building, Building, State),
-    {noreply, State};
+    case maps:get(PlanetId, State#state.planets, undefined) of
+        undefined ->
+            {noreply, State};
+        PState ->
+            Buildings = PState#planet_state.buildings,
+            Buildings0 = update_building(Buildings, Building),
+            PState0 = PState#planet_state{buildings=Buildings0},
+            Planets0 = maps:put(PlanetId, PState0, State#state.planets),
+
+            State0 = State#state{planets=Planets0},
+
+            % TODO: delete associated construction entry from db
+
+            json_to_sockets(ogonek_building, Building, State0),
+
+            {noreply, State0}
+    end;
 
 handle_info({get_planets, Sender}, State) ->
     Planets = maps:keys(State#state.planets),
@@ -506,9 +525,37 @@ get_building(Buildings, Type) ->
     end.
 
 
+-spec update_building([building()], building()) -> [building()].
+update_building(Buildings, #building{type=Type}=Building) ->
+    case get_building(Buildings, Type) of
+        undefined -> [Building | Buildings];
+        _Otherwise ->
+            lists:keyreplace(Type, 4, Buildings, Building)
+    end.
+
+
 -spec get_construction([construction()], atom()) -> {ok, construction()} | undefined.
 get_construction(Constructions, Type) ->
     case lists:keyfind(Type, 3, Constructions) of
         false -> undefined;
         Construction -> {ok, Construction}
     end.
+
+
+%%
+%% TESTS
+%%
+
+-ifdef(TEST).
+
+update_building_test_() ->
+    Now = ogonek_util:now8601(),
+    B1 = #building{type=gold_depot, level=1, planet=Now, created=Now},
+    B2 = #building{type=gold_depot, level=2, planet=Now, created=Now},
+
+    [?_assertEqual([B1], update_building([], B1)),
+     ?_assertEqual([B1], update_building([B1], B1)),
+     ?_assertEqual([B2], update_building([B1], B2))
+    ].
+
+-endif.
