@@ -148,7 +148,7 @@ create_user_from_twitch(User, Provider) ->
     end.
 
 
--spec get_user(binary()) ->
+-spec get_user(Id :: binary()) ->
     {ok, user()} |
     {error, invalid} |
     {error, not_found}.
@@ -161,15 +161,15 @@ get_user(UserId) ->
     end.
 
 
--spec get_user(binary(), binary()) ->
+-spec get_user(Id :: binary(), Provider :: binary()) ->
     {ok, user()} |
     {error, invalid} |
     {error, multiple} |
     {error, not_found} |
     error.
-get_user(ProviderId, Provider) ->
+get_user(Id, Provider) ->
     % query the 'user' design doc views
-    case singleton_from_view(<<"user">>, Provider, ProviderId, get_info()) of
+    case singleton_from_view(<<"user">>, Provider, Id, get_info()) of
         {ok, _Key, User} ->
             ogonek_user:from_json(User);
         Error ->

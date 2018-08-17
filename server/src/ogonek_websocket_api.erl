@@ -139,7 +139,9 @@ handle_request(<<"authorize">>, _Request, Json, State) ->
             case ogonek_auth:provider_from_binary(Provider) of
                 error ->
                     {reply, error_json(<<"invalid auth provider">>), State};
-                ProviderModule ->
+                ProviderId ->
+                    ProviderModule = ogonek_auth:provider_module(ProviderId),
+
                     % at first we are going to validate the passed values
                     % against the configured auth service
                     case ProviderModule:auth_user(Code, Scope, St) of
@@ -150,7 +152,9 @@ handle_request(<<"authorize">>, _Request, Json, State) ->
 
                             State0 = State#ws_state{user_id=User#user.id},
                             {reply, json(ogonek_user:to_json(User)), State0};
-                        _Error ->
+                        Error ->
+                            lager:info("authorization failed: ~p", [Error]),
+
                             % TODO: more specific error response for the client
                             {reply, error_json(<<"authorization failed">>), State}
                     end

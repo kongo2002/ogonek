@@ -39,11 +39,27 @@ get_info(_Socket) ->
 auth_user(Code, Scope, StateStr) ->
     lager:debug("local - trying to authorize with: [code ~p; scope ~p; state ~p]", [Code, Scope, StateStr]),
 
-    % TODO: implement local auth
-    {error, invalid}.
+    case get_user(Code) of
+        {ok, #user{oauth=undefined}} ->
+            {error, authorization_failed};
+        % we are going to 'recycle' the oauth_access' access_token field
+        % to store the password in
+        {ok, #user{oauth=Auth}=User} when Auth#oauth_access.access_token == StateStr ->
+            {ok, User};
+        _Otherwise ->
+            {error, authorization_failed}
+    end.
 
 
 -spec validate_login(binary(), user()) -> {ok, user()} | error.
 validate_login(_SessionId, _User) ->
     % TODO: implement local auth
     error.
+
+
+-spec get_user(UserEmail :: binary()) -> {ok, user()} | error.
+get_user(UserEmail) ->
+    case ogonek_db:get_user(UserEmail, <<"local">>) of
+        {ok, _User}=Success -> Success;
+        _Error -> error
+    end.
