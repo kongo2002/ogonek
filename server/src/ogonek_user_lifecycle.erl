@@ -176,7 +176,7 @@ handle_info({building_finish, Building}, #state{id=Id}=State) ->
 
             State0 = State#state{planets=Planets0},
 
-            % TODO: delete associated construction entry from db
+            ogonek_db:construction_remove(PlanetId, Building#building.type, Building#building.level),
 
             json_to_sockets(ogonek_building, Building, State0),
 

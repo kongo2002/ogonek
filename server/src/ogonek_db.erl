@@ -40,7 +40,8 @@
 
 %% Construction API
 -export([construction_create/1,
-         constructions_of_planet/1]).
+         constructions_of_planet/1,
+         construction_remove/3]).
 
 %% Planet API
 -export([planet_exists/3,
@@ -201,6 +202,22 @@ buildings_of_planet(PlanetId) ->
 -spec construction_create(construction()) -> ok.
 construction_create(Construction) ->
     gen_server:cast(?MODULE, {construction_create, Construction, self()}).
+
+
+-spec construction_remove(PlanetId :: binary(), Building :: atom(), Level :: integer()) -> ok.
+construction_remove(PlanetId, Building, Level) ->
+    Type = erlang:atom_to_binary(Building, utf8),
+    Info = get_info(),
+    Results = from_view(<<"construction">>, <<"by_planet">>, PlanetId, Info),
+    lists:foreach(fun(C) ->
+                          Keys = [<<"_rev">>, <<"_id">>, <<"building">>, <<"level">>],
+                          case ogonek_util:keys(Keys, C) of
+                              [Rev, Id, Type, Lvl] when Lvl =< Level ->
+                                  delete_(Id, Rev, Info);
+                              _Otherwise ->
+                                  ok
+                          end
+                  end, Results).
 
 
 -spec constructions_of_planet(binary()) -> [construction()].
@@ -666,6 +683,19 @@ put_(Path, Payload, #db_info{host=Host, headers=Headers, options=Options}) ->
 post_(Path, Payload, #db_info{host=Host, headers=Headers, options=Options}) ->
     Target = <<Host/binary, Path/binary>>,
     ogonek_util:json_post(Target, Headers, Payload, Options).
+
+
+delete_(Id, Revision, Info) ->
+    delete_(?OGONEK_DB_NAME, Id, Revision, Info).
+
+
+delete_(Db, Id, Revision, #db_info{host=Host, headers=Headers, options=Options}) ->
+    Target = <<Host/binary, "/", Db/binary, "/", Id/binary>>,
+    Headers0 = [{<<"If-Match">>, Revision} | Headers],
+    Result = hackney:delete(Target, Headers0, [], Options),
+
+    lager:debug("DELETE [~s] ~p", [Target, Result]),
+    Result.
 
 
 check_status(Info) ->
