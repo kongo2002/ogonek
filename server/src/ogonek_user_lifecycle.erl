@@ -186,7 +186,17 @@ handle_info({building_finish, Building}, #state{id=Id}=State) ->
 handle_info({construction_create, Construction}, #state{id=Id}=State) ->
     lager:info("user ~s - construction created: ~p", [Id, Construction]),
 
+    % push construction to client
     json_to_sockets(ogonek_construction, Construction, State),
+
+    % update resources as well
+    PlanetId = Construction#construction.planet,
+    case maps:get(PlanetId, State#state.planets, undefined) of
+        undefined -> ok;
+        #planet_state{planet=Planet} ->
+            Resources = Planet#planet.resources,
+            json_to_sockets(ogonek_resources, Resources, State)
+    end,
 
     {noreply, State};
 
@@ -265,30 +275,38 @@ handle_info({build_building, Planet, Type, Level}=Req, State) ->
                 % building available and no construction ongoing
                 {{ok, Building}, undefined} ->
                     if Building#building.level + 1 == Level ->
-                           % TODO: check and claim resources
+                           Costs = ogonek_buildings:calculate_building_costs(Building),
+                           Possible = construction_possible(PState, Costs),
 
-                           Duration = ogonek_buildings:calculate_construction_duration(Type, Level),
-                           FinishedAt = finished_at(Duration),
+                           if Possible == true ->
+                                  Duration = ogonek_buildings:calculate_construction_duration(Type, Level),
+                                  FinishedAt = finished_at(Duration),
 
-                           Construction = #construction{
-                                             planet=Planet,
-                                             building=Type,
-                                             level=Level,
-                                             created=ogonek_util:now8601(),
-                                             finish=FinishedAt
-                                            },
-                           ogonek_db:construction_create(Construction),
+                                  Construction = #construction{
+                                                    planet=Planet,
+                                                    building=Type,
+                                                    level=Level,
+                                                    created=ogonek_util:now8601(),
+                                                    finish=FinishedAt
+                                                   },
+                                  ogonek_db:construction_create(Construction),
 
-                           % we keep the new construction in state already although
-                           % the database store might still be ongoing
-                           % however we want to prevent multiple successive constructions
-                           % to be happening
-                           Cs0 = update_construction(Cs, Construction),
-                           PState0 = PState#planet_state{constructions=Cs0},
-                           Planets0 = maps:put(Planet, PState0, State#state.planets),
+                                  % we keep the new construction in state already although
+                                  % the database store might still be ongoing
+                                  % however we want to prevent multiple successive constructions
+                                  % to be happening
+                                  Cs0 = update_construction(Cs, Construction),
+                                  PState0 = PState#planet_state{constructions=Cs0},
+                                  PState1 = claim_resources(PState0, Costs),
+                                  Planets0 = maps:put(Planet, PState1, State#state.planets),
 
-                           State0 = State#state{planets=Planets0},
-                           {noreply, State0};
+                                  State0 = State#state{planets=Planets0},
+                                  {noreply, State0};
+                              true ->
+                                  lager:info("user ~s - build-building rejected due to insufficient resources [costs ~p, request ~p]",
+                                             [State#state.id, Costs, Req]),
+                                  {noreply, State}
+                           end;
                        true ->
                            lager:info("user ~s - build-building rejected [current ~p, request ~p]",
                                       [State#state.id, Building, Req]),
@@ -570,6 +588,49 @@ update_construction(Constructions, #construction{building=Type}=Construction) ->
         _Otherwise ->
             lists:keyreplace(Type, 3, Constructions, Construction)
     end.
+
+
+-spec construction_possible(PlanetState :: planet_state(), Costs :: bdef()) -> boolean().
+construction_possible(PlanetState, Costs) ->
+    % TODO: there will be more checks that plain resource requirements
+    % e.g. maximum concurrent constructions
+    Planet = PlanetState#planet_state.planet,
+    Resources = Planet#planet.resources,
+
+    Resources#resources.workers >= Costs#bdef.workers andalso
+    Resources#resources.power >= Costs#bdef.power andalso
+
+    Resources#resources.iron_ore >= Costs#bdef.iron_ore andalso
+    Resources#resources.gold >= Costs#bdef.gold andalso
+    Resources#resources.h2o >= Costs#bdef.h2o andalso
+    Resources#resources.oil >= Costs#bdef.oil andalso
+    Resources#resources.h2 >= Costs#bdef.h2 andalso
+    Resources#resources.uranium >= Costs#bdef.uranium andalso
+    Resources#resources.pvc >= Costs#bdef.pvc andalso
+    Resources#resources.kyanite >= Costs#bdef.kyanite.
+
+
+-spec claim_resources(PlanetState :: planet_state(), Costs :: bdef()) -> planet_state().
+claim_resources(PlanetState, Costs) ->
+    Planet = PlanetState#planet_state.planet,
+    Resources = Planet#planet.resources,
+
+    Res0 = Resources#resources{
+             workers=Resources#resources.workers - Costs#bdef.workers,
+             power=Resources#resources.power - Costs#bdef.power,
+             iron_ore=Resources#resources.iron_ore - Costs#bdef.iron_ore,
+             gold=Resources#resources.gold - Costs#bdef.gold,
+             h2o=Resources#resources.h2o - Costs#bdef.h2o,
+             oil=Resources#resources.oil - Costs#bdef.oil,
+             h2=Resources#resources.h2 - Costs#bdef.h2,
+             uranium=Resources#resources.uranium - Costs#bdef.uranium,
+             pvc=Resources#resources.pvc - Costs#bdef.pvc,
+             kyanite=Resources#resources.kyanite - Costs#bdef.kyanite
+            },
+
+    Planet0 = Planet#planet{resources=Res0},
+    PlanetState#planet_state{planet=Planet0}.
+
 
 %%
 %% TESTS
