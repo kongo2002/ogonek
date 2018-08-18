@@ -170,9 +170,8 @@ resources f =
 dateTimeDeltaDecoder : JD.Decoder Time.DateTime.DateTimeDelta
 dateTimeDeltaDecoder =
   let toDelta sec =
-        -- fromTimestamp expects milliseconds
-        let dt = Time.DateTime.fromTimestamp (toFloat (sec * 1000))
-            epoch = Time.DateTime.epoch
+        let epoch = Time.DateTime.epoch
+            dt = Time.DateTime.addSeconds sec epoch
         in  Time.DateTime.delta dt epoch
   in JD.int |> JD.map toDelta
 
