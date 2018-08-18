@@ -55,7 +55,8 @@ to_json(Building, Db) ->
              true -> [];
              false ->
                  Def = ogonek_buildings:calculate_building_costs(Building),
-                 json_from_definition(Def)
+                 Duration = ogonek_buildings:calculate_construction_duration(Building),
+                 [{<<"duration">>, Duration} | json_from_definition(Def)]
          end,
 
     ogonek_util:doc(<<"building">>, Values ++ Vs).

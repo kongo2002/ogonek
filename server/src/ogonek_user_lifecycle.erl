@@ -293,7 +293,7 @@ handle_info({build_building, Planet, Type, Level}=Req, State) ->
                            Possible = construction_possible(PState, Costs),
 
                            if Possible == true ->
-                                  Duration = ogonek_buildings:calculate_construction_duration(Type, Level),
+                                  Duration = ogonek_buildings:calculate_construction_duration(Building),
                                   FinishedAt = finished_at(Duration),
 
                                   Construction = #construction{
