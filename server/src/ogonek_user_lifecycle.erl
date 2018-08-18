@@ -640,10 +640,15 @@ remove_construction(Constructions, Type, Level) ->
 
 -spec construction_possible(PlanetState :: planet_state(), Costs :: bdef()) -> boolean().
 construction_possible(PlanetState, Costs) ->
-    % TODO: there will be more checks that plain resource requirements
-    % e.g. maximum concurrent constructions
     Planet = PlanetState#planet_state.planet,
+    Constructions = PlanetState#planet_state.constructions,
+    Buildings = PlanetState#planet_state.buildings,
     Resources = Planet#planet.resources,
+
+    NumConstructions = length(Constructions),
+    MaxConcurrentConstructions = max_concurrent_constructions(Buildings),
+
+    MaxConcurrentConstructions > NumConstructions andalso
 
     Resources#resources.workers >= Costs#bdef.workers andalso
     Resources#resources.power >= Costs#bdef.power andalso
@@ -656,6 +661,20 @@ construction_possible(PlanetState, Costs) ->
     Resources#resources.uranium >= Costs#bdef.uranium andalso
     Resources#resources.pvc >= Costs#bdef.pvc andalso
     Resources#resources.kyanite >= Costs#bdef.kyanite.
+
+
+-spec max_concurrent_constructions([building()]) -> integer().
+max_concurrent_constructions(Buildings) ->
+    CCLevel = construction_center_level(Buildings),
+    (CCLevel + 9) div 10.
+
+
+-spec construction_center_level([building()]) -> integer().
+construction_center_level(Buildings) ->
+    case get_building(Buildings, construction_center) of
+        {ok, #building{level=Level}} -> Level;
+        _Otherwise -> 0
+    end.
 
 
 -spec claim_resources(PlanetState :: planet_state(), Costs :: bdef()) -> planet_state().
