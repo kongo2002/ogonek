@@ -89,7 +89,6 @@ a.icon {
 
 table {
   table-layout: fixed;
-  width: 100%;
 }
 
 table thead {
@@ -166,7 +165,6 @@ table td.building {
 @media (min-width: 750px) {
   table {
     table-layout: inherit;
-    width: inherit;
   }
 
   table thead {
@@ -185,12 +183,12 @@ table td.building {
 
   table td {
     display: table-cell;
-    padding: 12px 5px;
+    padding: 0.8em 0.3em;
     text-align: left;
   }
 
   table th {
-    padding: 12px 5px;
+    padding: 1em 0.3em;
   }
 
   table td::before {
@@ -210,13 +208,13 @@ table td.building {
 
 @media (min-width: 1000px) {
   table td, table th {
-    padding: 12px 8px;
+    padding: 0.8em 0.5em;
   }
 }
 
 @media (min-width: 1200px) {
   table td, table th {
-    padding: 12px 15px;
+    padding: 0.8em 0.7em;
   }
 }
 

@@ -192,7 +192,7 @@ homePlanet active model =
     , div [ class "row" ]
       [ h3 [] [ text "Buildings" ]
       , constructionInfo
-      , table [ id "buildings" ]
+      , table [ id "buildings", class "u-full-width" ]
         [ thead []
           [ tr []
             [ header Const.building
