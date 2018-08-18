@@ -134,6 +134,7 @@ home model =
 homePlanet : ActivePlanet -> Model -> List (Html Msg)
 homePlanet active model =
   let planet = active.planet
+      cap = active.capacity
       name = "Planet at " ++ coordStr planet.position
       header name = th [] [ text name ]
       buildings = Dict.values active.buildings
@@ -141,31 +142,44 @@ homePlanet active model =
       maxConstr = maxConcurrentConstructions active
       numConstr = Dict.size active.constructions
       toRow = buildingRow active (maxConstr > numConstr)
-      desc (name, value) =
-        li []
-          [ span [ class "resource" ] [ text name, text ": " ]
-          , numberSpan value
-          ]
-      resources =
-        [ (Const.workers, res.workers)
-        , (Const.power, res.power)
-        , (Const.ironOre, res.ironOre)
-        , (Const.gold, res.gold)
-        , (Const.h2o, res.h2o)
-        , (Const.oil, res.oil)
-        , (Const.h2, res.h2)
-        , (Const.uranium, res.uranium)
-        , (Const.pvc, res.pvc)
-        , (Const.kyanite, res.kyanite)
+
+      desc (name, value, capacity) =
+        let progress = value * 100 // capacity
+            progStr = (toString progress) ++ "%"
+        in div [ class "resource three columns" ]
+           [ div [ class "meter" ]
+             [ h6 [ class "description" ]
+               [ text name , text ": ", numberSpan value
+               ]
+             , span [ style [("width", progStr)] ] []
+             ]
+           ]
+
+      energies =
+        [ (Const.workers, res.workers, 0)
+        , (Const.power, res.power, 0)
+        ]
+
+      baseResources =
+        [ (Const.ironOre, res.ironOre, cap.ironOre)
+        , (Const.gold, res.gold, cap.gold)
+        , (Const.h2o, res.h2o, cap.h2o)
+        , (Const.oil, res.oil, cap.oil)
+        ]
+
+      advancedResources =
+        [ (Const.h2, res.h2, cap.h2)
+        , (Const.uranium, res.uranium, cap.uranium)
+        , (Const.pvc, res.pvc, cap.pvc)
+        , (Const.kyanite, res.kyanite, cap.kyanite)
         ]
   in
-    [ div [ class "row" ]
-      [ h2 [] [ text name ] ]
-    , div [ class "row" ]
-      [ h3 [] [ text "Resources" ]
-      , div [ id "resources" ]
-        [ ul [ class "inline" ] (List.map desc resources)
-        ]
+    [ h2 [] [ text name ]
+    , h3 [] [ text "Resources" ]
+    , div [ id "resources" ]
+      [ div [ class "row" ] (List.map desc energies)
+      , div [ class "row" ] (List.map desc baseResources)
+      , div [ class "row" ] (List.map desc advancedResources)
       ]
     , div [ class "row" ]
       [ h3 [] [ text "Buildings" ]

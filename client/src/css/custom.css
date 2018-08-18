@@ -109,6 +109,36 @@ table td.building {
   text-transform: uppercase;
 }
 
+.meter {
+  height: 20px;
+  position: relative;
+  border-radius: 15px;
+  padding: 3px;
+  border: 2px solid #1eaedb;
+}
+
+.meter > span {
+  display: block;
+  height: 100%;
+  border-top-right-radius: 20px;
+  border-bottom-right-radius: 20px;
+  border-top-left-radius: 20px;
+  border-bottom-left-radius: 20px;
+  background-color: #ddd;
+  position: relative;
+  overflow: hidden;
+}
+
+.meter > h6 {
+  position: absolute;
+  z-index: 1;
+  padding-left: 1ex;
+}
+
+.resource {
+  padding-bottom: 2px;
+}
+
 /* large device table layout */
 
 @media (min-width: 750px) {
