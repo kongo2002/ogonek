@@ -262,7 +262,6 @@ handle_info({planet_info, PlanetId}, State) ->
 handle_info({build_building, Planet, Type, Level}=Req, State) ->
     case maps:get(Planet, State#state.planets, undefined) of
         undefined ->
-            % TODO: respond with error?
             {noreply, State};
         #planet_state{buildings=Bs, constructions=Cs}=PState ->
             case {get_building(Bs, Type), get_construction(Cs, Type)} of
@@ -664,9 +663,17 @@ claim_resources(PlanetState, Costs) ->
     Planet = PlanetState#planet_state.planet,
     Resources = Planet#planet.resources,
 
+    % claim_resources is called immediately on the creation of the construction
+    % that's why we claim only the 'positive' costs at this point
+    %
+    % the 'positive' gain of workers and/or power will be collected only
+    % once the construction is actually finished
+    Workers = max(Costs#bdef.workers, 0),
+    Power = max(Costs#bdef.power, 0),
+
     Res0 = Resources#resources{
-             workers=Resources#resources.workers - Costs#bdef.workers,
-             power=Resources#resources.power - Costs#bdef.power,
+             workers=Resources#resources.workers - Workers,
+             power=Resources#resources.power - Power,
              iron_ore=Resources#resources.iron_ore - Costs#bdef.iron_ore,
              gold=Resources#resources.gold - Costs#bdef.gold,
              h2o=Resources#resources.h2o - Costs#bdef.h2o,
