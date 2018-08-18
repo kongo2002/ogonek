@@ -105,7 +105,7 @@ get_cookie_session(Request) ->
             KVs = lists:foldl(fun(V, Cs) ->
                                       case binary:split(V, <<"=">>) of
                                           [Key, Value] ->
-                                              [{string:trim(Key), string:trim(Value)} | Cs];
+                                              [{ogonek_util:trim(Key), ogonek_util:trim(Value)} | Cs];
                                           _ -> Cs
                                       end
                               end, [], Values),

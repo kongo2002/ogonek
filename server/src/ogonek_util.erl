@@ -20,7 +20,8 @@
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
--export([lowercase/1,
+-export([trim/1,
+         lowercase/1,
          uppercase/1,
          parse_json/1,
          json_get/1,
@@ -38,6 +39,12 @@
          if_defined/2,
          now8601/0
         ]).
+
+
+-spec trim(binary()) -> binary().
+trim(Binary) ->
+    % TODO: replace with 'string:trim' for OTP >= 20
+    re:replace(Binary, "^\\s+|\\s+$", "", [{return, binary}, global]).
 
 
 -spec now8601() -> binary().
@@ -248,6 +255,14 @@ choose_random_test_() ->
      ?_assertEqual(true, lists:member(choose_random([1, 2, 3]), [1, 2, 3])),
      ?_assertEqual(true, lists:member(choose_random([1, 2, 3]), [1, 2, 3])),
      ?_assertEqual(true, lists:member(choose_random([1, 2, 3]), [1, 2, 3]))
+    ].
+
+trim_test_() ->
+    [?_assertEqual(<<"">>, trim(<<"">>)),
+     ?_assertEqual(<<"foo">>, trim(<<"foo">>)),
+     ?_assertEqual(<<"foo">>, trim(<<"  foo">>)),
+     ?_assertEqual(<<"foo">>, trim(<<"foo   ">>)),
+     ?_assertEqual(<<"foo">>, trim(<<"  foo   ">>))
     ].
 
 -endif.
