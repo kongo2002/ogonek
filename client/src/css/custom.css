@@ -53,6 +53,10 @@ ul.inline li:first-child {
   padding-left: 0;
 }
 
+#resources {
+  padding-bottom: 1em;
+}
+
 #resources span.resource {
   text-transform: capitalize;
 }

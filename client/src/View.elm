@@ -155,6 +155,14 @@ homePlanet active model =
              ]
            ]
 
+      constructionInfo =
+        if maxConstr <= numConstr then
+          div [ class "row cinfo" ]
+            [ p []
+              [ text ("Max. number of concurrent constructions: " ++ (toString maxConstr)) ]
+            ]
+        else div [] []
+
       energies =
         [ (Const.workers, res.workers, 0)
         , (Const.power, res.power, 0)
@@ -183,6 +191,7 @@ homePlanet active model =
       ]
     , div [ class "row" ]
       [ h3 [] [ text "Buildings" ]
+      , constructionInfo
       , table [ id "buildings" ]
         [ thead []
           [ tr []
