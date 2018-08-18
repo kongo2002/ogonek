@@ -29,6 +29,10 @@
   text-decoration: none;
 }
 
+#buildings {
+  font-size: 95%;
+}
+
 #buildings thead {
   text-transform: uppercase;
 }
