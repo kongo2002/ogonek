@@ -565,7 +565,7 @@ finish_building(#bdef{name=Def}, PlanetId, Level) ->
 process_constructions([], _Buildings) -> [];
 process_constructions(Constructions, Buildings) ->
     Now = ogonek_util:now8601(),
-    lists:foldl(fun(#construction{finish=F}=C, Cs) when F < Now ->
+    lists:foldl(fun(#construction{finish=F}=C, Cs) when F =< Now ->
                         Type = C#construction.building,
                         case get_building(Buildings, Type) of
                             {ok, B} ->
@@ -604,7 +604,7 @@ trigger_construction_checks(Constructions) ->
     lists:foreach(fun(C) ->
                           Planet = C#construction.planet,
                           DueIn = seconds_since(C#construction.finish),
-                          trigger_construction_check(Planet, DueIn)
+                          trigger_construction_check(Planet, DueIn + 1)
                   end, Constructions).
 
 
