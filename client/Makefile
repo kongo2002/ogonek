@@ -18,6 +18,8 @@ else
 endif
 
 clean:
+	@rm -rf elm-stuff
+	@rm -rf node_modules
 	@rm -f $(TARGETS)
 
 rebuild: clean all
