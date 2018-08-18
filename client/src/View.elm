@@ -21,6 +21,7 @@ import Html.Events exposing ( onClick, onWithOptions, onInput, onSubmit )
 import Json.Decode
 import Time.Iso8601
 
+import Const
 import Types exposing (..)
 import Routing
 
@@ -146,16 +147,16 @@ homePlanet active model =
           , numberSpan value
           ]
       resources =
-        [ ("workers", res.workers)
-        , ("power", res.power)
-        , ("iron ore", res.ironOre)
-        , ("gold", res.gold)
-        , ("H2O", res.h2o)
-        , ("oil", res.oil)
-        , ("H2", res.h2)
-        , ("uranium", res.uranium)
-        , ("pvc", res.pvc)
-        , ("kyanite", res.kyanite)
+        [ (Const.workers, res.workers)
+        , (Const.power, res.power)
+        , (Const.ironOre, res.ironOre)
+        , (Const.gold, res.gold)
+        , (Const.h2o, res.h2o)
+        , (Const.oil, res.oil)
+        , (Const.h2, res.h2)
+        , (Const.uranium, res.uranium)
+        , (Const.pvc, res.pvc)
+        , (Const.kyanite, res.kyanite)
         ]
   in
     [ div [ class "row" ]
@@ -171,18 +172,18 @@ homePlanet active model =
       , table [ id "buildings" ]
         [ thead []
           [ tr []
-            [ header "building"
-            , header "level"
-            , header "workers"
-            , header "power"
-            , header "iron ore"
-            , header "gold"
-            , header "H2O"
-            , header "oil"
-            , header "H2"
-            , header "uranium"
-            , header "PVC"
-            , header "kyanite"
+            [ header Const.building
+            , header Const.level
+            , header Const.workers
+            , header Const.power
+            , header Const.ironOre
+            , header Const.gold
+            , header Const.h2o
+            , header Const.oil
+            , header Const.h2
+            , header Const.uranium
+            , header Const.pvc
+            , header Const.kyanite
             , header ""
             ]
           ]
@@ -250,17 +251,17 @@ buildingRow planet constrPossible binfo =
   in
     tr []
     [ td [ class "building" ] [ text (translateBuilding binfo) ]
-    , col "level" binfo.level -1
-    , col "workers" binfo.workers res.workers
-    , col "power" binfo.power res.power
-    , col "iron ore" binfo.ironOre res.ironOre
-    , col "gold" binfo.gold res.gold
-    , col "H2O" binfo.h2o res.h2o
-    , col "oil" binfo.oil res.oil
-    , col "H2" binfo.h2 res.h2
-    , col "uranium" binfo.uranium res.uranium
-    , col "PVC" binfo.pvc res.pvc
-    , col "kyanite" binfo.kyanite res.kyanite
+    , col Const.level binfo.level -1
+    , col Const.workers binfo.workers res.workers
+    , col Const.power binfo.power res.power
+    , col Const.ironOre binfo.ironOre res.ironOre
+    , col Const.gold binfo.gold res.gold
+    , col Const.h2o binfo.h2o res.h2o
+    , col Const.oil binfo.oil res.oil
+    , col Const.h2 binfo.h2 res.h2
+    , col Const.uranium binfo.uranium res.uranium
+    , col Const.pvc binfo.pvc res.pvc
+    , col Const.kyanite binfo.kyanite res.kyanite
     , td [ class "operations" ] ops
     ]
 
