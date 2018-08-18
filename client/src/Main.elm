@@ -24,6 +24,7 @@ import Api
 import Types exposing (..)
 import Routing
 import View
+import Utils
 
 
 init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
@@ -222,16 +223,7 @@ updateConstructionTimes : Model -> DateTime -> Model
 updateConstructionTimes model now =
   let toDelta name info =
       let delta = Time.DateTime.delta info.finish now
-          str val unit = toString val ++ " " ++ unit
-          diffStr =
-            if delta.days > 0 then
-              str delta.days "days"
-            else if delta.hours > 0 then
-              str delta.hours "hours"
-            else if delta.minutes > 0 then
-              str delta.minutes "minutes"
-            else
-              str delta.seconds "seconds"
+          diffStr = Utils.deltaToString delta
       in { info | timeLeft = Just diffStr }
   in case model.planet of
     Just active ->

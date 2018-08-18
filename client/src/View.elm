@@ -24,6 +24,7 @@ import Time.Iso8601
 import Const
 import Types exposing (..)
 import Routing
+import Utils
 
 
 view : Model -> Html Msg
@@ -302,7 +303,7 @@ constructionOperation constr =
       durationDesc =
         case constr.timeLeft of
           Just time -> "finished in " ++ time
-          Nothing -> "in construction"
+          Nothing -> "in construction "
   in  a [ class "icon inactive construction", finish ]
       [ span [] [ text durationDesc ]
       , span [] [ icon "gavel" ]
@@ -317,7 +318,9 @@ buildOperation constrPossible res binfo =
       buildCls =
         if possible then [ href "#", numbClick request ]
         else [ class "inactive" ]
-      desc = span [ class "description" ] [ text "Build " ]
+      desc =
+        span [ class "description" ]
+          [ text <| "Build (" ++ Utils.deltaToString binfo.duration ++ ") " ]
   in  a (class "icon" :: buildCls) [ desc, icon "cog" ]
 
 

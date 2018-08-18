@@ -138,6 +138,7 @@ buildingInfoDecoder =
     |: (JD.field "type" JD.string)
     |: (JD.field "planet" JD.string)
     |: (JD.field "level" JD.int)
+    |: (JD.field "duration" dateTimeDeltaDecoder)
 
 
 resourceInfoDecoder : JD.Decoder Types.ResourceInfo
@@ -164,6 +165,16 @@ resources f =
   |: (JD.field "uranium" JD.int)
   |: (JD.field "pvc" JD.int)
   |: (JD.field "kyanite" JD.int)
+
+
+dateTimeDeltaDecoder : JD.Decoder Time.DateTime.DateTimeDelta
+dateTimeDeltaDecoder =
+  let toDelta sec =
+        -- fromTimestamp expects milliseconds
+        let dt = Time.DateTime.fromTimestamp (toFloat (sec * 1000))
+            epoch = Time.DateTime.epoch
+        in  Time.DateTime.delta dt epoch
+  in JD.int |> JD.map toDelta
 
 
 coordDecoder : JD.Decoder (Int, Int, Int)
