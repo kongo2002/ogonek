@@ -267,40 +267,44 @@ buildingRow planet constrPossible binfo =
   let col label val relative = td [ attribute "data-label" label ] [ numberSpanTo relative val ]
       res = planet.resources
       construction = Dict.get binfo.name planet.constructions
-      ops =
+
+      buildColumns =
+        [ col Const.workers binfo.workers res.workers
+        , col Const.power binfo.power res.power
+        , col Const.ironOre binfo.ironOre res.ironOre
+        , col Const.gold binfo.gold res.gold
+        , col Const.h2o binfo.h2o res.h2o
+        , col Const.oil binfo.oil res.oil
+        , col Const.h2 binfo.h2 res.h2
+        , col Const.uranium binfo.uranium res.uranium
+        , col Const.pvc binfo.pvc res.pvc
+        , col Const.kyanite binfo.kyanite res.kyanite
+        ]
+
+      columns =
         case construction of
-          Just constr -> [ constructionOperation constr ]
-          Nothing -> [ buildOperation constrPossible res binfo ]
+          Just constr ->
+            [ td [ class "operations", colspan 11 ] [ constructionOperation constr ] ]
+          Nothing ->
+            buildColumns ++
+            [ td [ class "operations" ] [ buildOperation constrPossible res binfo ] ]
   in
     tr []
-    [ td [ class "building" ] [ text (translateBuilding binfo) ]
+    ([ td [ class "building" ] [ text (translateBuilding binfo) ]
     , col Const.level binfo.level -1
-    , col Const.workers binfo.workers res.workers
-    , col Const.power binfo.power res.power
-    , col Const.ironOre binfo.ironOre res.ironOre
-    , col Const.gold binfo.gold res.gold
-    , col Const.h2o binfo.h2o res.h2o
-    , col Const.oil binfo.oil res.oil
-    , col Const.h2 binfo.h2 res.h2
-    , col Const.uranium binfo.uranium res.uranium
-    , col Const.pvc binfo.pvc res.pvc
-    , col Const.kyanite binfo.kyanite res.kyanite
-    , td [ class "operations" ] ops
-    ]
+    ] ++ columns)
 
 
 constructionOperation : ConstructionInfo -> Html Msg
 constructionOperation constr =
   let finishStr = Time.Iso8601.fromDateTime constr.finish
       finish = title ("finished: " ++ finishStr)
-      duration = constr.timeLeft |> Maybe.withDefault ""
       durationDesc =
         case constr.timeLeft of
-          Just time -> "finished in "
-          Nothing -> "in construction "
+          Just time -> "finished in " ++ time
+          Nothing -> "in construction"
   in  a [ class "icon inactive construction", finish ]
-      [ span [ class "mobile" ] [ text durationDesc ]
-      , span [] [ text duration ]
+      [ span [] [ text durationDesc ]
       , span [] [ icon "gavel" ]
       ]
 
