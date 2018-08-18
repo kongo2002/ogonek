@@ -93,6 +93,7 @@ payloadDecoder =
       "building" -> JD.map Types.Building buildingInfoDecoder
       "construction" -> JD.map Types.Construction constructionDecoder
       "planet" -> JD.map Types.Planet planetDecoder
+      "capacity" -> JD.map Types.Capacity capacityInfoDecoder
       "authinfo" -> JD.map Types.Auth authInfoDecoder
       "user" -> JD.map Types.User userInfoDecoder
       "error" -> JD.map Types.Error errorDecoder
@@ -132,6 +133,8 @@ constructionDecoder =
 buildingInfoDecoder : JD.Decoder Types.BuildingInfo
 buildingInfoDecoder =
   resources Types.BuildingInfo
+    |: (JD.field "workers" JD.int)
+    |: (JD.field "power" JD.int)
     |: (JD.field "type" JD.string)
     |: (JD.field "planet" JD.string)
     |: (JD.field "level" JD.int)
@@ -140,14 +143,20 @@ buildingInfoDecoder =
 resourceInfoDecoder : JD.Decoder Types.ResourceInfo
 resourceInfoDecoder =
   resources Types.ResourceInfo
+    |: (JD.field "workers" JD.int)
+    |: (JD.field "power" JD.int)
     |: (JD.field "planet" JD.string)
 
 
-resources : (Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> a) -> JD.Decoder a
+capacityInfoDecoder : JD.Decoder Types.CapacityInfo
+capacityInfoDecoder =
+  resources Types.CapacityInfo
+    |: (JD.field "planet" JD.string)
+
+
+resources : (Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> a) -> JD.Decoder a
 resources f =
-  JD.map f (JD.field "workers" JD.int)
-  |: (JD.field "power" JD.int)
-  |: (JD.field "iron_ore" JD.int)
+  JD.map f (JD.field "iron_ore" JD.int)
   |: (JD.field "gold" JD.int)
   |: (JD.field "h2o" JD.int)
   |: (JD.field "oil" JD.int)

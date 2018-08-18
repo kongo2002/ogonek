@@ -115,6 +115,11 @@ update msg model =
           model0 = updateBuilding model info
       in  model0 ! []
 
+    ApiResponse (Capacity info) ->
+      let _ = Debug.log "capacity information received" info
+          model0 = updateCapacity model info
+      in  model0 ! []
+
     ApiResponse (Construction info) ->
       let _ = Debug.log "construction information received" info
           model0 = updateConstruction model info
@@ -158,7 +163,21 @@ initialPlanet : PlanetInfo -> ActivePlanet
 initialPlanet info =
   let planetId = info.id
       resources = emptyResources planetId
-  in  ActivePlanet info Dict.empty Dict.empty resources
+      capacity = emptyCapacity planetId
+  in  ActivePlanet info Dict.empty Dict.empty resources capacity
+
+
+updateCapacity : Model -> CapacityInfo -> Model
+updateCapacity model info =
+  case model.planet of
+    Just active ->
+      if active.planet.id == info.planetId then
+        let updated = { active | capacity = info }
+        in  { model | planet = Just updated }
+      else
+        model
+    Nothing ->
+      model
 
 
 updateBuilding : Model -> BuildingInfo -> Model
@@ -223,6 +242,11 @@ constructionValid planet info =
 emptyResources : String -> ResourceInfo
 emptyResources planet =
   ResourceInfo 0 0 0 0 0 0 0 0 0 0 planet
+
+
+emptyCapacity : String -> CapacityInfo
+emptyCapacity planet =
+  CapacityInfo 0 0 0 0 0 0 0 0 planet
 
 
 updateResources : Model -> ResourceInfo -> Model

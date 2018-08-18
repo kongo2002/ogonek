@@ -49,6 +49,7 @@ type ApiContent
   | Planet PlanetInfo
   | Building BuildingInfo
   | Construction ConstructionInfo
+  | Capacity CapacityInfo
   | Resources ResourceInfo
   | Error ApiError
 
@@ -111,9 +112,7 @@ type alias Flags =
 
 
 type alias BuildingInfo =
-  { workers : Int
-  , power : Int
-  , ironOre : Int
+  { ironOre : Int
   , gold : Int
   , h2o : Int
   , oil : Int
@@ -121,6 +120,8 @@ type alias BuildingInfo =
   , uranium : Int
   , pvc : Int
   , kyanite : Int
+  , workers : Int
+  , power : Int
   , name : String
   , planetId : String
   , level : Int
@@ -137,9 +138,22 @@ type alias ConstructionInfo =
 
 
 type alias ResourceInfo =
-  { workers : Int
+  { ironOre : Int
+  , gold : Int
+  , h2o : Int
+  , oil : Int
+  , h2 : Int
+  , uranium : Int
+  , pvc : Int
+  , kyanite : Int
+  , workers : Int
   , power : Int
-  , ironOre : Int
+  , planetId: String
+  }
+
+
+type alias CapacityInfo =
+  { ironOre : Int
   , gold : Int
   , h2o : Int
   , oil : Int
@@ -156,6 +170,7 @@ type alias ActivePlanet =
   , buildings : Dict String BuildingInfo
   , constructions : Dict String ConstructionInfo
   , resources : ResourceInfo
+  , capacity : CapacityInfo
   }
 
 

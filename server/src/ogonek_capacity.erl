@@ -52,7 +52,7 @@ to_json(Capacity, _Db) ->
               {<<"uranium">>, Capacity#capacity.uranium},
               {<<"pvc">>, Capacity#capacity.pvc},
               {<<"kyanite">>, Capacity#capacity.kyanite}
-             ],
+             ] ++ ogonek_util:if_defined(<<"planet">>, Capacity#capacity.planet),
 
     ogonek_util:doc(<<"capacity">>, Values).
 
