@@ -36,7 +36,8 @@
 -record(planet_state, {
           planet :: planet(),
           buildings :: [building()],
-          constructions :: [construction()]
+          constructions :: [construction()],
+          capacity :: capacity()
          }).
 
 -type planet_state() :: #planet_state{}.
@@ -120,9 +121,11 @@ handle_cast(prepare, #state{id=UserId}=State) ->
     Self = self(),
     Planets = fetch_planets(State),
     PlanetMap = lists:foldl(fun(#planet{id=Id}=P, Ps) ->
-                                    PState = #planet_state{planet=P,
-                                                           buildings=[],
-                                                           constructions=[]},
+                                    PState = #planet_state{
+                                                planet=P,
+                                                buildings=[],
+                                                constructions=[],
+                                                capacity=ogonek_capacity:empty(Id)},
                                     maps:put(Id, PState, Ps)
                             end, maps:new(), Planets),
 
@@ -224,7 +227,7 @@ handle_info({calc_resources, PlanetId, Silent}, State) ->
             % the last time we calculated power/workers
             {Power, Workers} = ogonek_buildings:calculate_power_workers(Buildings),
 
-            Res0 = calculate_resources(Planet, Buildings),
+            Res0 = calculate_resources(PState, Buildings),
             Res1 = Res0#resources{power=Power, workers=Workers},
 
             ogonek_db:planet_update_resources(PlanetId, Res1),
@@ -333,10 +336,13 @@ handle_info({get_buildings, Planet, Silent}, State) ->
             lager:debug("user ~s - fetched buildings of planet ~s: ~p",
                         [State#state.id, Planet, Fetched]),
 
-            PState0 = PState#planet_state{buildings=Fetched},
+            Capacity = ogonek_capacity:from_buildings(Planet, Fetched),
+            PState0 = PState#planet_state{buildings=Fetched, capacity=Capacity},
+
             Planets0 = maps:put(Planet, PState0, State#state.planets),
 
             json_to_sockets(ogonek_building, PState0#planet_state.buildings, State, Silent),
+            json_to_sockets(ogonek_capacity, Capacity, State, Silent),
 
             {noreply, State#state{planets=Planets0}};
         % buildings already present
@@ -491,15 +497,17 @@ finished_at(DurationSeconds) ->
     iso8601:format(calendar:gregorian_seconds_to_datetime(FinishedAt)).
 
 
--spec calculate_resources(planet(), [building()]) -> resources().
-calculate_resources(Planet, Buildings) ->
-    calculate_resources(Planet, Buildings, false).
+-spec calculate_resources(planet_state(), [building()]) -> resources().
+calculate_resources(PlanetState, Buildings) ->
+    calculate_resources(PlanetState, Buildings, false).
 
 
--spec calculate_resources(planet(), [building()], boolean()) -> resources().
-calculate_resources(Planet, Buildings, Force) ->
+-spec calculate_resources(planet_state(), [building()], boolean()) -> resources().
+calculate_resources(PlanetState, Buildings, Force) ->
+    Planet = PlanetState#planet_state.planet,
     UserId = Planet#planet.owner,
     Resources = Planet#planet.resources,
+    Capacity = PlanetState#planet_state.capacity,
 
     SecondsSince = seconds_since(Resources#resources.updated),
 
@@ -518,7 +526,8 @@ calculate_resources(Planet, Buildings, Force) ->
            lager:debug("user ~s - produced since ~s: ~p", [UserId, Resources#resources.updated, Produced]),
 
            Summed = ogonek_resources:sum(Resources, Produced),
-           Summed#resources{updated=ogonek_util:now8601()};
+           Capped = ogonek_resources:with_capacity(Summed, Capacity),
+           Capped#resources{updated=ogonek_util:now8601()};
        true ->
            lager:debug("user ~s - skipping resources calculation [~p sec ago]",
                        [UserId, SecondsSince]),

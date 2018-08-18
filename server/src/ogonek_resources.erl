@@ -22,7 +22,8 @@
          empty/0,
          multiply/2,
          sum/2,
-         with_factor/2]).
+         with_factor/2,
+         with_capacity/2]).
 
 
 -spec empty() -> resources().
@@ -136,4 +137,18 @@ with_factor(Factor, Resources) ->
       uranium=round(Resources#resources.uranium * Factor),
       pvc=round(Resources#resources.pvc * Factor),
       kyanite=round(Resources#resources.kyanite * Factor)
+     }.
+
+
+-spec with_capacity(resources(), capacity()) -> resources().
+with_capacity(Resources, Capacity) ->
+    Resources#resources{
+      iron_ore=min(Resources#resources.iron_ore, Capacity#capacity.iron_ore),
+      gold=min(Resources#resources.gold, Capacity#capacity.gold),
+      h2o=min(Resources#resources.h2o, Capacity#capacity.h2o),
+      oil=min(Resources#resources.oil, Capacity#capacity.oil),
+      h2=min(Resources#resources.h2, Capacity#capacity.h2),
+      uranium=min(Resources#resources.uranium, Capacity#capacity.uranium),
+      pvc=min(Resources#resources.pvc, Capacity#capacity.pvc),
+      kyanite=min(Resources#resources.kyanite, Capacity#capacity.kyanite)
      }.

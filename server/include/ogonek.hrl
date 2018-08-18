@@ -101,6 +101,21 @@
 -type resources() :: #resources{}.
 
 
+-record(capacity, {
+          planet :: maybe_unset_id(),
+          iron_ore :: integer(),
+          gold :: integer(),
+          h2o :: integer(),
+          oil :: integer() ,
+          h2 :: integer(),
+          uranium :: integer(),
+          pvc :: integer(),
+          kyanite :: integer()
+         }).
+
+-type capacity() :: #capacity{}.
+
+
 -type coordinate() :: {integer(), integer(), integer()}.
 
 
