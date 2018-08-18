@@ -25,6 +25,7 @@ type Msg
   -- internals
   | NavigationChange Location
   | NewUrl Route
+  | Tick Time.DateTime.DateTime
   -- forms
   | FormContent String String
   | LocalLogin
@@ -129,7 +130,8 @@ type alias BuildingInfo =
 
 
 type alias ConstructionInfo =
-  { planetId : String
+  { timeLeft : Maybe String
+  , planetId : String
   , building : String
   , level : Int
   , created : Time.DateTime.DateTime
@@ -182,6 +184,7 @@ type alias Model =
   , planet : Maybe ActivePlanet
   , websocketHost : String
   , formContents : Dict String String
+  , lastTimeStamp : Maybe Time.DateTime.DateTime
   }
 
 

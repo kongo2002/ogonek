@@ -293,8 +293,14 @@ constructionOperation : ConstructionInfo -> Html Msg
 constructionOperation constr =
   let finishStr = Time.Iso8601.fromDateTime constr.finish
       finish = title ("finished: " ++ finishStr)
+      duration = constr.timeLeft |> Maybe.withDefault ""
+      durationDesc =
+        case constr.timeLeft of
+          Just time -> "finished in "
+          Nothing -> "in construction "
   in  a [ class "icon inactive construction", finish ]
-      [ span [ class "mobile" ] [ text "in construction " ]
+      [ span [ class "mobile" ] [ text durationDesc ]
+      , span [] [ text duration ]
       , span [] [ icon "gavel" ]
       ]
 

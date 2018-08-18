@@ -17,6 +17,8 @@ module Main exposing ( main )
 import Debug
 import Dict
 import Navigation
+import Time
+import Time.DateTime exposing ( DateTime )
 
 import Api
 import Types exposing (..)
@@ -27,7 +29,7 @@ import View
 init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
 init flags location =
   let route = Routing.parse location
-      model = Model route Nothing [] Dict.empty Nothing flags.websocketHost Dict.empty
+      model = Model route Nothing [] Dict.empty Nothing flags.websocketHost Dict.empty Nothing
       actions = routeActions model
   in  model ! actions
 
@@ -83,6 +85,11 @@ update msg model =
 
     NewUrl url ->
       model ! [ Navigation.newUrl (Routing.routeToPath url) ]
+
+    Tick now ->
+      let model0 = { model | lastTimeStamp = Just now }
+          model1 = updateConstructionTimes model0 now
+      in  model1 ! []
 
     FormContent key value ->
       let forms = Dict.insert key value model.formContents
@@ -211,6 +218,30 @@ removeConstruction planet info =
       Nothing -> planet.constructions
 
 
+updateConstructionTimes : Model -> DateTime -> Model
+updateConstructionTimes model now =
+  let toDelta name info =
+      let delta = Time.DateTime.delta info.finish now
+          str val unit = toString val ++ " " ++ unit
+          diffStr =
+            if delta.days > 0 then
+              str delta.days "days"
+            else if delta.hours > 0 then
+              str delta.hours "hours"
+            else if delta.minutes > 0 then
+              str delta.minutes "minutes"
+            else
+              str delta.seconds "seconds"
+      in { info | timeLeft = Just diffStr }
+  in case model.planet of
+    Just active ->
+      let cs = Dict.map toDelta active.constructions
+          updated = { active | constructions = cs }
+      in  { model | planet = Just updated }
+    Nothing ->
+      model
+
+
 updateConstruction : Model -> ConstructionInfo -> Model
 updateConstruction model info =
   case model.planet of
@@ -264,12 +295,17 @@ updateResources model info =
 
 main : Program Flags Model Msg
 main =
-  Navigation.programWithFlags NavigationChange
-    { init = init
-    , view = View.view
-    , update = update
-    , subscriptions = Api.websocket
-    }
+  let toTick time = Tick (Time.DateTime.fromTimestamp time)
+      tenSeconds = Time.second * 10
+      timeTick = Time.every tenSeconds toTick
+      subs model =
+        Sub.batch [ Api.websocket model, timeTick ]
+  in Navigation.programWithFlags NavigationChange
+      { init = init
+      , view = View.view
+      , update = update
+      , subscriptions = subs
+      }
 
 
 -- vim: et sw=2 sts=2

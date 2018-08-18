@@ -122,7 +122,7 @@ planetDecoder =
 
 constructionDecoder : JD.Decoder Types.ConstructionInfo
 constructionDecoder =
-  JD.map5 Types.ConstructionInfo
+  JD.map5 (Types.ConstructionInfo Nothing)
     (JD.field "planet" JD.string)
     (JD.field "building" JD.string)
     (JD.field "level" JD.int)
