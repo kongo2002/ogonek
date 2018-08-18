@@ -137,7 +137,9 @@ homePlanet active model =
       header name = th [] [ text name ]
       buildings = Dict.values active.buildings
       res = active.resources
-      toRow = buildingRow active
+      maxConstr = maxConcurrentConstructions active
+      numConstr = Dict.size active.constructions
+      toRow = buildingRow active (maxConstr > numConstr)
       desc (name, value) =
         li []
           [ span [ class "resource" ] [ text name, text ": " ]
@@ -190,6 +192,16 @@ homePlanet active model =
     ]
 
 
+maxConcurrentConstructions : ActivePlanet -> Int
+maxConcurrentConstructions planet =
+  let buildings = planet.buildings
+      ccLevel =
+        Dict.get "construction_center" buildings
+        |> Maybe.map .level
+        |> Maybe.withDefault 0
+  in  (ccLevel + 9) // 10
+
+
 numberSpan : Int -> Html Msg
 numberSpan = numberSpanTo -1
 
@@ -226,15 +238,15 @@ splitThousands integers =
     in integers |> reversedSplit |> List.reverse
 
 
-buildingRow : ActivePlanet -> BuildingInfo -> Html Msg
-buildingRow planet binfo =
+buildingRow : ActivePlanet -> Bool -> BuildingInfo -> Html Msg
+buildingRow planet constrPossible binfo =
   let col label val relative = td [ attribute "data-label" label ] [ numberSpanTo relative val ]
       res = planet.resources
       construction = Dict.get binfo.name planet.constructions
       ops =
         case construction of
           Just constr -> [ constructionOperation constr ]
-          Nothing -> [ buildOperation res binfo ]
+          Nothing -> [ buildOperation constrPossible res binfo ]
   in
     tr []
     [ td [ class "building" ] [ text (translateBuilding binfo) ]
@@ -263,9 +275,9 @@ constructionOperation constr =
       ]
 
 
-buildOperation : ResourceInfo -> BuildingInfo -> Html Msg
-buildOperation res binfo =
-  let possible = buildPossible res binfo
+buildOperation : Bool -> ResourceInfo -> BuildingInfo -> Html Msg
+buildOperation constrPossible res binfo =
+  let possible = constrPossible && buildPossible res binfo
       buildReq = BuildBuildingRequest res.planetId binfo.name (binfo.level + 1)
       request = ApiRequest buildReq
       buildCls =
