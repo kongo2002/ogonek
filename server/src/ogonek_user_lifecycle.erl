@@ -179,7 +179,15 @@ handle_info({building_finish, Building}, #state{id=Id}=State) ->
             Buildings0 = update_building(Buildings, Building),
             Cs0 = remove_construction(PState#planet_state.constructions, BuildingType, BuildingLevel),
 
-            PState0 = PState#planet_state{buildings=Buildings0, constructions=Cs0},
+            % in case we finished a capacity-relevant building we
+            % have to re-calculate the capacities
+            Capacity = ogonek_capacity:from_buildings(PlanetId, Buildings0),
+
+            PState0 = PState#planet_state{
+                        buildings=Buildings0,
+                        capacity=Capacity,
+                        constructions=Cs0},
+
             Planets0 = maps:put(PlanetId, PState0, State#state.planets),
             State0 = State#state{planets=Planets0},
 
