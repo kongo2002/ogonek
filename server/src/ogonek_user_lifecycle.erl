@@ -348,6 +348,7 @@ handle_info({get_buildings, Planet, Silent}, State) ->
         % buildings already present
         PState ->
             json_to_sockets(ogonek_building, PState#planet_state.buildings, State, Silent),
+            json_to_sockets(ogonek_capacity, PState#planet_state.capacity, State, Silent),
             {noreply, State}
     end;
 
