@@ -304,6 +304,9 @@ handle_info({build_building, Planet, Type, Level}=Req, State) ->
                                   PState1 = claim_resources(PState0, Costs),
                                   Planets0 = maps:put(Planet, PState1, State#state.planets),
 
+                                  % schedule check for the time the construction will be finished
+                                  trigger_construction_check(Planet, Duration + 1),
+
                                   State0 = State#state{planets=Planets0},
                                   {noreply, State0};
                               true ->
@@ -358,6 +361,8 @@ handle_info({get_constructions, Planet, Silent}, State) ->
             Buildings = PState#planet_state.buildings,
             RemainingConstructions = process_constructions(Fetched, Buildings),
 
+            trigger_construction_checks(RemainingConstructions),
+
             PState0 = PState#planet_state{constructions=RemainingConstructions},
             Planets0 = maps:put(Planet, PState0, State#state.planets),
 
@@ -368,6 +373,23 @@ handle_info({get_constructions, Planet, Silent}, State) ->
         PState ->
             json_to_sockets(ogonek_construction, PState#planet_state.constructions, State, Silent),
             {noreply, State}
+    end;
+
+handle_info({process_constructions, PlanetId}, #state{id=Id}=State) ->
+    case maps:get(PlanetId, State#state.planets, undefined) of
+        % unknown, invalid or foreign planet
+        undefined ->
+            {noreply, State};
+        #planet_state{constructions=Cs}=PState ->
+            lager:debug("user ~s - processing constructions", [Id]),
+
+            Buildings = PState#planet_state.buildings,
+            RemainingConstructions = process_constructions(Cs, Buildings),
+
+            PState0 = PState#planet_state{constructions=RemainingConstructions},
+            Planets0 = maps:put(PlanetId, PState0, State#state.planets),
+
+            {noreply, State#state{planets=Planets0}}
     end;
 
 handle_info(Info, #state{id=Id}=State) ->
@@ -449,11 +471,11 @@ bootstrap_free_planet(Planet) ->
     lists:foreach(Build, InitialBuildings).
 
 
--spec seconds_since(resources()) -> integer().
-seconds_since(Resources) ->
+-spec seconds_since(Timestamp :: binary()) -> integer().
+seconds_since(Timestamp) ->
     Now = calendar:universal_time(),
-    Since = iso8601:parse(Resources#resources.updated),
-    calendar:datetime_to_gregorian_seconds(Now) - calendar:datetime_to_gregorian_seconds(Since).
+    Since = iso8601:parse(Timestamp),
+    abs(calendar:datetime_to_gregorian_seconds(Now) - calendar:datetime_to_gregorian_seconds(Since)).
 
 
 -spec seconds_to_simulated_hours(integer()) -> float().
@@ -480,7 +502,7 @@ calculate_resources(Planet, Buildings, Force) ->
     UserId = Planet#planet.owner,
     Resources = Planet#planet.resources,
 
-    SecondsSince = seconds_since(Resources),
+    SecondsSince = seconds_since(Resources#resources.updated),
 
     if SecondsSince >= 60 orelse Force == true ->
            % the production capabilities of the planet's buildings are the
@@ -558,6 +580,21 @@ json_to_sockets(Module, Obj, State) ->
 json_to_sockets(_Module, _Obj, _State, true) -> ok;
 json_to_sockets(Module, Obj, State, _) ->
     json_to_sockets(Module, Obj, State).
+
+
+-spec trigger_construction_checks([construction()]) -> ok.
+trigger_construction_checks(Constructions) ->
+    lists:foreach(fun(C) ->
+                          Planet = C#construction.planet,
+                          DueIn = seconds_since(C#construction.finish),
+                          trigger_construction_check(Planet, DueIn)
+                  end, Constructions).
+
+
+-spec trigger_construction_check(PlanetId :: binary(), Seconds :: integer()) -> ok.
+trigger_construction_check(PlanetId, Seconds) ->
+    erlang:send_after(Seconds * 1000, self(), {process_constructions, PlanetId}),
+    ok.
 
 
 -spec get_building([building()], atom()) -> {ok, building()} | undefined.
