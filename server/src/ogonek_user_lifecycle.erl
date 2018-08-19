@@ -438,6 +438,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
+-spec fetch_planets(state()) -> [planet()].
 fetch_planets(State) ->
     UserId = State#state.id,
     Planets = ogonek_planet_manager:user_planets(UserId),
