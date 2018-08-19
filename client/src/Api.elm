@@ -94,6 +94,7 @@ payloadDecoder =
       "construction" -> JD.map Types.Construction constructionDecoder
       "planet" -> JD.map Types.Planet planetDecoder
       "capacity" -> JD.map Types.Capacity capacityInfoDecoder
+      "production" -> JD.map Types.Production resourceInfoDecoder
       "authinfo" -> JD.map Types.Auth authInfoDecoder
       "user" -> JD.map Types.User userInfoDecoder
       "error" -> JD.map Types.Error errorDecoder

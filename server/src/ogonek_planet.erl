@@ -86,7 +86,8 @@ exists(X, Y, Z) ->
 % production rate per hour of all resources
 -spec production(planet()) -> resources().
 production(Planet) ->
-    production(Planet#planet.type, Planet#planet.size).
+    Prod = production(Planet#planet.type, Planet#planet.size),
+    Prod#resources{planet=Planet#planet.id}.
 
 
 -spec production(planet_type(), integer()) -> resources().

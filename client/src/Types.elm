@@ -52,6 +52,7 @@ type ApiContent
   | Construction ConstructionInfo
   | Capacity CapacityInfo
   | Resources ResourceInfo
+  | Production ResourceInfo
   | Error ApiError
 
 
@@ -174,6 +175,7 @@ type alias ActivePlanet =
   , constructions : Dict String ConstructionInfo
   , resources : ResourceInfo
   , capacity : CapacityInfo
+  , production : ResourceInfo
   }
 
 

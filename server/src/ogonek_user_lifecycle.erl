@@ -141,7 +141,10 @@ handle_cast(prepare, #state{id=UserId}=State) ->
                           Self ! {get_constructions, P, true},
 
                           % calculate resources after that
-                          Self ! {calc_resources, P, true}
+                          Self ! {calc_resources, P, true},
+
+                          % push production info as well
+                          Self ! {production_info, P}
                   end, maps:keys(PlanetMap)),
 
     {noreply, State#state{planets=PlanetMap}};
@@ -256,8 +259,19 @@ handle_info({planet_info, PlanetId}, State) ->
             Self = self(),
             Self ! {get_buildings, PlanetId, false},
             Self ! {get_constructions, PlanetId, false},
-            Self ! {calc_resources, PlanetId, false}
+            Self ! {calc_resources, PlanetId, false},
+            Self ! {production_info, PlanetId}
     end,
+    {noreply, State};
+
+handle_info({production_info, PlanetId}, State) ->
+    case maps:get(PlanetId, State#state.planets, undefined) of
+        undefined -> ok;
+        #planet_state{planet=Planet, buildings=Buildings} ->
+            Production = ogonek_production:of_planet(Planet, Buildings),
+            json_to_sockets(ogonek_production, Production, State)
+    end,
+
     {noreply, State};
 
 handle_info({build_building, Planet, Type, Level}=Req, State) ->
@@ -535,17 +549,12 @@ calculate_resources(PlanetState, Buildings, RelativeTo, Force) ->
     SecondsSince = seconds_since(Resources#resources.updated, RelativeTo),
 
     if SecondsSince >= 60 orelse Force == true ->
-           % the production capabilities of the planet's buildings are the
-           % base of the overall resource production
-           % that productivity is calculated in relation to the planet's base resources
-           Production = ogonek_buildings:calculate_building_production(Buildings),
-           PlanetResources = ogonek_planet:production(Planet),
-           CombinedProduction = ogonek_resources:multiply(Production, PlanetResources),
-           lager:debug("user ~s - production: ~p", [UserId, CombinedProduction]),
+           Production = ogonek_production:of_planet(Planet, Buildings),
+           lager:debug("user ~s - production: ~p", [UserId, Production]),
 
            SimulatedHours = seconds_to_simulated_hours(SecondsSince),
 
-           Produced = ogonek_resources:with_factor(SimulatedHours, CombinedProduction),
+           Produced = ogonek_resources:with_factor(SimulatedHours, Production),
            lager:debug("user ~s - produced since ~s: ~p", [UserId, Resources#resources.updated, Produced]),
 
            Summed = ogonek_resources:sum(Resources, Produced),

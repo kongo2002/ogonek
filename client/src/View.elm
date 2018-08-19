@@ -136,6 +136,7 @@ homePlanet : ActivePlanet -> Model -> List (Html Msg)
 homePlanet active model =
   let planet = active.planet
       cap = active.capacity
+      prod = active.production
       name = "Planet at " ++ coordStr planet.position
       header name = th [] [ text name ]
       buildings = Dict.values active.buildings
@@ -144,14 +145,23 @@ homePlanet active model =
       numConstr = Dict.size active.constructions
       toRow = buildingRow active (maxConstr > numConstr)
 
-      desc (name, value, capacity) =
+      desc (name, value, capacity, production) =
         let progress = value * 100 // capacity
             progStr = (toString progress) ++ "%"
-        in div [ class "resource three columns" ]
+            hasProduction = production > 0
+            prodStr = if hasProduction then (toString production) ++ " /h" else ""
+            prodTitle =
+              if hasProduction then [ title prodStr ]
+              else []
+            prodSpan =
+              if hasProduction then
+                [ span [ class "mobile light" ] [ text <| " (" ++ prodStr ++ ")" ] ]
+              else []
+        in div ([ class "resource three columns" ] ++ prodTitle)
            [ div [ class "meter" ]
              [ h6 [ class "description" ]
-               [ text name , text ": ", numberSpan value
-               ]
+               ([ text name , text ": ", numberSpan value
+               ] ++ prodSpan)
              , span [ style [("width", progStr)] ] []
              ]
            ]
@@ -165,22 +175,22 @@ homePlanet active model =
         else div [] []
 
       energies =
-        [ (Const.workers, res.workers, 0)
-        , (Const.power, res.power, 0)
+        [ (Const.workers, res.workers, 0, 0)
+        , (Const.power, res.power, 0, 0)
         ]
 
       baseResources =
-        [ (Const.ironOre, res.ironOre, cap.ironOre)
-        , (Const.gold, res.gold, cap.gold)
-        , (Const.h2o, res.h2o, cap.h2o)
-        , (Const.oil, res.oil, cap.oil)
+        [ (Const.ironOre, res.ironOre, cap.ironOre, prod.ironOre)
+        , (Const.gold, res.gold, cap.gold, prod.gold)
+        , (Const.h2o, res.h2o, cap.h2o, prod.h2o)
+        , (Const.oil, res.oil, cap.oil, prod.oil)
         ]
 
       advancedResources =
-        [ (Const.h2, res.h2, cap.h2)
-        , (Const.uranium, res.uranium, cap.uranium)
-        , (Const.pvc, res.pvc, cap.pvc)
-        , (Const.kyanite, res.kyanite, cap.kyanite)
+        [ (Const.h2, res.h2, cap.h2, prod.h2)
+        , (Const.uranium, res.uranium, cap.uranium, prod.uranium)
+        , (Const.pvc, res.pvc, cap.pvc, prod.pvc)
+        , (Const.kyanite, res.kyanite, cap.kyanite, prod.kyanite)
         ]
   in
     [ h2 [] [ text name ]
