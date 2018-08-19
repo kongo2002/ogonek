@@ -194,6 +194,7 @@ handle_info({building_finish, Building}, #state{id=Id}=State) ->
             ogonek_db:construction_remove(PlanetId, BuildingType, BuildingLevel),
 
             json_to_sockets(ogonek_building, Building, State0),
+            json_to_sockets(ogonek_capacity, Capacity, State0),
 
             {noreply, State0}
     end;
