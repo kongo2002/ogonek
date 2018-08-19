@@ -190,7 +190,16 @@ handle_info({building_finish, Building}, #state{id=Id}=State) ->
             % have to re-calculate the capacities
             Capacity = ogonek_capacity:from_buildings(PlanetId, Buildings0),
 
+            % re-calculate the power/worker amounts in case a relevant
+            % building was just finished
+            Planet = PState#planet_state.planet,
+            Res = Planet#planet.resources,
+            {Power, Workers} = ogonek_buildings:calculate_power_workers(Buildings0),
+            Res1 = Res#resources{power=Power, workers=Workers},
+            Planet0 = Planet#planet{resources=Res1},
+
             PState0 = PState#planet_state{
+                        planet=Planet0,
                         buildings=Buildings0,
                         capacity=Capacity,
                         constructions=Cs0},
@@ -202,6 +211,7 @@ handle_info({building_finish, Building}, #state{id=Id}=State) ->
 
             json_to_sockets(ogonek_building, Building, State0),
             json_to_sockets(ogonek_capacity, Capacity, State0),
+            json_to_sockets(ogonek_resources, Res1, State0),
 
             {noreply, State0}
     end;
@@ -543,16 +553,9 @@ calc_resources(PState, RelativeTo) ->
         skipped ->
             PState;
         Resources ->
-            % TODO: re-calculate power/workers only if necessary
-            % that is if there are buildings that were finished since
-            % the last time we calculated power/workers
-            {Power, Workers} = ogonek_buildings:calculate_power_workers(Buildings),
+            ogonek_db:planet_update_resources(Planet#planet.id, Resources),
 
-            Res1 = Resources#resources{power=Power, workers=Workers},
-
-            ogonek_db:planet_update_resources(Planet#planet.id, Res1),
-
-            Planet0 = Planet#planet{resources=Res1},
+            Planet0 = Planet#planet{resources=Resources},
             PState#planet_state{planet=Planet0}
     end.
 
