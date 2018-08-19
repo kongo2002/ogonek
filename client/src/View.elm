@@ -157,7 +157,7 @@ homePlanet active model =
               if hasProduction then
                 [ span [ class "mobile light" ] [ text <| " (" ++ prodStr ++ ")" ] ]
               else []
-        in div ([ class "resource three columns" ] ++ prodTitle)
+        in div ([ class "resource four columns" ] ++ prodTitle)
            [ div [ class "meter" ]
              [ h6 [ class "description" ]
                ([ text name , text ": ", numberSpan value
@@ -179,17 +179,21 @@ homePlanet active model =
         , (Const.power, res.power, 0, 0)
         ]
 
-      baseResources =
+      resourceRow1 =
         [ (Const.ironOre, res.ironOre, cap.ironOre, prod.ironOre)
         , (Const.gold, res.gold, cap.gold, prod.gold)
         , (Const.h2o, res.h2o, cap.h2o, prod.h2o)
-        , (Const.oil, res.oil, cap.oil, prod.oil)
         ]
 
-      advancedResources =
-        [ (Const.h2, res.h2, cap.h2, prod.h2)
+      resourceRow2 =
+        [ (Const.oil, res.oil, cap.oil, prod.oil)
+        , (Const.h2, res.h2, cap.h2, prod.h2)
         , (Const.uranium, res.uranium, cap.uranium, prod.uranium)
-        , (Const.pvc, res.pvc, cap.pvc, prod.pvc)
+        ]
+
+      resourceRow3 =
+        [ (Const.pvc, res.pvc, cap.pvc, prod.pvc)
+        , (Const.titan, res.titan, cap.titan, prod.titan)
         , (Const.kyanite, res.kyanite, cap.kyanite, prod.kyanite)
         ]
   in
@@ -213,8 +217,9 @@ homePlanet active model =
     , h3 [] [ text "Resources" ]
     , div [ id "resources" ]
       [ div [ class "row" ] (List.map desc energies)
-      , div [ class "row" ] (List.map desc baseResources)
-      , div [ class "row" ] (List.map desc advancedResources)
+      , div [ class "row" ] (List.map desc resourceRow1)
+      , div [ class "row" ] (List.map desc resourceRow2)
+      , div [ class "row" ] (List.map desc resourceRow3)
       ]
     , div [ class "row" ]
       [ h3 [] [ text "Buildings" ]
@@ -233,6 +238,7 @@ homePlanet active model =
             , header Const.h2
             , header Const.uranium
             , header Const.pvc
+            , header Const.titan
             , header Const.kyanite
             , header ""
             ]
@@ -305,6 +311,7 @@ buildingRow planet constrPossible binfo =
         , col Const.h2 binfo.h2 res.h2
         , col Const.uranium binfo.uranium res.uranium
         , col Const.pvc binfo.pvc res.pvc
+        , col Const.titan binfo.titan res.titan
         , col Const.kyanite binfo.kyanite res.kyanite
         ]
 
@@ -361,6 +368,7 @@ buildPossible res info =
   res.h2 >= info.h2 &&
   res.uranium >= info.uranium &&
   res.pvc >= info.pvc &&
+  res.titan >= info.titan &&
   res.kyanite >= info.kyanite
 
 

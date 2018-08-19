@@ -93,7 +93,7 @@ production(Planet) ->
 -spec production(planet_type(), integer()) -> resources().
 production(Type, Size) ->
     Factor = size_factor(Size),
-    [Iron, Gold, H2O, Oil, H2, Uranium, PVC, Kyanite] = base_production(Type),
+    [Iron, Gold, H2O, Oil, H2, Uranium, PVC, Titan, Kyanite] = base_production(Type),
 
     #resources{iron_ore=round(Iron * Factor),
                gold=round(Gold * Factor),
@@ -102,6 +102,7 @@ production(Type, Size) ->
                h2=round(H2 * Factor),
                uranium=round(Uranium * Factor),
                pvc=round(PVC * Factor),
+               titan=round(Titan * Factor),
                kyanite=round(Kyanite * Factor),
                % bogus values
                power=0,
@@ -111,17 +112,17 @@ production(Type, Size) ->
 
 -spec base_production(planet_type()) -> [integer()].
 base_production(earth) ->
-    % IRON ORE , GOLD , H2O , OIL , H2 , URANIUM , PVC , KYANITE
-    [200       , 80   , 100 , 150 , 10 , 15      , 25  , 5];
+    % IRON ORE , GOLD , H2O , OIL , H2 , URANIUM , PVC , TITAN , KYANITE
+    [200       , 80   , 100 , 150 , 10 , 15      , 25  , 15    , 5];
 base_production(water) ->
-    % IRON ORE , GOLD , H2O , OIL , H2 , URANIUM , PVC , KYANITE
-    [80        , 150  , 200 , 100 , 25 , 10      , 15  , 4];
+    % IRON ORE , GOLD , H2O , OIL , H2 , URANIUM , PVC , TITAN , KYANITE
+    [80        , 150  , 200 , 100 , 25 , 10      , 15  , 15    , 4];
 base_production(fire) ->
-    % IRON ORE , GOLD , H2O , OIL , H2 , URANIUM , PVC , KYANITE
-    [150       , 100  , 80  , 200 , 10 , 30      , 15  , 3];
+    % IRON ORE , GOLD , H2O , OIL , H2 , URANIUM , PVC , TITAN , KYANITE
+    [150       , 100  , 80  , 200 , 10 , 30      , 15  , 15    , 3];
 base_production(ice) ->
-    % IRON ORE , GOLD , H2O , OIL , H2 , URANIUM , PVC , KYANITE
-    [100       , 200  , 150 , 80  , 25 , 15      , 10  , 7].
+    % IRON ORE , GOLD , H2O , OIL , H2 , URANIUM , PVC , TITAN , KYANITE
+    [100       , 200  , 150 , 80  , 25 , 15      , 10  , 15    , 7].
 
 
 -spec size_factor(integer()) -> float().

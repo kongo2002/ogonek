@@ -156,7 +156,7 @@ capacityInfoDecoder =
     |: (JD.field "planet" JD.string)
 
 
-resources : (Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> a) -> JD.Decoder a
+resources : (Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> a) -> JD.Decoder a
 resources f =
   JD.map f (JD.field "iron_ore" JD.int)
   |: (JD.field "gold" JD.int)
@@ -165,6 +165,7 @@ resources f =
   |: (JD.field "h2" JD.int)
   |: (JD.field "uranium" JD.int)
   |: (JD.field "pvc" JD.int)
+  |: (JD.field "titan" JD.int)
   |: (JD.field "kyanite" JD.int)
 
 

@@ -74,5 +74,6 @@ json_from_definition(Def) ->
      {<<"h2">>, Def#bdef.h2},
      {<<"uranium">>, Def#bdef.uranium},
      {<<"pvc">>, Def#bdef.pvc},
+     {<<"titan">>, Def#bdef.titan},
      {<<"kyanite">>, Def#bdef.kyanite}
     ].

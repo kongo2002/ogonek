@@ -283,12 +283,12 @@ constructionValid planet info =
 
 emptyResources : String -> ResourceInfo
 emptyResources planet =
-  ResourceInfo 0 0 0 0 0 0 0 0 0 0 planet
+  ResourceInfo 0 0 0 0 0 0 0 0 0 0 0 planet
 
 
 emptyCapacity : String -> CapacityInfo
 emptyCapacity planet =
-  CapacityInfo 0 0 0 0 0 0 0 0 planet
+  CapacityInfo 0 0 0 0 0 0 0 0 0 planet
 
 
 updateResources : Model -> ResourceInfo -> Model

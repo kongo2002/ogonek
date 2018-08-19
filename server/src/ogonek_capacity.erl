@@ -33,6 +33,7 @@ empty(PlanetId) ->
        h2=0,
        uranium=0,
        pvc=0,
+       titan=0,
        kyanite=0
       }.
 
@@ -51,6 +52,7 @@ to_json(Capacity, _Db) ->
               {<<"h2">>, Capacity#capacity.h2},
               {<<"uranium">>, Capacity#capacity.uranium},
               {<<"pvc">>, Capacity#capacity.pvc},
+              {<<"titan">>, Capacity#capacity.titan},
               {<<"kyanite">>, Capacity#capacity.kyanite}
              ] ++ ogonek_util:if_defined(<<"planet">>, Capacity#capacity.planet),
 

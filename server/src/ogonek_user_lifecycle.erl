@@ -774,6 +774,7 @@ construction_possible(PlanetState, Costs) ->
     Resources#resources.h2 >= Costs#bdef.h2 andalso
     Resources#resources.uranium >= Costs#bdef.uranium andalso
     Resources#resources.pvc >= Costs#bdef.pvc andalso
+    Resources#resources.titan >= Costs#bdef.titan andalso
     Resources#resources.kyanite >= Costs#bdef.kyanite.
 
 
@@ -814,6 +815,7 @@ claim_resources(PlanetState, Costs) ->
              h2=Resources#resources.h2 - Costs#bdef.h2,
              uranium=Resources#resources.uranium - Costs#bdef.uranium,
              pvc=Resources#resources.pvc - Costs#bdef.pvc,
+             titan=Resources#resources.titan - Costs#bdef.titan,
              kyanite=Resources#resources.kyanite - Costs#bdef.kyanite
             },
 

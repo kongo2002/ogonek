@@ -121,6 +121,7 @@ type alias BuildingInfo =
   , h2 : Int
   , uranium : Int
   , pvc : Int
+  , titan : Int
   , kyanite : Int
   , workers : Int
   , power : Int
@@ -149,6 +150,7 @@ type alias ResourceInfo =
   , h2 : Int
   , uranium : Int
   , pvc : Int
+  , titan : Int
   , kyanite : Int
   , workers : Int
   , power : Int
@@ -164,6 +166,7 @@ type alias CapacityInfo =
   , h2 : Int
   , uranium : Int
   , pvc : Int
+  , titan : Int
   , kyanite : Int
   , planetId: String
   }

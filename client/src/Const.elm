@@ -48,6 +48,9 @@ uranium = "uranium"
 pvc : String
 pvc = "PVC"
 
+titan : String
+titan = "titan"
+
 kyanite : String
 kyanite = "kyanite"
 

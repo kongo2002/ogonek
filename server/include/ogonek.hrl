@@ -94,6 +94,7 @@
           h2 :: integer(),
           uranium :: integer(),
           pvc :: integer(),
+          titan :: integer(),
           kyanite :: integer(),
           updated :: timestamp() | undefined
          }).
@@ -110,6 +111,7 @@
           h2 :: integer(),
           uranium :: integer(),
           pvc :: integer(),
+          titan :: integer(),
           kyanite :: integer()
          }).
 
@@ -146,6 +148,7 @@
           h2 :: integer(),
           uranium :: integer(),
           pvc :: integer(),
+          titan :: integer(),
           kyanite :: integer()
          }).
 

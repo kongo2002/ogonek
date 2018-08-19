@@ -171,5 +171,6 @@ calculate_building_costs(Definition, Level) ->
       h2=round(Definition#bdef.h2 * Factor),
       uranium=round(Definition#bdef.uranium * Factor),
       pvc=round(Definition#bdef.pvc * Factor),
+      titan=round(Definition#bdef.titan * Factor),
       kyanite=round(Definition#bdef.kyanite * Factor)
      }.

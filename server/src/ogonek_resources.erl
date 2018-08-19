@@ -38,6 +38,7 @@ empty() ->
                h2=0,
                uranium=0,
                pvc=0,
+               titan=0,
                kyanite=0}.
 
 
@@ -46,13 +47,13 @@ from_json(Resources) ->
     Keys = [{<<"workers">>, 0},
             {<<"power">>, 0},
             <<"iron_ore">>, <<"gold">>, <<"h2o">>, <<"oil">>,
-            <<"h2">>, <<"uranium">>, <<"pvc">>, <<"kyanite">>,
+            <<"h2">>, <<"uranium">>, <<"pvc">>, <<"titan">>, <<"kyanite">>,
             {<<"planet">>, undefined},
             {<<"updated">>, undefined}
            ],
 
     case ogonek_util:keys(Keys, Resources) of
-        [Workers, Power, Iron, Gold, H2O, Oil, H2, Uranium, Pvc, Kyanite, Planet, Upd] ->
+        [Workers, Power, Iron, Gold, H2O, Oil, H2, Uranium, Pvc, Titan, Kyanite, Planet, Upd] ->
             {ok, #resources{planet=Planet,
                             workers=Workers,
                             power=Power,
@@ -63,6 +64,7 @@ from_json(Resources) ->
                             h2=H2,
                             uranium=Uranium,
                             pvc=Pvc,
+                            titan=Titan,
                             kyanite=Kyanite,
                             updated=Upd}};
         _Otherwise ->
@@ -86,6 +88,7 @@ to_json(Resources, Db) ->
               {<<"h2">>, Resources#resources.h2},
               {<<"uranium">>, Resources#resources.uranium},
               {<<"pvc">>, Resources#resources.pvc},
+              {<<"titan">>, Resources#resources.titan},
               {<<"kyanite">>, Resources#resources.kyanite}
              ] ++ ogonek_util:if_defined(<<"updated">>, Resources#resources.updated),
 
@@ -108,6 +111,7 @@ multiply(ResA, ResB) ->
       h2=ResA#resources.h2 * ResB#resources.h2,
       uranium=ResA#resources.uranium * ResB#resources.uranium,
       pvc=ResA#resources.pvc * ResB#resources.pvc,
+      titan=ResA#resources.titan * ResB#resources.titan,
       kyanite=ResA#resources.kyanite * ResB#resources.kyanite
      }.
 
@@ -122,6 +126,7 @@ sum(ResA, ResB) ->
       h2=ResA#resources.h2 + ResB#resources.h2,
       uranium=ResA#resources.uranium + ResB#resources.uranium,
       pvc=ResA#resources.pvc + ResB#resources.pvc,
+      titan=ResA#resources.titan + ResB#resources.titan,
       kyanite=ResA#resources.kyanite + ResB#resources.kyanite
      }.
 
@@ -136,6 +141,7 @@ with_factor(Factor, Resources) ->
       h2=round(Resources#resources.h2 * Factor),
       uranium=round(Resources#resources.uranium * Factor),
       pvc=round(Resources#resources.pvc * Factor),
+      titan=round(Resources#resources.titan * Factor),
       kyanite=round(Resources#resources.kyanite * Factor)
      }.
 
@@ -150,5 +156,6 @@ with_capacity(Resources, Capacity) ->
       h2=min(Resources#resources.h2, Capacity#capacity.h2),
       uranium=min(Resources#resources.uranium, Capacity#capacity.uranium),
       pvc=min(Resources#resources.pvc, Capacity#capacity.pvc),
+      titan=min(Resources#resources.titan, Capacity#capacity.titan),
       kyanite=min(Resources#resources.kyanite, Capacity#capacity.kyanite)
      }.
