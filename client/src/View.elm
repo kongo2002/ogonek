@@ -318,7 +318,7 @@ buildingRow planet constrPossible binfo =
       columns =
         case construction of
           Just constr ->
-            [ td [ class "operations", colspan 11 ] [ constructionOperation constr ] ]
+            [ td [ class "operations", colspan 12 ] [ constructionOperation constr ] ]
           Nothing ->
             buildColumns ++
             [ td [ class "operations" ] [ buildOperation constrPossible res binfo ] ]
