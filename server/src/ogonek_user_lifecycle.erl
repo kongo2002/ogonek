@@ -40,6 +40,8 @@
           capacity :: capacity()
          }).
 
+-define(OGONEK_REFRESH_RESOURCE_INTERVAL_SECS, 60).
+
 -type planet_state() :: #planet_state{}.
 
 -record(state, {
@@ -147,6 +149,8 @@ handle_cast(prepare, #state{id=UserId}=State) ->
                           Self ! {production_info, P}
                   end, maps:keys(PlanetMap)),
 
+    schedule_recalculate_resources(),
+
     {noreply, State#state{planets=PlanetMap}};
 
 handle_cast({terminate, Reason}, #state{id=UserId}=State) ->
@@ -222,6 +226,13 @@ handle_info({construction_create, Construction}, #state{id=Id}=State) ->
 handle_info({get_planets, Sender}, State) ->
     Planets = maps:keys(State#state.planets),
     Sender ! {planets, Planets},
+    {noreply, State};
+
+handle_info(calc_resources, State) ->
+    lists:foreach(fun(P) -> self() ! {calc_resources, P, false} end,
+                  maps:keys(State#state.planets)),
+
+    schedule_recalculate_resources(),
     {noreply, State};
 
 handle_info({calc_resources, PlanetId, Silent}, State) ->
@@ -485,6 +496,13 @@ bootstrap_free_planet(Planet) ->
     lists:foreach(Build, InitialBuildings).
 
 
+-spec schedule_recalculate_resources() -> ok.
+schedule_recalculate_resources() ->
+    Interval = ?OGONEK_REFRESH_RESOURCE_INTERVAL_SECS * 1000,
+    erlang:send_after(Interval, self(), calc_resources),
+    ok.
+
+
 -spec seconds_since(Timestamp :: binary()) -> integer().
 seconds_since(Timestamp) ->
     seconds_since(Timestamp, ogonek_util:now8601()).
@@ -521,26 +539,30 @@ calc_resources(PState, RelativeTo) ->
     Planet = PState#planet_state.planet,
     Buildings = PState#planet_state.buildings,
 
-    % TODO: re-calculate power/workers only if necessary
-    % that is if there are buildings that were finished since
-    % the last time we calculated power/workers
-    {Power, Workers} = ogonek_buildings:calculate_power_workers(Buildings),
+    case calculate_resources(PState, Buildings, RelativeTo) of
+        skipped ->
+            PState;
+        Resources ->
+            % TODO: re-calculate power/workers only if necessary
+            % that is if there are buildings that were finished since
+            % the last time we calculated power/workers
+            {Power, Workers} = ogonek_buildings:calculate_power_workers(Buildings),
 
-    Res0 = calculate_resources(PState, Buildings, RelativeTo),
-    Res1 = Res0#resources{power=Power, workers=Workers},
+            Res1 = Resources#resources{power=Power, workers=Workers},
 
-    ogonek_db:planet_update_resources(Planet#planet.id, Res1),
+            ogonek_db:planet_update_resources(Planet#planet.id, Res1),
 
-    Planet0 = Planet#planet{resources=Res1},
-    PState#planet_state{planet=Planet0}.
+            Planet0 = Planet#planet{resources=Res1},
+            PState#planet_state{planet=Planet0}
+    end.
 
 
--spec calculate_resources(planet_state(), [building()], timestamp()) -> resources().
+-spec calculate_resources(planet_state(), [building()], timestamp()) -> resources() | skipped.
 calculate_resources(PlanetState, Buildings, RelativeTo) ->
     calculate_resources(PlanetState, Buildings, RelativeTo, false).
 
 
--spec calculate_resources(planet_state(), [building()], timestamp(), boolean()) -> resources().
+-spec calculate_resources(planet_state(), [building()], timestamp(), boolean()) -> resources() | skipped.
 calculate_resources(PlanetState, Buildings, RelativeTo, Force) ->
     Planet = PlanetState#planet_state.planet,
     UserId = Planet#planet.owner,
@@ -564,7 +586,7 @@ calculate_resources(PlanetState, Buildings, RelativeTo, Force) ->
        true ->
            lager:debug("user ~s - skipping resources calculation [~p sec ago]",
                        [UserId, SecondsSince]),
-           Resources
+           skipped
     end.
 
 
