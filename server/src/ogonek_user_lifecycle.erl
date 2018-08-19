@@ -227,25 +227,14 @@ handle_info({calc_resources, PlanetId, Silent}, State) ->
         undefined ->
             {noreply, State};
         PState ->
-            Planet = PState#planet_state.planet,
-            Buildings = PState#planet_state.buildings,
-
-            % TODO: re-calculate power/workers only if necessary
-            % that is if there are buildings that were finished since
-            % the last time we calculated power/workers
-            {Power, Workers} = ogonek_buildings:calculate_power_workers(Buildings),
-
-            Res0 = calculate_resources(PState, Buildings),
-            Res1 = Res0#resources{power=Power, workers=Workers},
-
-            ogonek_db:planet_update_resources(PlanetId, Res1),
-
-            Planet0 = Planet#planet{resources=Res1},
-            PState0 = PState#planet_state{planet=Planet0},
+            PState0 = calc_resources(PState),
             Planets0 = maps:put(PlanetId, PState0, State#state.planets),
             State0 = State#state{planets=Planets0},
 
-            json_to_sockets(ogonek_resources, Res1, State0, Silent),
+            Planet = PState#planet_state.planet,
+            Res = Planet#planet.resources,
+
+            json_to_sockets(ogonek_resources, Res, State0, Silent),
 
             {noreply, State0}
     end;
@@ -372,12 +361,10 @@ handle_info({get_constructions, Planet, Silent}, State) ->
             lager:debug("user ~s - fetched constructions of planet ~s: ~p",
                         [State#state.id, Planet, Fetched]),
 
-            Buildings = PState#planet_state.buildings,
-            RemainingConstructions = process_constructions(Fetched, Buildings),
+            PState0 = process_constructions(PState, Fetched),
 
-            trigger_construction_checks(RemainingConstructions),
+            trigger_construction_checks(PState0#planet_state.constructions),
 
-            PState0 = PState#planet_state{constructions=RemainingConstructions},
             Planets0 = maps:put(Planet, PState0, State#state.planets),
 
             json_to_sockets(ogonek_construction, PState0#planet_state.constructions, State, Silent),
@@ -397,10 +384,7 @@ handle_info({process_constructions, PlanetId}, #state{id=Id}=State) ->
         #planet_state{constructions=Cs}=PState ->
             lager:debug("user ~s - processing constructions", [Id]),
 
-            Buildings = PState#planet_state.buildings,
-            RemainingConstructions = process_constructions(Cs, Buildings),
-
-            PState0 = PState#planet_state{constructions=RemainingConstructions},
+            PState0 = process_constructions(PState, Cs),
             Planets0 = maps:put(PlanetId, PState0, State#state.planets),
 
             {noreply, State#state{planets=Planets0}}
@@ -487,9 +471,14 @@ bootstrap_free_planet(Planet) ->
 
 -spec seconds_since(Timestamp :: binary()) -> integer().
 seconds_since(Timestamp) ->
-    Now = calendar:universal_time(),
+    seconds_since(Timestamp, ogonek_util:now8601()).
+
+
+-spec seconds_since(Timestamp :: timestamp(), RelativeTo :: timestamp()) -> integer().
+seconds_since(Timestamp, RelativeTo) ->
+    RelativeTime = iso8601:parse(RelativeTo),
     Since = iso8601:parse(Timestamp),
-    abs(calendar:datetime_to_gregorian_seconds(Now) - calendar:datetime_to_gregorian_seconds(Since)).
+    abs(calendar:datetime_to_gregorian_seconds(RelativeTime) - calendar:datetime_to_gregorian_seconds(Since)).
 
 
 -spec seconds_to_simulated_hours(integer()) -> float().
@@ -504,6 +493,25 @@ finished_at(DurationSeconds) ->
     GregorianNow = calendar:datetime_to_gregorian_seconds(Now),
     FinishedAt = GregorianNow + DurationSeconds,
     iso8601:format(calendar:gregorian_seconds_to_datetime(FinishedAt)).
+
+
+-spec calc_resources(planet_state()) -> planet_state().
+calc_resources(PState) ->
+    Planet = PState#planet_state.planet,
+    Buildings = PState#planet_state.buildings,
+
+    % TODO: re-calculate power/workers only if necessary
+    % that is if there are buildings that were finished since
+    % the last time we calculated power/workers
+    {Power, Workers} = ogonek_buildings:calculate_power_workers(Buildings),
+
+    Res0 = calculate_resources(PState, Buildings),
+    Res1 = Res0#resources{power=Power, workers=Workers},
+
+    ogonek_db:planet_update_resources(Planet#planet.id, Res1),
+
+    Planet0 = Planet#planet{resources=Res1},
+    PState#planet_state{planet=Planet0}.
 
 
 -spec calculate_resources(planet_state(), [building()]) -> resources().
@@ -561,30 +569,65 @@ finish_building(#bdef{name=Def}, PlanetId, Level) ->
     ogonek_db:building_finish(Building).
 
 
--spec process_constructions([construction()], [building()]) -> [construction()].
-process_constructions([], _Buildings) -> [];
-process_constructions(Constructions, Buildings) ->
-    Now = ogonek_util:now8601(),
-    lists:foldl(fun(#construction{finish=F}=C, Cs) when F =< Now ->
-                        Type = C#construction.building,
+-spec process_constructions(planet_state(), [construction()]) -> planet_state().
+process_constructions(PlanetState, []) -> PlanetState;
+process_constructions(PlanetState, Constructions) ->
+    Buildings = PlanetState#planet_state.buildings,
+    {Finished, Running} = split_constructions(Constructions),
+
+    PlanetState0 =
+    lists:foldl(fun({Construction, UpTo}, State) ->
+                        Type = Construction#construction.building,
                         case get_building(Buildings, Type) of
                             {ok, B} ->
-                                CLevel = C#construction.level,
+                                CLevel = Construction#construction.level,
                                 BLevel = B#building.level,
                                 if BLevel + 1 == CLevel ->
                                        Update = B#building{level=CLevel},
                                        ogonek_db:building_finish(Update),
-                                       Cs;
+
+                                       % TODO: update resources
+                                       State;
                                    true ->
-                                       lager:warning("invalid construction building level: ~p", [C]),
-                                       [C | Cs]
+                                       lager:warning("invalid construction building level: ~p",
+                                                     [Construction]),
+                                       State
                                 end;
                             undefined ->
-                                lager:warning("construction finished for unknown building: ~p", [C]),
-                                [C | Cs]
-                        end;
-                   (C, Cs) -> [C | Cs]
-                end, [], Constructions).
+                                lager:warning("construction finished for unknown building: ~p",
+                                              [Construction]),
+                                State
+                        end
+                end, PlanetState, Finished),
+
+    PlanetState0#planet_state{constructions=Running}.
+
+
+-spec split_constructions([construction()]) ->
+    {[{construction(), timestamp()}], [construction()]}.
+split_constructions(Constructions) ->
+    split_constructions(Constructions, ogonek_util:now8601()).
+
+
+-spec split_constructions([construction()], RelativeTo :: timestamp()) ->
+    {[{construction(), timestamp()}], [construction()]}.
+split_constructions(Constructions, RelativeTo) ->
+    % divide the list of constructions into finished and running ones
+    {Finished, StillRunning} = lists:partition(fun(#construction{finish=F}) ->
+                                                       F =< RelativeTo
+                                               end, Constructions),
+
+    % after that we want to prepare the finished constructions
+    % by sorting by finish timestamp as well
+    SortedFinished = lists:keysort(7, Finished),
+
+    % now we add the respective next timestamp to which the
+    % resources have to be re-calculated until
+    Ts = lists:map(fun(#construction{finish=F}) -> F end, SortedFinished),
+    % the last construction will be calculated up to 'now'
+    Ts0 = tl(Ts ++ [RelativeTo]),
+
+    {lists:zip(SortedFinished, Ts0), StillRunning}.
 
 
 -spec json_to_sockets(atom(), term(), state()) -> ok.
@@ -763,6 +806,22 @@ remove_construction_test_() ->
      ?_assertEqual([C1], remove_construction([C1], oil_depot, 1)),
      ?_assertEqual([C2], remove_construction([C2], gold_depot, 1)),
      ?_assertEqual([], remove_construction([C2], gold_depot, 2))
+    ].
+
+split_constructions_test_() ->
+    P = <<"p1">>,
+    Past = <<"2000-08-19T06:49:04Z">>,
+    Between = <<"2010-08-09T16:49:04Z">>,
+    Now = ogonek_util:now8601(),
+    C1 = #construction{building=gold_depot, level=1, planet=P, created=Past, finish=Now},
+    C2 = #construction{building=gold_depot, level=2, planet=P, created=Past, finish=Past},
+    C3 = #construction{building=gold_depot, level=3, planet=P, created=Past, finish=Between},
+
+    [?_assertEqual({[], []}, split_constructions([])),
+     ?_assertEqual({[{C2, Between}], [C1]}, split_constructions([C1, C2], Between)),
+     ?_assertEqual({[{C2, Between}], [C1]}, split_constructions([C2, C1], Between)),
+     ?_assertEqual({[{C2, Between}, {C3, Now}], []}, split_constructions([C2, C3], Now)),
+     ?_assertEqual({[{C2, Between}, {C3, Now}], []}, split_constructions([C3, C2], Now))
     ].
 
 -endif.
