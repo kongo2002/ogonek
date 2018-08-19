@@ -40,7 +40,7 @@
           capacity :: capacity()
          }).
 
--define(OGONEK_REFRESH_RESOURCE_INTERVAL_SECS, 60).
+-define(OGONEK_REFRESH_RESOURCE_INTERVAL_SECS, 300).
 
 -type planet_state() :: #planet_state{}.
 
