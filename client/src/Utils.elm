@@ -14,6 +14,8 @@
 
 module Utils exposing (..)
 
+import Types exposing (..)
+
 import Time.DateTime
 
 
@@ -28,6 +30,15 @@ deltaToString delta =
         fmt delta.minutes "minutes"
       else
         fmt delta.seconds "seconds"
+
+
+planetToString : PlanetType -> String
+planetToString planet =
+  case planet of
+    EarthPlanet -> "earth"
+    FirePlanet -> "fire"
+    WaterPlanet -> "water"
+    IcePlanet -> "ice"
 
 
 -- vim: et sw=2 sts=2
