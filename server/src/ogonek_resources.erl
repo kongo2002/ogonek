@@ -22,6 +22,7 @@
          empty/0,
          multiply/2,
          sum/2,
+         substract_costs/2,
          with_factor/2,
          with_capacity/2]).
 
@@ -158,4 +159,26 @@ with_capacity(Resources, Capacity) ->
       pvc=min(Resources#resources.pvc, Capacity#capacity.pvc),
       titan=min(Resources#resources.titan, Capacity#capacity.titan),
       kyanite=min(Resources#resources.kyanite, Capacity#capacity.kyanite)
+     }.
+
+
+-spec substract_costs(resources(), Costs :: bdef()) -> resources().
+substract_costs(Resources, Costs) ->
+    % the 'positive' gain of workers and/or power will not be
+    % considered in here but instead once the construction is actually finished
+    Workers = max(Costs#bdef.workers, 0),
+    Power = max(Costs#bdef.power, 0),
+
+    Resources#resources{
+      workers=Resources#resources.workers - Workers,
+      power=Resources#resources.power - Power,
+      iron_ore=Resources#resources.iron_ore - Costs#bdef.iron_ore,
+      gold=Resources#resources.gold - Costs#bdef.gold,
+      h2o=Resources#resources.h2o - Costs#bdef.h2o,
+      oil=Resources#resources.oil - Costs#bdef.oil,
+      h2=Resources#resources.h2 - Costs#bdef.h2,
+      uranium=Resources#resources.uranium - Costs#bdef.uranium,
+      pvc=Resources#resources.pvc - Costs#bdef.pvc,
+      titan=Resources#resources.titan - Costs#bdef.titan,
+      kyanite=Resources#resources.kyanite - Costs#bdef.kyanite
      }.
