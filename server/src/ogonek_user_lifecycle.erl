@@ -497,6 +497,11 @@ finished_at(DurationSeconds) ->
 
 -spec calc_resources(planet_state()) -> planet_state().
 calc_resources(PState) ->
+    calc_resources(PState, ogonek_util:now8601()).
+
+
+-spec calc_resources(planet_state(), timestamp()) -> planet_state().
+calc_resources(PState, RelativeTo) ->
     Planet = PState#planet_state.planet,
     Buildings = PState#planet_state.buildings,
 
@@ -505,7 +510,7 @@ calc_resources(PState) ->
     % the last time we calculated power/workers
     {Power, Workers} = ogonek_buildings:calculate_power_workers(Buildings),
 
-    Res0 = calculate_resources(PState, Buildings),
+    Res0 = calculate_resources(PState, Buildings, RelativeTo),
     Res1 = Res0#resources{power=Power, workers=Workers},
 
     ogonek_db:planet_update_resources(Planet#planet.id, Res1),
@@ -514,19 +519,19 @@ calc_resources(PState) ->
     PState#planet_state{planet=Planet0}.
 
 
--spec calculate_resources(planet_state(), [building()]) -> resources().
-calculate_resources(PlanetState, Buildings) ->
-    calculate_resources(PlanetState, Buildings, false).
+-spec calculate_resources(planet_state(), [building()], timestamp()) -> resources().
+calculate_resources(PlanetState, Buildings, RelativeTo) ->
+    calculate_resources(PlanetState, Buildings, RelativeTo, false).
 
 
--spec calculate_resources(planet_state(), [building()], boolean()) -> resources().
-calculate_resources(PlanetState, Buildings, Force) ->
+-spec calculate_resources(planet_state(), [building()], timestamp(), boolean()) -> resources().
+calculate_resources(PlanetState, Buildings, RelativeTo, Force) ->
     Planet = PlanetState#planet_state.planet,
     UserId = Planet#planet.owner,
     Resources = Planet#planet.resources,
     Capacity = PlanetState#planet_state.capacity,
 
-    SecondsSince = seconds_since(Resources#resources.updated),
+    SecondsSince = seconds_since(Resources#resources.updated, RelativeTo),
 
     if SecondsSince >= 60 orelse Force == true ->
            % the production capabilities of the planet's buildings are the
@@ -544,7 +549,7 @@ calculate_resources(PlanetState, Buildings, Force) ->
 
            Summed = ogonek_resources:sum(Resources, Produced),
            Capped = ogonek_resources:with_capacity(Summed, Capacity),
-           Capped#resources{updated=ogonek_util:now8601()};
+           Capped#resources{updated=RelativeTo};
        true ->
            lager:debug("user ~s - skipping resources calculation [~p sec ago]",
                        [UserId, SecondsSince]),
@@ -570,37 +575,52 @@ finish_building(#bdef{name=Def}, PlanetId, Level) ->
 
 
 -spec process_constructions(planet_state(), [construction()]) -> planet_state().
-process_constructions(PlanetState, []) -> PlanetState;
-process_constructions(PlanetState, Constructions) ->
-    Buildings = PlanetState#planet_state.buildings,
+process_constructions(PState, []) -> PState;
+process_constructions(PState, Constructions) ->
     {Finished, Running} = split_constructions(Constructions),
 
-    PlanetState0 =
-    lists:foldl(fun({Construction, UpTo}, State) ->
-                        Type = Construction#construction.building,
-                        case get_building(Buildings, Type) of
-                            {ok, B} ->
-                                CLevel = Construction#construction.level,
-                                BLevel = B#building.level,
-                                if BLevel + 1 == CLevel ->
-                                       Update = B#building{level=CLevel},
-                                       ogonek_db:building_finish(Update),
+    PState0 = lists:foldl(fun process_construction/2, PState, Finished),
+    PState0#planet_state{constructions=Running}.
 
-                                       % TODO: update resources
-                                       State;
-                                   true ->
-                                       lager:warning("invalid construction building level: ~p",
-                                                     [Construction]),
-                                       State
-                                end;
-                            undefined ->
-                                lager:warning("construction finished for unknown building: ~p",
-                                              [Construction]),
-                                State
-                        end
-                end, PlanetState, Finished),
 
-    PlanetState0#planet_state{constructions=Running}.
+-spec process_construction({construction(), timestamp()}, planet_state()) -> planet_state().
+process_construction({Construction, UpTo}, PState) ->
+    Planet = PState#planet_state.planet,
+    Buildings = PState#planet_state.buildings,
+    PlanetId = Planet#planet.id,
+    Type = Construction#construction.building,
+
+    case get_building(Buildings, Type) of
+        {ok, B} ->
+            CLevel = Construction#construction.level,
+            BLevel = B#building.level,
+            if BLevel + 1 == CLevel ->
+                   Update = B#building{level=CLevel},
+
+                   % trigger asynchronous db update
+                   ogonek_db:building_finish(Update),
+
+                   % in order to properly calculate multiple successive
+                   % constructions we have to re-calculate resources
+                   % in here already
+                   Buildings0 = update_building(Buildings, Update),
+                   Capacity = ogonek_capacity:from_buildings(PlanetId, Buildings0),
+
+                   PState0 = PState#planet_state{
+                              buildings=Buildings0,
+                              capacity=Capacity},
+
+                   calc_resources(PState0, UpTo);
+               true ->
+                   lager:warning("invalid construction building level: ~p",
+                                 [Construction]),
+                   PState
+            end;
+        undefined ->
+            lager:warning("construction finished for unknown building: ~p",
+                          [Construction]),
+            PState
+    end.
 
 
 -spec split_constructions([construction()]) ->
