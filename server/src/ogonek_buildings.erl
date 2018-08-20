@@ -135,8 +135,8 @@ calculate_construction_duration(Type, Level) ->
 
 
 -spec base_construction_duration(atom()) -> integer().
-base_construction_duration(construction_center) -> 2000;
-base_construction_duration(research_lab) -> 1500;
+base_construction_duration(construction_center) -> 15000;
+base_construction_duration(research_lab) -> 8000;
 base_construction_duration(oil_rig) -> 1000;
 base_construction_duration(water_rig) -> 1000;
 base_construction_duration(ore_mine) -> 1000;
