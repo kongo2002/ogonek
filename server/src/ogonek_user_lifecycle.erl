@@ -468,13 +468,13 @@ fetch_planets(State) ->
         [] ->
             lager:info("user ~s has no planets yet - assigning a free one now", [UserId]),
             {ok, Planet} = ogonek_planet_manager:claim_free_planet(UserId),
-            bootstrap_free_planet(Planet),
-            [Planet];
+            Planet0 = bootstrap_free_planet(Planet),
+            [Planet0];
         Ps -> Ps
     end.
 
 
--spec bootstrap_free_planet(planet()) -> ok.
+-spec bootstrap_free_planet(planet()) -> planet().
 bootstrap_free_planet(Planet) ->
     lager:info("user ~s - bootstrapping initial infrastructure on planet ~s",
                [Planet#planet.owner, Planet#planet.id]),
@@ -494,6 +494,10 @@ bootstrap_free_planet(Planet) ->
                         power_plant,
                         apartment_block],
 
+    % TODO: proper initial resources
+    Empty = ogonek_resources:empty(),
+    Resources = Empty#resources{updated=ogonek_util:now8601()},
+
     Build = fun(B) ->
                     case ogonek_buildings:get_definition(B) of
                         error ->
@@ -503,7 +507,9 @@ bootstrap_free_planet(Planet) ->
                             finish_building(Def, PlanetId)
                     end
             end,
-    lists:foreach(Build, InitialBuildings).
+    lists:foreach(Build, InitialBuildings),
+
+    Planet#planet{resources=Resources}.
 
 
 -spec schedule_recalculate_resources() -> ok.

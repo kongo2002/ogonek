@@ -28,12 +28,12 @@
 from_json(Planet) ->
     Keys = [<<"_id">>, <<"type">>, <<"size">>, <<"pos">>, <<"idx">>,
             {<<"owner">>, undefined},
-            {<<"resources">>, ogonek_resources:empty()}
+            {<<"resources">>, undefined}
            ],
 
     case ogonek_util:keys(Keys, Planet) of
         [Id, Type, Size, [X, Y, Z], Idx, Owner, Res] ->
-            case {parse_type(Type), ogonek_resources:from_json(Res)} of
+            case {parse_type(Type), resources_or_empty(Res)} of
                 {error, _} -> {error, invalid};
                 {_, {error, _}} -> {error, invalid};
                 {Type0, {ok, Resources}} ->
@@ -50,6 +50,13 @@ from_json(Planet) ->
         _Otherwise ->
             {error, invalid}
     end.
+
+
+-spec resources_or_empty(json_doc() | undefined) -> {ok, resources()} | {error, invalid}.
+resources_or_empty(undefined) ->
+    {ok, ogonek_resources:empty()};
+resources_or_empty(ResJson) ->
+    ogonek_resources:from_json(ResJson).
 
 
 -spec to_json(planet()) -> tuple().
