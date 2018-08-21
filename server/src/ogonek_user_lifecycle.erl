@@ -496,7 +496,12 @@ bootstrap_free_planet(Planet) ->
 
     % TODO: proper initial resources
     Empty = ogonek_resources:empty(),
-    Resources = Empty#resources{updated=ogonek_util:now8601()},
+    Resources = Empty#resources{
+                  iron_ore=10000,
+                  gold=10000,
+                  h2o=10000,
+                  oil=10000,
+                  updated=ogonek_util:now8601()},
 
     Build = fun(B) ->
                     case ogonek_buildings:get_definition(B) of
