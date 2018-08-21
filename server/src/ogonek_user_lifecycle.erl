@@ -143,7 +143,7 @@ handle_cast(prepare, #state{id=UserId}=State) ->
                           Self ! {get_constructions, P, true},
 
                           % calculate resources after that
-                          Self ! {calc_resources, P, true},
+                          Self ! {calc_resources, P, false},
 
                           % push production info as well
                           Self ! {production_info, P}
@@ -500,6 +500,7 @@ bootstrap_free_planet(Planet) ->
                   gold=10000,
                   h2o=10000,
                   oil=10000,
+                  planet=PlanetId,
                   updated=ogonek_util:now8601()},
 
     Build = fun(B) ->
