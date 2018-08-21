@@ -185,7 +185,7 @@ type alias ActivePlanet =
 type alias Model =
   { route : Route
   , user : Maybe UserInfo
-  , authInfo : List AuthInformation
+  , authInfo : Dict String AuthInformation
   , planets : Dict String PlanetInfo
   , planet : Maybe ActivePlanet
   , websocketHost : String

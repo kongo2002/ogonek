@@ -112,10 +112,10 @@ login model =
         in if provider == "local" then localAuth else viaProvider
 
       providers =
-        case model.authInfo of
+        if Dict.isEmpty model.authInfo then
           -- fallback to local auth in case no providers given at all
-          [] -> [ localAuth ]
-          auths -> List.map fromAuth auths
+          [ localAuth ]
+        else Dict.values model.authInfo |> List.map fromAuth
   in [ div [ class "row" ]
        [ h2 [] [ text "login" ] ]
      ] ++ providers

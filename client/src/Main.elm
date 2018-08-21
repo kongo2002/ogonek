@@ -30,7 +30,7 @@ import Utils
 init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
 init flags location =
   let route = Routing.parse location
-      model = Model route Nothing [] Dict.empty Nothing flags.websocketHost Dict.empty Nothing
+      model = Model route Nothing Dict.empty Dict.empty Nothing flags.websocketHost Dict.empty Nothing
       actions = routeActions model
   in  model ! actions
 
@@ -115,7 +115,8 @@ update msg model =
     ApiResponse (Auth info) ->
       let _ = Debug.log "auth information received" info
           auths = model.authInfo
-          model0 = { model | authInfo = info :: auths }
+          auths0 = Dict.insert info.provider info auths
+          model0 = { model | authInfo = auths0 }
       in  model0 ! []
 
     ApiResponse (Building info) ->
