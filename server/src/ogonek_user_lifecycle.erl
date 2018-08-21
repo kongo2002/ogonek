@@ -494,7 +494,6 @@ bootstrap_free_planet(Planet) ->
                         power_plant,
                         apartment_block],
 
-    % TODO: proper initial resources
     Empty = ogonek_resources:empty(),
     Resources = Empty#resources{
                   iron_ore=10000,
