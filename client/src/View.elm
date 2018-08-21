@@ -81,16 +81,8 @@ navigation model =
 
 login : Model -> List (Html Msg)
 login model =
-  let fromAuth auth =
-        let provider = auth.provider
-            login = auth.loginUrl
-        in div [ class "row" ]
-           [ h3 [] [ text ("via " ++ provider) ]
-           , p []
-             [ a [ class "button button-primary", href login ] [ text "login" ]
-             ]
-           ]
-      localAuth =
+  let localAuth =
+        div [ class "row" ]
         [ h3 [] [ text "local login" ]
         , Html.form [ onSubmit LocalLogin ]
           [ div [ class "row" ]
@@ -106,9 +98,23 @@ login model =
             ]
           ]
         ]
+
+      fromAuth auth =
+        let provider = auth.provider
+            login = auth.loginUrl
+            viaProvider =
+              div [ class "row" ]
+              [ h3 [] [ text ("via " ++ provider) ]
+              , p []
+                [ a [ class "button button-primary", href login ] [ text "login" ]
+                ]
+              ]
+        in if provider == "local" then localAuth else viaProvider
+
       providers =
         case model.authInfo of
-          [] -> localAuth
+          -- fallback to local auth in case no providers given at all
+          [] -> [ localAuth ]
           auths -> List.map fromAuth auths
   in [ div [ class "row" ]
        [ h2 [] [ text "login" ] ]

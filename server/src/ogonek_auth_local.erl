@@ -25,9 +25,15 @@
 
 
 -spec get_info(pid()) -> ok.
-get_info(_Socket) ->
-    % the local auth provider has no auth_info at all
-    ok.
+get_info(Socket) ->
+    case os:getenv("OGONEK_LOCAL_AUTH") of
+        false -> ok;
+        _Enabled ->
+            Vs = [{<<"provider">>, <<"local">>},
+                  {<<"loginUrl">>, <<"http://localhost/">>}],
+            AuthInfo = ogonek_util:doc(<<"authinfo">>, Vs),
+            Socket ! {json, AuthInfo}
+    end.
 
 
 -spec auth_user(binary(), binary(), binary()) ->
@@ -39,12 +45,14 @@ get_info(_Socket) ->
 auth_user(Code, Scope, StateStr) ->
     lager:debug("local - trying to authorize with: [code ~p; scope ~p; state ~p]", [Code, Scope, StateStr]),
 
+    Hashed = hash(StateStr),
+
     case get_user(Code) of
         {ok, #user{oauth=undefined}} ->
             {error, authorization_failed};
         % we are going to 'recycle' the oauth_access' access_token field
         % to store the password in
-        {ok, #user{oauth=Auth}=User} when Auth#oauth_access.access_token == StateStr ->
+        {ok, #user{oauth=Auth}=User} when Auth#oauth_access.access_token == Hashed ->
             {ok, User};
         _Otherwise ->
             {error, authorization_failed}
@@ -52,9 +60,9 @@ auth_user(Code, Scope, StateStr) ->
 
 
 -spec validate_login(binary(), user()) -> {ok, user()} | error.
-validate_login(_SessionId, _User) ->
-    % TODO: implement local auth
-    error.
+validate_login(_SessionId, User) ->
+    % there is nothing else to check right now
+    {ok, User}.
 
 
 -spec get_user(UserEmail :: binary()) -> {ok, user()} | error.
@@ -63,3 +71,14 @@ get_user(UserEmail) ->
         {ok, _User}=Success -> Success;
         _Error -> error
     end.
+
+
+-spec hash(binary()) -> binary().
+hash(Input) ->
+    hash(<<":ogonek:#">>, Input).
+
+
+-spec hash(binary(), binary()) -> binary().
+hash(Salt, Input) ->
+    Salted = <<Salt/binary, Input/binary>>,
+    crypto:hash(sha256, Salted).
