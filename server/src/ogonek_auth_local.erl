@@ -43,9 +43,9 @@ get_info(Socket) ->
     {error, missing_rev} |
     {error, authorization_failed}.
 auth_user(Code, Scope, StateStr) ->
-    lager:debug("local - trying to authorize with: [code ~p; scope ~p; state ~p]", [Code, Scope, StateStr]),
-
     Hashed = hash(StateStr),
+
+    lager:debug("local - trying to authorize with: [code ~p; scope ~p; state ~p]", [Code, Scope, Hashed]),
 
     case get_user(Code) of
         {ok, #user{oauth=undefined}} ->
@@ -81,4 +81,5 @@ hash(Input) ->
 -spec hash(binary(), binary()) -> binary().
 hash(Salt, Input) ->
     Salted = <<Salt/binary, Input/binary>>,
-    crypto:hash(sha256, Salted).
+    <<X:256/big-unsigned-integer>> = crypto:hash(sha256, Salted),
+    integer_to_binary(X, 16).
