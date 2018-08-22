@@ -482,17 +482,23 @@ bootstrap_free_planet(Planet) ->
     % this is a new free planet: let's populate
     % with initial set of infrastructure
     PlanetId = Planet#planet.id,
-    InitialBuildings = [construction_center,
-                        oil_rig,
-                        water_rig,
-                        ore_mine,
-                        gold_mine,
-                        oil_tank,
-                        water_tank,
-                        ore_depot,
-                        gold_depot,
-                        power_plant,
-                        apartment_block],
+
+    InitialBuildings = [% initial set of buildings
+                        {construction_center, 1},
+                        {oil_rig, 1},
+                        {water_rig, 1},
+                        {ore_mine, 1},
+                        {gold_mine, 1},
+                        {oil_tank, 1},
+                        {water_tank, 1},
+                        {ore_depot, 1},
+                        {gold_depot, 1},
+                        {power_plant, 1},
+                        {apartment_block, 1},
+                        % remaining buildings that are not built yet
+                        {apartment, 0},
+                        {wind_turbine, 0}
+                       ],
 
     Empty = ogonek_resources:empty(),
     Resources = Empty#resources{
@@ -503,13 +509,13 @@ bootstrap_free_planet(Planet) ->
                   planet=PlanetId,
                   updated=ogonek_util:now8601()},
 
-    Build = fun(B) ->
+    Build = fun({B, Level}) ->
                     case ogonek_buildings:get_definition(B) of
                         error ->
                             lager:error("user ~s - there is no building definition for ~p - skipping",
                                         [Planet#planet.owner, B]);
                         Def ->
-                            finish_building(Def, PlanetId)
+                            finish_building(Def, PlanetId, Level)
                     end
             end,
     lists:foreach(Build, InitialBuildings),
@@ -602,11 +608,6 @@ calculate_resources(PlanetState, Buildings, RelativeTo, Force) ->
                        [UserId, SecondsSince]),
            skipped
     end.
-
-
--spec finish_building(bdef(), binary()) -> ok.
-finish_building(Def, PlanetId) ->
-    finish_building(Def, PlanetId, 1).
 
 
 -spec finish_building(bdef(), binary(), integer()) -> ok.
