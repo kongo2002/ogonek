@@ -21,6 +21,7 @@ import Html.Events exposing ( onClick, onWithOptions, onInput, onSubmit )
 import Json.Decode
 import Time.Iso8601
 
+import Assets
 import Const
 import Types exposing (..)
 import Routing
@@ -138,6 +139,14 @@ home model =
     Nothing -> noPlanet
 
 
+planetImg : PlanetInfo -> Html Msg
+planetImg planet =
+  let typ = planet.planetType
+      asset = Assets.planetAsset typ
+      path = Assets.path asset
+  in  img [ class "planet", src path ] []
+
+
 homePlanet : ActivePlanet -> Model -> List (Html Msg)
 homePlanet active model =
   let planet = active.planet
@@ -205,7 +214,7 @@ homePlanet active model =
   in
     [ h2 [] [ text name ]
     , div [ class "row" ]
-      [ ul [ id "planet-description" ]
+      [ ul [ id "planet-description", class "no-mobile nine columns" ]
         [ li []
           [ span [ class "description" ] [ text "Type: " ]
           , span [ class "value" ] [ text <| Utils.planetToString planet.planetType ]
@@ -217,6 +226,11 @@ homePlanet active model =
         , li []
           [ span [ class "description" ] [ text "Position: " ]
           , span [ class "value" ] [ text <| coordStr planet.position ]
+          ]
+        ]
+      , div [ class "u-pull-right three columns" ]
+        [ div [ class "u-full-width text-right" ]
+          [ planetImg planet
           ]
         ]
       ]

@@ -89,6 +89,15 @@ a.icon {
   color: #666;
 }
 
+.text-right {
+  text-align: right;
+}
+
+img.planet {
+  max-height: 96px;
+  max-width: 96px;
+}
+
 /* mobile-first table layout */
 
 table {
