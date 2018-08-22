@@ -1,2 +1,3 @@
 *.beam
+/venv
 tags
