@@ -21,10 +21,12 @@ import Time
 import Time.DateTime exposing ( DateTime )
 
 import Api
-import Types exposing (..)
+import Notification
+import Ports
 import Routing
-import View
+import Types exposing (..)
 import Utils
+import View
 
 
 init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
@@ -121,8 +123,8 @@ update msg model =
 
     ApiResponse (Building info) ->
       let _ = Debug.log "building information received" info
-          model0 = updateBuilding model info
-      in  model0 ! []
+          updated = updateBuilding model info
+      in  updated
 
     ApiResponse (Capacity info) ->
       let _ = Debug.log "capacity information received" info
@@ -208,7 +210,7 @@ updateProduction model info =
       model
 
 
-updateBuilding : Model -> BuildingInfo -> Model
+updateBuilding : Model -> BuildingInfo -> ( Model, Cmd Msg )
 updateBuilding model info =
   case model.planet of
     Just active ->
@@ -219,11 +221,21 @@ updateBuilding model info =
             -- will remove any pending construction entries
             constructions0 = removeConstruction active info
             updated = { active | buildings = buildings0, constructions = constructions0 }
-        in  { model | planet = Just updated }
+            -- if this building update removed at least one construction this
+            -- means we just finished a building:
+            -- send a push notification in that case
+            finished = Dict.size constructions0 < Dict.size active.constructions
+            actions =
+              if finished then
+                let title = "ogonek: building finished"
+                    body = info.name ++ " (level " ++ toString info.level ++ ") finished" |> Just
+                in [ Notification.notify Ports.notification title body Nothing ]
+              else []
+        in  { model | planet = Just updated } ! actions
       else
-        model
+        model ! []
     Nothing ->
-      model
+      model ! []
 
 
 removeConstruction : ActivePlanet -> BuildingInfo -> Dict.Dict String ConstructionInfo
