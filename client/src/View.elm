@@ -204,14 +204,14 @@ homePlanet active model =
       buildingFilters =
         div [ class "row" ]
         [ filterButton AllBuildings
-        , filterButton ConstructableBuildings
+        , filterButton AvailableBuildings
         , filterButton InProgressBuildings
         ]
 
       filteredBuildings =
         case active.buildingsFilter of
           AllBuildings -> buildings
-          ConstructableBuildings ->
+          AvailableBuildings ->
             if maxConstr > numConstr then
               let possible = buildPossible res
               in  List.filter possible buildings
@@ -305,7 +305,7 @@ buildingFilterName : BuildingsFilter -> String
 buildingFilterName filter =
   case filter of
     AllBuildings -> "all"
-    ConstructableBuildings -> "constructable"
+    AvailableBuildings -> "available"
     InProgressBuildings -> "in progress"
 
 

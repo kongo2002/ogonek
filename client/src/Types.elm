@@ -176,7 +176,7 @@ type alias CapacityInfo =
 
 type BuildingsFilter
   = AllBuildings
-  | ConstructableBuildings
+  | AvailableBuildings
   | InProgressBuildings
 
 
