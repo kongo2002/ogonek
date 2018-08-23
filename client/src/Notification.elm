@@ -12,11 +12,17 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-module Notification exposing ( notify )
+module Notification exposing ( init, notify )
 
 import Json.Encode as JE
 
 import Ports
+
+
+init : Ports.NotificationPort msg -> Cmd msg
+init notifyPort =
+  -- an empty title indicates to *just* request notification permissions
+  notify notifyPort "" Nothing Nothing
 
 
 notify : Ports.NotificationPort msg -> String -> Maybe String -> Maybe String -> Cmd msg

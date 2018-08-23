@@ -42,7 +42,16 @@ var elm = require('./Main.elm');
 var app = elm.Main.fullscreen({websocketHost: wsHost});
 
 app.ports.notification.subscribe(function(data) {
-  elmNotify.notify(data.title, data.body, data.img);
+  if (data.title) {
+    elmNotify.notify(data.title, data.body, data.img);
+  } else {
+    /* we are going to recycle this subscription in order to *just*
+     * initialize the notifications after successful login:
+     * an empty 'title' indicates we just want to request permissions */
+    if (elmNotify.isAvailable) {
+      elmNotify.requestPermission(function() {});
+    }
+  }
 });
 
 /* vim:set et sw=2 sts=2: */

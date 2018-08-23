@@ -162,7 +162,8 @@ update msg model =
           model0 = { model | user = Just info}
           actions = requestPlanetInfo model0
           toHome = Navigation.newUrl (Routing.routeToPath HomeRoute)
-      in  model0 ! (toHome :: actions)
+          notifications = Notification.init Ports.notification
+      in  model0 ! (notifications :: toHome :: actions)
 
     ApiResponse cnt ->
       let _ = Debug.log "api content received" cnt
