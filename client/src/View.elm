@@ -189,6 +189,37 @@ homePlanet active model =
             ]
         else div [] []
 
+      filterButton filter =
+        let isActive = active.buildingsFilter == filter
+            name = buildingFilterName filter
+            click = onClick (SetBuildingsFilter filter)
+            cls =
+              if isActive then
+                [ class "button-primary u-full-width", click ]
+              else [ class "u-full-width", click ]
+        in  div [ class "four columns" ]
+            [ button cls [ text name ]
+            ]
+
+      buildingFilters =
+        div [ class "row" ]
+        [ filterButton AllBuildings
+        , filterButton ConstructableBuildings
+        , filterButton InProgressBuildings
+        ]
+
+      filteredBuildings =
+        case active.buildingsFilter of
+          AllBuildings -> buildings
+          ConstructableBuildings ->
+            if maxConstr > numConstr then
+              let possible = buildPossible res
+              in  List.filter possible buildings
+            else []
+          InProgressBuildings ->
+            let inProgress b = Dict.member b.name active.constructions
+            in  List.filter inProgress buildings
+
       energies =
         [ (Const.workers, res.workers, 0, 0)
         , (Const.power, res.power, 0, 0)
@@ -244,6 +275,7 @@ homePlanet active model =
     , div [ class "row" ]
       [ h3 [] [ text "Buildings" ]
       , constructionInfo
+      , buildingFilters
       , table [ id "buildings", class "u-full-width" ]
         [ thead []
           [ tr []
@@ -263,10 +295,18 @@ homePlanet active model =
             , header ""
             ]
           ]
-        , tbody [] (List.map toRow buildings)
+        , tbody [] (List.map toRow filteredBuildings)
         ]
       ]
     ]
+
+
+buildingFilterName : BuildingsFilter -> String
+buildingFilterName filter =
+  case filter of
+    AllBuildings -> "all"
+    ConstructableBuildings -> "constructable"
+    InProgressBuildings -> "in progress"
 
 
 maxConcurrentConstructions : ActivePlanet -> Int

@@ -29,6 +29,8 @@ type Msg
   -- forms
   | FormContent String String
   | LocalLogin
+  -- buildings
+  | SetBuildingsFilter BuildingsFilter
   -- API
   | ApiResponseError String
   | ApiResponse ApiContent
@@ -172,6 +174,12 @@ type alias CapacityInfo =
   }
 
 
+type BuildingsFilter
+  = AllBuildings
+  | ConstructableBuildings
+  | InProgressBuildings
+
+
 type alias ActivePlanet =
   { planet : PlanetInfo
   , buildings : Dict String BuildingInfo
@@ -179,6 +187,7 @@ type alias ActivePlanet =
   , resources : ResourceInfo
   , capacity : CapacityInfo
   , production : ResourceInfo
+  , buildingsFilter : BuildingsFilter
   }
 
 

@@ -107,6 +107,13 @@ update msg model =
           req = AuthorizeRequest auth
       in  model ! [ Api.send model req ]
 
+    SetBuildingsFilter filter ->
+      let active =
+            case model.planet of
+              Just active -> Just { active | buildingsFilter = filter }
+              Nothing -> Nothing
+      in  { model | planet = active } ! []
+
     ApiRequest msg ->
       model ! [ Api.send model msg ]
 
@@ -183,7 +190,8 @@ initialPlanet info =
       resources = emptyResources planetId
       capacity = emptyCapacity planetId
       production = resources
-  in  ActivePlanet info Dict.empty Dict.empty resources capacity production
+      filter = AllBuildings
+  in  ActivePlanet info Dict.empty Dict.empty resources capacity production filter
 
 
 updateCapacity : Model -> CapacityInfo -> Model
