@@ -161,7 +161,8 @@ update msg model =
       let _ = Debug.log "user information received" info
           model0 = { model | user = Just info}
           actions = requestPlanetInfo model0
-      in  model0 ! actions
+          toHome = Navigation.newUrl (Routing.routeToPath HomeRoute)
+      in  model0 ! (toHome :: actions)
 
     ApiResponse cnt ->
       let _ = Debug.log "api content received" cnt
