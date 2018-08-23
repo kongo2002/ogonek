@@ -1,14 +1,12 @@
-.no-mobile {
-  display: none;
+@media (max-width: 550px) {
+  .no-mobile {
+    display: none;
+  }
 }
 
 @media (min-width: 550px) {
   .mobile {
     display: none;
-  }
-
-  .no-mobile {
-    display: inherit;
   }
 }
 

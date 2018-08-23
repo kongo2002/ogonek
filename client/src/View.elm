@@ -317,7 +317,14 @@ splitThousands integers =
 
 buildingRow : ActivePlanet -> Bool -> BuildingInfo -> Html Msg
 buildingRow planet constrPossible binfo =
-  let col label val relative = td [ attribute "data-label" label ] [ numberSpanTo relative val ]
+  let col label val relative =
+      let dataLabel = attribute "data-label" label
+          attrs =
+            if val == relative then
+              [ class "no-mobile", dataLabel ]
+            else [ dataLabel ]
+      in  td attrs [ numberSpanTo relative val ]
+
       res = planet.resources
       construction = Dict.get binfo.name planet.constructions
 
