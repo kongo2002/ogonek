@@ -609,16 +609,19 @@ handle_cast({research_create, #research{id=undefined}=R, Sender}, #state{info=In
 % update an existing research item
 handle_cast({research_create, Research, Sender}, #state{info=Info}=State) ->
     Level = Research#research.level,
+    CreatedAt = Research#research.created,
     FinishedAt = Research#research.finish,
     Update = fun(_Code, {R}) ->
                      Lvl = <<"level">>,
+                     Created = <<"created">>,
                      Finish = <<"finish">>,
                      Progress = <<"progress">>,
 
                      Updated = lists:keyreplace(Lvl, 1, R, {Lvl, Level}),
                      Updated0 = lists:keyreplace(Finish, 1, Updated, {Finish, FinishedAt}),
                      Updated1 = lists:keyreplace(Progress, 1, Updated0, {Progress, true}),
-                     {Updated1}
+                     Updated2 = lists:keyreplace(Created, 1, Updated1, {Created, CreatedAt}),
+                     {Updated2}
              end,
 
     case update(Research#research.id, Update, Info) of

@@ -294,6 +294,7 @@ handle_info(start_research, State) ->
                     % update research
                     Res0#research{
                       level=Res0#research.level+1,
+                      created=ogonek_util:now8601(),
                       finish=FinishedAt,
                       progress=true};
                 _Otherwise ->

@@ -47,7 +47,7 @@ trim(Binary) ->
     re:replace(Binary, "^\\s+|\\s+$", "", [{return, binary}, global]).
 
 
--spec now8601() -> binary().
+-spec now8601() -> timestamp().
 now8601() ->
     iso8601:format(calendar:universal_time()).
 
