@@ -107,10 +107,11 @@ research_info_json(Running, Finished) ->
                                 ]},
                      [{<<"status">>, Status0}]
              end,
+    Sorted = lists:keysort(4, Finished),
     Research = lists:map(fun(R) ->
                                  {[{<<"name">>, R#research.research},
                                    {<<"level">>, R#research.level}]}
-                         end, Finished),
+                         end, Sorted),
 
     ogonek_util:doc(<<"research">>,
                     [{<<"research">>, Research}] ++ Status).

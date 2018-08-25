@@ -430,7 +430,7 @@ handle_info(get_research, State) ->
 
             ogonek_db:research_finish(Pending1),
 
-            Updated = [Pending1 | Finished0],
+            Updated = update_research(Finished0, Pending1),
             {undefined, Updated, Updated};
         {P, F} ->
             {P, F, Research}
@@ -799,6 +799,9 @@ current_research(Research) ->
     case lists:partition(InProgress, Research) of
         {[], Finished} ->
             {undefined, Finished};
+        {[Pending], Finished} when Pending#research.level > 1 ->
+            Pending0 = Pending#research{level=Pending#research.level-1},
+            {Pending, update_research(Finished, Pending0)};
         {[Pending], Finished} ->
             {Pending, Finished};
         {MultiplePending, Finished} ->
