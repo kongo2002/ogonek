@@ -275,6 +275,9 @@ handle_info({calc_resources, PlanetId, Silent}, State) ->
 handle_info(planet_info, State) ->
     lists:foreach(fun(P) -> self() ! {planet_info, P} end,
                   maps:keys(State#state.planets)),
+
+    self() ! get_research,
+
     {noreply, State};
 
 handle_info({planet_info, PlanetId}, State) ->
