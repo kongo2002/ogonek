@@ -368,12 +368,14 @@ handle_info({build_building, Planet, Type, Level}=Req, State) ->
 handle_info(get_research, State) ->
     Research = ogonek_db:research_of_user(State#state.id),
 
-    {_Pending, Finished} = current_research(Research),
+    {Pending, Finished} = current_research(Research),
+
+    % TODO: check if the 'pending' research is actually finished by now
+
+    Json = ogonek_research:research_info_json(Pending, Finished),
+    gen_server:cast(State#state.session, {json_to_sockets, Json}),
 
     State0 = State#state{research=Research},
-
-    % return the finished researches only
-    json_to_sockets(ogonek_research, Finished, State0),
 
     {noreply, State0};
 

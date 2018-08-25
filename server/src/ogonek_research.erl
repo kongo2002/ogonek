@@ -22,7 +22,8 @@
 
 -export([all_researches/0,
          possible_research/1,
-         possible_research/2]).
+         possible_research/2,
+         research_info_json/2]).
 
 
 -spec all_researches() -> [rdef()].
@@ -93,6 +94,21 @@ to_json(Research, _Db) ->
               {<<"progress">>, Research#research.progress}
              ],
     ogonek_util:doc(<<"research">>, Values).
+
+
+-spec research_info_json(research() | undefined, [research()]) -> json_doc().
+research_info_json(Running, Finished) ->
+    Finish = case Running of
+                 undefined -> [];
+                 _ -> [{<<"finish">>, Running#research.finish}]
+             end,
+    Research = lists:map(fun(R) ->
+                                 {[{<<"name">>, R#research.research},
+                                   {<<"level">>, R#research.level}]}
+                         end, Finished),
+
+    ogonek_util:doc(<<"research">>,
+                    [{<<"research">>, Research}] ++ Finish).
 
 
 -spec to_research(binary()) -> atom().
