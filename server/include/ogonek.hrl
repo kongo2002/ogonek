@@ -176,3 +176,15 @@
          }).
 
 -type construction() :: #construction{}.
+
+
+-record(research, {
+          id :: maybe_unset_id(),
+          user :: binary(),
+          research :: atom(),
+          level :: integer(),
+          created :: timestamp(),
+          finish :: timestamp()
+         }).
+
+-type research() :: #research{}.
