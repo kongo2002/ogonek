@@ -33,6 +33,7 @@ view model =
   let content =
         case model.route of
           LoginRoute -> login
+          ResearchRoute -> research
           _ -> home
       rows = navigation model :: content model
   in
@@ -48,6 +49,7 @@ navigation model =
 
       routes =
         [ Types.HomeRoute
+        , Types.ResearchRoute
         , Types.HelpRoute
         ]
 
@@ -78,6 +80,42 @@ navigation model =
        [ ul [] links
        ]
      ]
+
+
+research : Model -> List (Html Msg)
+research model =
+  let res = model.research
+      row (name, level) =
+        tr []
+        [ td [] [ text name ]
+        , td [] [ text (toString level) ]
+        ]
+
+      researchStatus =
+        case res.finish of
+          Just finish ->
+            div []
+            [ p [] [ text ("research finished at: " ++ Time.Iso8601.fromDateTime finish) ]
+            ]
+          Nothing ->
+            div []
+            [ p [] [ text "no current research in progress" ]
+            , button [ onClick (ApiRequest StartResearchRequest) ] [ text "Research" ]
+            ]
+
+  in  [ h2 [] [ text "Research" ]
+      , researchStatus
+      , h3 [] [ text "Overview"]
+      , table []
+        [ thead []
+          [ tr []
+            [ th [] [ text "Research" ]
+            , th [] [ text "Level" ]
+            ]
+          ]
+        , tbody [] (List.map row res.research)
+        ]
+      ]
 
 
 login : Model -> List (Html Msg)

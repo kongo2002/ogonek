@@ -39,6 +39,7 @@ type Msg
 
 type Route
   = HomeRoute
+  | ResearchRoute
   | LoginRoute
   | LogoutRoute
   -- auth (code, state, scope, provider)
@@ -62,6 +63,7 @@ type ApiContent
 type Request
   = AuthorizeRequest Authorize
   | BuildBuildingRequest String String Int
+  | StartResearchRequest
   | PlanetInfoRequest
   | LogoutRequest
 

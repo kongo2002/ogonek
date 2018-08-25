@@ -62,6 +62,8 @@ requestEncoder req =
         ]
     Types.PlanetInfoRequest ->
       JE.object [ requestType "planet_info" ]
+    Types.StartResearchRequest ->
+      JE.object [ requestType "start_research" ]
     Types.LogoutRequest ->
       JE.object
         [ requestType "logout"

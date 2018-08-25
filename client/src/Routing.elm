@@ -12,7 +12,7 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-module Routing exposing ( home, login, logout, auth, help, parse, routeToPath, routeToName )
+module Routing exposing ( home, research, login, logout, auth, help, parse, routeToPath, routeToName )
 
 import Navigation exposing ( Location )
 import UrlParser exposing (..)
@@ -22,6 +22,10 @@ import Types
 
 home : String
 home = "/"
+
+
+research : String
+research = "/research"
 
 
 login : String
@@ -44,6 +48,7 @@ routeToPath : Types.Route -> String
 routeToPath route =
   case route of
     Types.HomeRoute -> home
+    Types.ResearchRoute -> research
     Types.LoginRoute -> login
     Types.LogoutRoute -> logout
     Types.AuthRoute _ _ _ _ -> auth
@@ -54,6 +59,7 @@ routeToName : Types.Route -> String
 routeToName route =
   case route of
     Types.HomeRoute -> "Home"
+    Types.ResearchRoute -> "Research"
     Types.LoginRoute -> "Login"
     Types.LogoutRoute -> "Logout"
     Types.AuthRoute _ _ _ _ -> "Authorization"
@@ -71,6 +77,7 @@ matchers : Parser (Types.Route -> a) a
 matchers =
   oneOf
     [ map Types.HomeRoute top
+    , map Types.ResearchRoute (s "research")
     , map Types.AuthRoute (s "auth" <?> stringParam "code" <?> stringParam "state" <?> stringParam "scope" <?> stringParam "provider")
     , map Types.LoginRoute (s "login")
     , map Types.LogoutRoute (s "logout")

@@ -68,7 +68,6 @@ atAuth route =
     _ -> False
 
 
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
   case msg of
@@ -130,7 +129,8 @@ update msg model =
       in  model0 ! []
 
     ApiResponse (Research info) ->
-      let updated = { model | research = info }
+      let _ = Debug.log "research information received" info
+          updated = { model | research = info }
       in  updated ! []
 
     ApiResponse (Building info) ->
