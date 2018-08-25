@@ -92,10 +92,10 @@ research model =
         ]
 
       researchStatus =
-        case res.finish of
-          Just finish ->
+        case res.status of
+          Just status ->
             div []
-            [ p [] [ text ("research finished at: " ++ Time.Iso8601.fromDateTime finish) ]
+            [ p [] [ text ("research finished at: " ++ Time.Iso8601.fromDateTime status.finish) ]
             ]
           Nothing ->
             div []

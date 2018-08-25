@@ -99,9 +99,13 @@ to_json(Research, _Db) ->
 
 -spec research_info_json(research() | undefined, [research()]) -> json_doc().
 research_info_json(Running, Finished) ->
-    Finish = case Running of
+    Status = case Running of
                  undefined -> [];
-                 _ -> [{<<"finish">>, Running#research.finish}]
+                 _IsRunning ->
+                     Status0 = {[{<<"finish">>, Running#research.finish},
+                                 {<<"created">>, Running#research.created}
+                                ]},
+                     [{<<"status">>, Status0}]
              end,
     Research = lists:map(fun(R) ->
                                  {[{<<"name">>, R#research.research},
@@ -109,7 +113,7 @@ research_info_json(Running, Finished) ->
                          end, Finished),
 
     ogonek_util:doc(<<"research">>,
-                    [{<<"research">>, Research}] ++ Finish).
+                    [{<<"research">>, Research}] ++ Status).
 
 
 -spec to_research(binary()) -> atom().

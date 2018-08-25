@@ -161,13 +161,17 @@ capacityInfoDecoder =
 
 researchInfoDecoder : JD.Decoder Types.ResearchInfo
 researchInfoDecoder =
-  let getter =
+  let research =
         JD.map2 (,)
           (JD.field "name" JD.string)
           (JD.field "level" JD.int)
+      status =
+        JD.map2 Types.ResearchStatusInfo
+          (JD.field "created" dateTimeDecoder)
+          (JD.field "finish" dateTimeDecoder)
   in JD.map2 Types.ResearchInfo
-       (JD.field "research" (JD.list getter))
-       (JD.maybe (JD.field "finish" dateTimeDecoder))
+       (JD.field "research" (JD.list research))
+       (JD.maybe (JD.field "status" status))
 
 
 resources : (Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> a) -> JD.Decoder a

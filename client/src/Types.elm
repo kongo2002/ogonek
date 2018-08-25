@@ -177,9 +177,15 @@ type alias CapacityInfo =
   }
 
 
+type alias ResearchStatusInfo =
+  { created : Time.DateTime.DateTime
+  , finish : Time.DateTime.DateTime
+  }
+
+
 type alias ResearchInfo =
   { research : List (String, Int)
-  , finish : Maybe Time.DateTime.DateTime
+  , status : Maybe ResearchStatusInfo
   }
 
 
