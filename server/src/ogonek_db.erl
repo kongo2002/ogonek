@@ -39,7 +39,8 @@
          buildings_of_planet/1]).
 
 %% Research API
--export([research_of_user/1]).
+-export([research_of_user/1,
+         research_create/1]).
 
 %% Construction API
 -export([construction_create/1,
@@ -211,6 +212,11 @@ research_of_user(UserId) ->
                               _Otherwise -> []
                           end
                   end, Results).
+
+
+-spec research_create(research()) -> ok.
+research_create(Research) ->
+    gen_server:cast(?MODULE, {research_create, Research, self()}).
 
 
 -spec construction_create(construction()) -> ok.
@@ -572,6 +578,46 @@ handle_cast({building_finish, Building, Sender}, #state{info=Info}=State) ->
     case update(Building#building.id, Update, Info) of
         {ok, Code, _Hs, _Body} when Code == 200 orelse Code == 201 ->
             Sender ! {building_finish, Building};
+        {ok, Code, _Hs, Body} ->
+            lager:error("building_finish failed [~p]: ~p", [Code, Body]),
+            error;
+        Error ->
+            lager:error("building_finish failed: ~p", [Error]),
+            error
+    end,
+    {noreply, State};
+
+% insert a *new* research item
+handle_cast({research_create, #research{id=undefined}=R, Sender}, #state{info=Info}=State) ->
+    Json = ogonek_research:to_json(R),
+
+    case insert(Json, Info) of
+        {ok, Id, _Rev} ->
+            WithId = R#research{id=Id},
+            Sender ! {research_create, WithId};
+        _Otherwise ->
+            ok
+    end,
+    {noreply, State};
+
+% update an existing research item
+handle_cast({research_create, Research, Sender}, #state{info=Info}=State) ->
+    Level = Research#research.level,
+    FinishedAt = Research#research.finish,
+    Update = fun(_Code, {R}) ->
+                     Lvl = <<"level">>,
+                     Finish = <<"finish">>,
+                     Progress = <<"progress">>,
+
+                     Updated = lists:keyreplace(Lvl, 1, R, {Lvl, Level}),
+                     Updated0 = lists:keyreplace(Finish, 1, Updated, {Finish, FinishedAt}),
+                     Updated1 = lists:keyreplace(Progress, 1, Updated0, {Progress, true}),
+                     {Updated1}
+             end,
+
+    case update(Research#research.id, Update, Info) of
+        {ok, Code, _Hs, _Body} when Code == 200 orelse Code == 201 ->
+            Sender ! {research_create, Research};
         {ok, Code, _Hs, Body} ->
             lager:error("building_finish failed [~p]: ~p", [Code, Body]),
             error;

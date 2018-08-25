@@ -280,6 +280,50 @@ handle_info(planet_info, State) ->
 
     {noreply, State};
 
+handle_info(start_research, State) ->
+    case current_research(State#state.research) of
+        {undefined, Research} ->
+            % TODO: proper calculation for research duration
+            FinishedAt = finished_at(20 * 60),
+            Possible = ogonek_research:possible_research(Research),
+            Pick = ogonek_util:choose_random(Possible),
+
+            Res =
+            case get_research(Research, Pick#rdef.name) of
+                {ok, Res0} ->
+                    % update research
+                    Res0#research{
+                      level=Res0#research.level+1,
+                      finish=FinishedAt,
+                      progress=true};
+                _Otherwise ->
+                    % new research
+                    #research{
+                       user=State#state.id,
+                       research=Pick#rdef.name,
+                       level=1,
+                       created=ogonek_util:now8601(),
+                       finish=FinishedAt,
+                       progress=true
+                      }
+            end,
+
+            lager:info("user ~s - starting research: ~p", [State#state.id, Res]),
+
+            ogonek_db:research_create(Res),
+            Rss = update_research(State#state.research, Res),
+
+            {noreply, State#state{research=Rss}};
+        _Otherwise ->
+            % research already ongoing
+            {noreply, State}
+    end;
+
+handle_info({research_create, _Research}, State) ->
+    % TODO: update/serve from in-memory instead
+    self() ! get_research,
+    {noreply, State};
+
 handle_info({planet_info, PlanetId}, State) ->
     case maps:get(PlanetId, State#state.planets, undefined) of
         undefined -> ok;
@@ -573,7 +617,7 @@ seconds_to_simulated_hours(Seconds) ->
     Seconds / 1800.
 
 
--spec finished_at(integer()) -> timestamp().
+-spec finished_at(Seconds :: integer()) -> timestamp().
 finished_at(DurationSeconds) ->
     Now = calendar:universal_time(),
     GregorianNow = calendar:datetime_to_gregorian_seconds(Now),
@@ -805,6 +849,23 @@ remove_construction(Constructions, Type, Level) ->
                       when T == Type andalso Lvl =< Level -> Cs;
                    (C, Cs) -> [C | Cs]
                 end, [], Constructions).
+
+
+-spec get_research([research()], atom()) -> {ok, research()} | undefined.
+get_research(Rss, Type) ->
+    case lists:keyfind(Type, 4, Rss) of
+        false -> undefined;
+        Research -> {ok, Research}
+    end.
+
+
+-spec update_research([research()], research()) -> [research()].
+update_research(Researches, #research{research=Name}=Research) ->
+    case get_research(Researches, Name) of
+        undefined -> [Research | Researches];
+        _Otherwise ->
+            lists:keyreplace(Name, 4, Researches, Research)
+    end.
 
 
 -spec construction_possible(PlanetState :: planet_state(), Costs :: bdef()) -> boolean().

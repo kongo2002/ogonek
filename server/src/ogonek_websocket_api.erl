@@ -173,6 +173,15 @@ handle_request(<<"planet_info">>, _Request, _Json, State) ->
     ogonek_session_manager:publish_to_user(UserId, SessionId, planet_info),
     {ok, State};
 
+handle_request(<<"start_research">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
+    {reply, error_json(<<"not logged in at all">>), State};
+
+handle_request(<<"start_research">>, _Request, _Json, State) ->
+    UserId = State#ws_state.user_id,
+    SessionId = State#ws_state.session_id,
+    ogonek_session_manager:publish_to_user(UserId, SessionId, start_research),
+    {ok, State};
+
 handle_request(<<"production_info">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
     {reply, error_json(<<"not logged in at all">>), State};
 

@@ -171,7 +171,7 @@ update msg model =
 
     ApiResponse (User info) ->
       let _ = Debug.log "user information received" info
-          model0 = { model | user = Just info}
+          model0 = { model | user = Just info }
           actions = requestPlanetInfo model0
           notifications = Notification.init Ports.notification
           actions0 = notifications :: actions ++ afterLogin model

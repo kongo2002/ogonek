@@ -34,12 +34,12 @@ all_researches() ->
     end.
 
 
--spec possible_research([research()]) -> [atom()].
+-spec possible_research([research()]) -> [rdef()].
 possible_research(Research) ->
     possible_research(Research, all_researches()).
 
 
--spec possible_research([research()], [rdef()]) -> [atom()].
+-spec possible_research([research()], [rdef()]) -> [rdef()].
 possible_research(Research, Definitions) ->
     lists:filter(fun(R) -> research_available(Research, R) end, Definitions).
 
@@ -85,14 +85,15 @@ to_json(Research) ->
 
 -spec to_json(research(), boolean()) -> tuple().
 to_json(Research, _Db) ->
-    Values = [{<<"_id">>, Research#research.id},
-              {<<"user">>, Research#research.user},
+    Values = [{<<"user">>, Research#research.user},
               {<<"research">>, Research#research.research},
               {<<"level">>, Research#research.level},
               {<<"created">>, Research#research.created},
               {<<"finish">>, Research#research.finish},
               {<<"progress">>, Research#research.progress}
-             ],
+             ]
+    ++ ogonek_util:if_defined(<<"_id">>, Research#research.id),
+
     ogonek_util:doc(<<"research">>, Values).
 
 
