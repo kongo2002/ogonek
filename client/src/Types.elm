@@ -54,6 +54,7 @@ type ApiContent
   | Construction ConstructionInfo
   | Capacity CapacityInfo
   | Resources ResourceInfo
+  | Research ResearchInfo
   | Production ResourceInfo
   | Error ApiError
 
@@ -174,6 +175,12 @@ type alias CapacityInfo =
   }
 
 
+type alias ResearchInfo =
+  { research : List (String, Int)
+  , finish : Maybe Time.DateTime.DateTime
+  }
+
+
 type BuildingsFilter
   = AllBuildings
   | AvailableBuildings
@@ -197,6 +204,7 @@ type alias Model =
   , authInfo : Dict String AuthInformation
   , planets : Dict String PlanetInfo
   , planet : Maybe ActivePlanet
+  , research : ResearchInfo
   , websocketHost : String
   , formContents : Dict String String
   , lastTimeStamp : Maybe Time.DateTime.DateTime

@@ -95,6 +95,7 @@ payloadDecoder =
       "planet" -> JD.map Types.Planet planetDecoder
       "capacity" -> JD.map Types.Capacity capacityInfoDecoder
       "production" -> JD.map Types.Production resourceInfoDecoder
+      "research" -> JD.map Types.Research researchInfoDecoder
       "authinfo" -> JD.map Types.Auth authInfoDecoder
       "user" -> JD.map Types.User userInfoDecoder
       "error" -> JD.map Types.Error errorDecoder
@@ -154,6 +155,17 @@ capacityInfoDecoder : JD.Decoder Types.CapacityInfo
 capacityInfoDecoder =
   resources Types.CapacityInfo
     |: (JD.field "planet" JD.string)
+
+
+researchInfoDecoder : JD.Decoder Types.ResearchInfo
+researchInfoDecoder =
+  let getter =
+        JD.map2 (,)
+          (JD.field "name" JD.string)
+          (JD.field "level" JD.int)
+  in JD.map2 Types.ResearchInfo
+       (JD.field "research" (JD.list getter))
+       (JD.maybe (JD.field "finish" dateTimeDecoder))
 
 
 resources : (Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> a) -> JD.Decoder a
