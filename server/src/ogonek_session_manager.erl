@@ -25,6 +25,7 @@
          publish_to_sockets/2,
          close_socket/1,
          close_socket/2,
+         kill_timeout/1,
          logout/1,
          logout/2]).
 
@@ -35,6 +36,7 @@
          handle_info/2,
          terminate/2,
          code_change/3]).
+
 
 -record(user_session, {
           user_id :: binary(),
@@ -80,6 +82,11 @@ publish_to_user(UserId, SessionId, Msg) ->
 -spec publish_to_sockets(binary(), term()) -> ok.
 publish_to_sockets(UserId, Msg) ->
     gen_server:cast(?MODULE, {publish_to_sockets, UserId, Msg}).
+
+
+-spec kill_timeout(UserId :: binary()) -> ok.
+kill_timeout(UserId) ->
+    gen_server:cast(?MODULE, {kill_timeout, UserId}).
 
 
 -spec logout(binary()) -> ok.
@@ -221,6 +228,20 @@ handle_cast({close_socket, Socket, UserId}, State) ->
             gen_server:cast(Session#user_session.dispatcher, {unregister_socket, Socket, SessionId}),
 
             {noreply, State}
+    end;
+
+handle_cast({kill_timeout, UserId}, State) ->
+    UserSessions = State#state.sessions,
+
+    case maps:get(UserId, UserSessions, undefined) of
+        undefined ->
+            {noreply, State};
+        Session ->
+            Msg = {terminate, kill_timeout},
+            gen_server:cast(Session#user_session.lifecycle, Msg),
+
+            UserSessions0 = maps:remove(UserId, UserSessions),
+            {noreply, State#state{sessions=UserSessions0}}
     end;
 
 handle_cast(Msg, State) ->

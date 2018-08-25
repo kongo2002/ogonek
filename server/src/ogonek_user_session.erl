@@ -29,11 +29,16 @@
          terminate/2,
          code_change/3]).
 
+
+-define(USER_TIMEOUT_MILLIS, 120000).
+
+
 -type socket_info() :: {binary(), pid()}.
 
 -record(state, {
           id :: binary(),
-          sockets :: [socket_info()]
+          sockets :: [socket_info()],
+          terminate :: reference() | undefined
          }).
 
 -type state() :: #state{}.
@@ -106,7 +111,7 @@ handle_cast({register_socket, Socket, SessionId}, State) ->
     lager:debug("user-session ~s: ~p connections registered",
                 [State#state.id, length(Sockets0)]),
 
-    {noreply, State#state{sockets=Sockets0}};
+    {noreply, check_activity(State#state{sockets=Sockets0})};
 
 handle_cast({unregister_session, SessionId, Reason}, State) ->
     UserId = State#state.id,
@@ -122,28 +127,16 @@ handle_cast({unregister_session, SessionId, Reason}, State) ->
                         [SessSock | Ss]
                 end, [], State#state.sockets),
 
-    % TODO: check on remaining sockets and possible termination timer
+    State0 = State#state{sockets=Sockets0},
 
-    {noreply, State#state{sockets=Sockets0}};
+    {noreply, check_remaining_sockets(State0)};
 
 handle_cast({unregister_socket, Socket, SessionId}, State) ->
-    UserId = State#state.id,
     Sockets = State#state.sockets,
     Sockets0 = lists:delete({SessionId, Socket}, Sockets),
     State0 = State#state{sockets=Sockets0},
 
-    case Sockets0 of
-        [] ->
-            lager:debug("user-session ~s: no remaining sockets", [UserId]),
-
-            % TODO: check on remaining sockets and possible termination timer
-
-            {noreply, State0};
-        _NonEmpty ->
-            lager:debug("user-session ~s: ~p connections registered",
-                        [UserId, length(Sockets0)]),
-            {noreply, State0}
-    end;
+    {noreply, check_remaining_sockets(State0)};
 
 handle_cast({logout, Reason}, State) ->
     lager:info("user-session ~s: sending close to sockets due to ~p", [State#state.id, Reason]),
@@ -170,6 +163,10 @@ handle_cast({publish_to_sockets, Msg}, State) ->
     publish_to_sockets(Msg, State),
     {noreply, State};
 
+handle_cast({terminate, Reason}, State) ->
+    lager:debug("user-session ~s - terminating due to ~p", [State#state.id, Reason]),
+    {stop, normal, State};
+
 handle_cast(Msg, State) ->
     lager:warning("user-session ~s - unhandled cast message: ~p", [State#state.id, Msg]),
     {noreply, State}.
@@ -184,6 +181,18 @@ handle_cast(Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_info(kill_timeout, State) ->
+    case State#state.terminate of
+        undefined ->
+            % kill timeout is outdated
+            % user is active again
+            {noreply, State};
+        _TimerRef ->
+            lager:debug("user-session ~s - terminating due to inactivity", [State#state.id]),
+            ogonek_session_manager:kill_timeout(State#state.id),
+            {stop, normal, State}
+    end;
+
 handle_info(_Info, State) ->
     {noreply, State}.
 
@@ -215,6 +224,36 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+-spec check_remaining_sockets(state()) -> state().
+check_remaining_sockets(State) ->
+    UserId = State#state.id,
+    Sockets = State#state.sockets,
+
+    case Sockets of
+        [] ->
+            lager:debug("user-session ~s: no remaining sockets", [UserId]),
+
+            TimerRef = erlang:send_after(?USER_TIMEOUT_MILLIS, self(), kill_timeout),
+
+            State#state{terminate=TimerRef};
+        _NonEmpty ->
+            lager:debug("user-session ~s: ~p connections registered",
+                        [UserId, length(Sockets)]),
+            State
+    end.
+
+
+-spec check_activity(state()) -> state().
+check_activity(State) ->
+    case State#state.terminate of
+        undefined ->
+            State;
+        TimerRef ->
+            erlang:cancel_timer(TimerRef, [{async, true}, {info, false}]),
+            State#state{terminate=undefined}
+    end.
+
 
 -spec publish_to_sockets(term(), state()) -> ok.
 publish_to_sockets(Msg, #state{sockets=Sockets}) ->
