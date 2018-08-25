@@ -20,6 +20,44 @@
          to_json/1,
          to_json/2]).
 
+-export([all_researches/0,
+         possible_research/1,
+         possible_research/2]).
+
+
+-spec all_researches() -> [rdef()].
+all_researches() ->
+    case application:get_env(research) of
+        undefined -> [];
+        {ok, Research} -> Research
+    end.
+
+
+-spec possible_research([research()]) -> [atom()].
+possible_research(Research) ->
+    possible_research(Research, all_researches()).
+
+
+-spec possible_research([research()], [rdef()]) -> [atom()].
+possible_research(Research, Definitions) ->
+    lists:filter(fun(R) -> research_available(Research, R) end, Definitions).
+
+
+-spec research_available([research()], rdef()) -> boolean().
+research_available(_Research, #rdef{requirements=[]}) -> true;
+research_available(Research, #rdef{requirements=Reqs}) ->
+    lists:all(fun(Req) -> has_requirement(Research, Req) end, Reqs).
+
+
+-spec has_requirement([research()], {atom(), integer()}) -> boolean().
+has_requirement([], _Requirement) -> false;
+has_requirement([Research | Rs], {Name, MinLevel}=Req) ->
+    if Research#research.research == Name andalso Research#research.level >= MinLevel ->
+           true;
+       true ->
+           has_requirement(Rs, Req)
+    end.
+
 
 -spec from_json(json_doc()) -> {ok, research()} | {error, invalid}.
 from_json(UserJson) ->

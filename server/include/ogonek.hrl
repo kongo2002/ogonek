@@ -178,6 +178,14 @@
 -type construction() :: #construction{}.
 
 
+-record(rdef, {
+          name :: atom(),
+          requirements :: [{atom(), integer()}]
+    }).
+
+-type rdef() :: #rdef{}.
+
+
 -record(research, {
           id :: maybe_unset_id(),
           user :: binary(),
