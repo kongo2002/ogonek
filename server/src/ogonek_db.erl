@@ -40,6 +40,7 @@
 
 %% Research API
 -export([research_of_user/1,
+         research_finish/1,
          research_create/1]).
 
 %% Construction API
@@ -217,6 +218,11 @@ research_of_user(UserId) ->
 -spec research_create(research()) -> ok.
 research_create(Research) ->
     gen_server:cast(?MODULE, {research_create, Research, self()}).
+
+
+-spec research_finish(research()) -> ok.
+research_finish(Research) ->
+    gen_server:cast(?MODULE, {research_finish, Research, self()}).
 
 
 -spec construction_create(construction()) -> ok.
@@ -619,10 +625,29 @@ handle_cast({research_create, Research, Sender}, #state{info=Info}=State) ->
         {ok, Code, _Hs, _Body} when Code == 200 orelse Code == 201 ->
             Sender ! {research_create, Research};
         {ok, Code, _Hs, Body} ->
-            lager:error("building_finish failed [~p]: ~p", [Code, Body]),
+            lager:error("research_create failed [~p]: ~p", [Code, Body]),
             error;
         Error ->
-            lager:error("building_finish failed: ~p", [Error]),
+            lager:error("research_create failed: ~p", [Error]),
+            error
+    end,
+    {noreply, State};
+
+handle_cast({research_finish, Research, Sender}, #state{info=Info}=State) ->
+    Update = fun(_Code, {R}) ->
+                     Progress = <<"progress">>,
+                     Updated = lists:keyreplace(Progress, 1, R, {Progress, false}),
+                     {Updated}
+             end,
+
+    case update(Research#research.id, Update, Info) of
+        {ok, Code, _Hs, _Body} when Code == 200 orelse Code == 201 ->
+            Sender ! {research_finish, Research};
+        {ok, Code, _Hs, Body} ->
+            lager:error("research_finish failed [~p]: ~p", [Code, Body]),
+            error;
+        Error ->
+            lager:error("research_finish failed: ~p", [Error]),
             error
     end,
     {noreply, State};

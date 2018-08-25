@@ -324,6 +324,11 @@ handle_info({research_create, _Research}, State) ->
     self() ! get_research,
     {noreply, State};
 
+handle_info({research_finish, _Research}, State) ->
+    % TODO: update/serve from in-memory instead
+    self() ! get_research,
+    {noreply, State};
+
 handle_info({planet_info, PlanetId}, State) ->
     case maps:get(PlanetId, State#state.planets, undefined) of
         undefined -> ok;
@@ -413,16 +418,29 @@ handle_info({build_building, Planet, Type, Level}=Req, State) ->
     end;
 
 handle_info(get_research, State) ->
+    Now = ogonek_util:now8601(),
     Research = ogonek_db:research_of_user(State#state.id),
 
-    {Pending, Finished} = current_research(Research),
+    {Pending, Finished, Research0} =
+    case current_research(Research) of
+        {undefined, Finished0} ->
+            {undefined, Finished0, Research};
+        {Pending0, Finished0} when Pending0#research.finish =< Now ->
+            % unset progress and move into finished-set
+            Pending1 = Pending0#research{progress=false},
 
-    % TODO: check if the 'pending' research is actually finished by now
+            ogonek_db:research_finish(Pending1),
+
+            Updated = [Pending1 | Finished0],
+            {undefined, Updated, Updated};
+        {P, F} ->
+            {P, F, Research}
+    end,
 
     Json = ogonek_research:research_info_json(Pending, Finished),
     gen_server:cast(State#state.session, {json_to_sockets, Json}),
 
-    State0 = State#state{research=Research},
+    State0 = State#state{research=Research0},
 
     {noreply, State0};
 
