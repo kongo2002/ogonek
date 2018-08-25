@@ -320,12 +320,10 @@ handle_info(start_research, State) ->
     end;
 
 handle_info({research_create, _Research}, State) ->
-    % TODO: update/serve from in-memory instead
     self() ! get_research,
     {noreply, State};
 
 handle_info({research_finish, _Research}, State) ->
-    % TODO: update/serve from in-memory instead
     self() ! get_research,
     {noreply, State};
 
@@ -419,7 +417,7 @@ handle_info({build_building, Planet, Type, Level}=Req, State) ->
 
 handle_info(get_research, State) ->
     Now = ogonek_util:now8601(),
-    Research = ogonek_db:research_of_user(State#state.id),
+    Research = fetch_research(State),
 
     {Pending, Finished, Research0} =
     case current_research(Research) of
@@ -558,6 +556,14 @@ fetch_planets(State) ->
             Planet0 = bootstrap_free_planet(Planet),
             [Planet0];
         Ps -> Ps
+    end.
+
+
+-spec fetch_research(state()) -> [research()].
+fetch_research(State) ->
+    case State#state.research of
+        [] -> ogonek_db:research_of_user(State#state.id);
+        Research -> Research
     end.
 
 
