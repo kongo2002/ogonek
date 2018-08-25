@@ -62,13 +62,23 @@ to_json(Capacity, _Db) ->
 -spec from_buildings(PlanetId :: binary(), Buildings :: [building()]) -> capacity().
 from_buildings(PlanetId, Buildings) ->
     lists:foldl(fun(#building{type=ore_depot, level=Level}, Cap) ->
-                        Cap#capacity{iron_ore=25000 * Level};
+                        Cap#capacity{iron_ore=base_storage(Level)};
                    (#building{type=gold_depot, level=Level}, Cap) ->
-                        Cap#capacity{gold=25000 * Level};
+                        Cap#capacity{gold=base_storage(Level)};
                    (#building{type=water_tank, level=Level}, Cap) ->
-                        Cap#capacity{h2o=25000 * Level};
+                        Cap#capacity{h2o=base_storage(Level)};
                    (#building{type=oil_tank, level=Level}, Cap) ->
-                        Cap#capacity{oil=25000 * Level};
+                        Cap#capacity{oil=base_storage(Level)};
                    (_Building, Cap) ->
                         Cap
                 end, empty(PlanetId), Buildings).
+
+
+-spec base_storage(Level :: integer()) -> integer().
+base_storage(Level) ->
+    storage_from_level(25000, Level).
+
+
+-spec storage_from_level(Base :: integer(), Level :: integer()) -> integer().
+storage_from_level(Base, Level) ->
+    round(Base * math:pow(Level, 1.5)).
