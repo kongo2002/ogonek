@@ -173,13 +173,21 @@ update msg model =
       let _ = Debug.log "user information received" info
           model0 = { model | user = Just info}
           actions = requestPlanetInfo model0
-          toHome = Navigation.newUrl (Routing.routeToPath HomeRoute)
           notifications = Notification.init Ports.notification
-      in  model0 ! (notifications :: toHome :: actions)
+          actions0 = notifications :: actions ++ afterLogin model
+      in  model0 ! actions0
 
     ApiResponse cnt ->
       let _ = Debug.log "api content received" cnt
       in  model ! []
+
+
+afterLogin : Model -> List (Cmd Msg)
+afterLogin model =
+  case model.route of
+    LoginRoute ->
+      [ Navigation.newUrl (Routing.routeToPath HomeRoute) ]
+    _ -> []
 
 
 requestPlanetInfo : Model -> List (Cmd Msg)
