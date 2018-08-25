@@ -1,12 +1,12 @@
 @media (max-width: 550px) {
   .no-mobile {
-    display: none;
+    display: none!important;
   }
 }
 
 @media (min-width: 550px) {
   .mobile {
-    display: none;
+    display: none!important;
   }
 }
 
@@ -98,11 +98,11 @@ img.planet {
 
 /* mobile-first table layout */
 
-table {
+.table-responsive {
   table-layout: fixed;
 }
 
-table thead {
+.table-responsive thead {
   clip: rect(0 0 0 0);
   height: 1px;
   margin: -1px;
@@ -112,16 +112,16 @@ table thead {
   width: 1px;
 }
 
-table tr {
+.table-responsive tr {
   display: block;
 }
 
-table td {
+.table-responsive td {
   display: block;
   text-align: right;
 }
 
-table td::before {
+.table-responsive td::before {
   content: attr(data-label);
   float: left;
 }
@@ -178,11 +178,11 @@ button.u-full-width {
 /* large device table layout */
 
 @media (min-width: 750px) {
-  table {
+  .table-responsive {
     table-layout: inherit;
   }
 
-  table thead {
+  .table-responsive thead {
     clip: inherit;
     height: inherit;
     margin: inherit;
@@ -192,21 +192,21 @@ button.u-full-width {
     width: inherit;
   }
 
-  table tr {
+  .table-responsive tr {
     display: table-row;
   }
 
-  table td {
+  .table-responsive td {
     display: table-cell;
     padding: 0.8em 0.3em;
     text-align: left;
   }
 
-  table th {
+  .table-responsive th {
     padding: 1em 0.3em;
   }
 
-  table td::before {
+  .table-responsive td::before {
     content: unset;
     float: none;
   }

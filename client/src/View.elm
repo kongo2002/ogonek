@@ -314,7 +314,7 @@ homePlanet active model =
       [ h3 [] [ text "Buildings" ]
       , constructionInfo
       , buildingFilters
-      , table [ id "buildings", class "u-full-width" ]
+      , table [ id "buildings", class "table-responsive u-full-width" ]
         [ thead []
           [ tr []
             [ header Const.building
