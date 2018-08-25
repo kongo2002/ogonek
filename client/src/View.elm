@@ -106,14 +106,18 @@ research model =
   in  [ h2 [] [ text "Research" ]
       , researchStatus
       , h3 [] [ text "Overview"]
-      , table []
-        [ thead []
-          [ tr []
-            [ th [] [ text "Research" ]
-            , th [] [ text "Level" ]
+      , div [ class "row" ]
+        [ div [ class "six columns" ]
+          [ table [ class "u-full-width" ]
+            [ thead []
+              [ tr []
+                [ th [] [ text "Research" ]
+                , th [] [ text "Level" ]
+                ]
+              ]
+            , tbody [] (List.map row res.research)
             ]
           ]
-        , tbody [] (List.map row res.research)
         ]
       ]
 
