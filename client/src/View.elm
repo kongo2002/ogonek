@@ -415,13 +415,14 @@ buildOperation constrPossible res binfo =
   let possible = constrPossible && buildPossible res binfo
       buildReq = BuildBuildingRequest res.planetId binfo.name (binfo.level + 1)
       request = ApiRequest buildReq
+      duration = Utils.deltaToString binfo.duration
       buildCls =
         if possible then [ href "#", numbClick request ]
         else [ class "inactive" ]
       desc =
         span [ class "description" ]
-          [ text <| "Build (" ++ Utils.deltaToString binfo.duration ++ ") " ]
-  in  a (class "icon" :: buildCls) [ desc, icon "cog" ]
+          [ text <| "Build (" ++ duration ++ ") " ]
+  in  a (title duration :: class "icon" :: buildCls) [ desc, icon "cog" ]
 
 
 buildPossible : ResourceInfo -> BuildingInfo -> Bool
