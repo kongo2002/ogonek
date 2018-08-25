@@ -192,7 +192,8 @@
           research :: atom(),
           level :: integer(),
           created :: timestamp(),
-          finish :: timestamp()
+          finish :: timestamp(),
+          progress :: boolean()
          }).
 
 -type research() :: #research{}.

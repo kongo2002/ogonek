@@ -47,7 +47,8 @@
 -record(state, {
           id :: binary(),
           planets :: #{binary() => planet_state()},
-          session :: pid()
+          session :: pid(),
+          research :: [research()]
          }).
 
 -type state() :: #state{}.
@@ -83,7 +84,11 @@ start_link(UserId, SessionDispatcher) ->
 %%--------------------------------------------------------------------
 init([UserId, SessionDispatcher]) ->
     lager:info("initializing user lifecycle of '~s' [~p]", [UserId, self()]),
-    State = #state{id=UserId, planets=maps:new(), session=SessionDispatcher},
+    State = #state{
+               id=UserId,
+               planets=maps:new(),
+               research=[],
+               session=SessionDispatcher},
 
     gen_server:cast(self(), prepare),
 
@@ -146,7 +151,10 @@ handle_cast(prepare, #state{id=UserId}=State) ->
                           Self ! {calc_resources, P, false},
 
                           % push production info as well
-                          Self ! {production_info, P}
+                          Self ! {production_info, P},
+
+                          % fetch research progress
+                          Self ! get_research
                   end, maps:keys(PlanetMap)),
 
     schedule_recalculate_resources(),
@@ -356,6 +364,18 @@ handle_info({build_building, Planet, Type, Level}=Req, State) ->
                     end
             end
     end;
+
+handle_info(get_research, State) ->
+    Research = ogonek_db:research_of_user(State#state.id),
+
+    {_Pending, Finished} = current_research(Research),
+
+    State0 = State#state{research=Research},
+
+    % return the finished researches only
+    json_to_sockets(ogonek_research, Finished, State0),
+
+    {noreply, State0};
 
 handle_info({get_buildings, Planet, Silent}, State) ->
     case maps:get(Planet, State#state.planets, undefined) of
@@ -696,6 +716,21 @@ split_constructions(Constructions, RelativeTo) ->
     Ts0 = tl(Ts ++ [RelativeTo]),
 
     {lists:zip(SortedFinished, Ts0), StillRunning}.
+
+
+-spec current_research([research()]) -> {research() | undefined, [research()]}.
+current_research(Research) ->
+    InProgress = fun(R) -> R#research.progress end,
+
+    case lists:partition(InProgress, Research) of
+        {[], Finished} ->
+            {undefined, Finished};
+        {[Pending], Finished} ->
+            {Pending, Finished};
+        {MultiplePending, Finished} ->
+            lager:error("multiple pending researches: ~p", [MultiplePending]),
+            {hd(MultiplePending), Finished}
+    end.
 
 
 -spec json_to_sockets(atom(), term(), state()) -> ok.

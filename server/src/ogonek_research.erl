@@ -61,16 +61,17 @@ has_requirement([Research | Rs], {Name, MinLevel}=Req) ->
 
 -spec from_json(json_doc()) -> {ok, research()} | {error, invalid}.
 from_json(UserJson) ->
-    Keys = [<<"_id">>, <<"user">>, <<"research">>, <<"level">>, <<"created">>, <<"finish">>],
+    Keys = [<<"_id">>, <<"user">>, <<"research">>, <<"level">>, <<"created">>, <<"finish">>, <<"progress">>],
 
     case ogonek_util:keys(Keys, UserJson) of
-        [Id, User, Research, Level, Created, Finish] ->
+        [Id, User, Research, Level, Created, Finish, Progress] ->
             {ok, #research{id=Id,
                            user=User,
                            research=to_research(Research),
                            level=Level,
                            created=Created,
-                           finish=Finish}};
+                           finish=Finish,
+                           progress=Progress}};
         _Otherwise ->
             {error, invalid}
     end.
@@ -88,7 +89,8 @@ to_json(Research, _Db) ->
               {<<"research">>, Research#research.research},
               {<<"level">>, Research#research.level},
               {<<"created">>, Research#research.created},
-              {<<"finish">>, Research#research.finish}
+              {<<"finish">>, Research#research.finish},
+              {<<"progress">>, Research#research.progress}
              ],
     ogonek_util:doc(<<"research">>, Values).
 

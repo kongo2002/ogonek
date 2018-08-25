@@ -38,6 +38,9 @@
 -export([building_finish/1,
          buildings_of_planet/1]).
 
+%% Research API
+-export([research_of_user/1]).
+
 %% Construction API
 -export([construction_create/1,
          constructions_of_planet/1,
@@ -188,12 +191,23 @@ building_finish(Building) ->
     gen_server:cast(?MODULE, {building_finish, Building, self()}).
 
 
--spec buildings_of_planet(binary()) -> [building()].
+-spec buildings_of_planet(PlanetId :: binary()) -> [building()].
 buildings_of_planet(PlanetId) ->
     Results = from_view(<<"building">>, <<"by_planet">>, PlanetId, get_info()),
     lists:flatmap(fun(Building) ->
                           case ogonek_building:from_json(Building) of
                               {ok, B} -> [B];
+                              _Otherwise -> []
+                          end
+                  end, Results).
+
+
+-spec research_of_user(UserId :: binary()) -> [research()].
+research_of_user(UserId) ->
+    Results = from_view(<<"research">>, <<"by_user">>, UserId, get_info()),
+    lists:flatmap(fun(Research) ->
+                          case ogonek_research:from_json(Research) of
+                              {ok, R} -> [R];
                               _Otherwise -> []
                           end
                   end, Results).
@@ -422,6 +436,15 @@ handle_cast(prepare, #state{info=Info}=State) ->
   \"views\": {
     \"by_planet\": {
       \"map\": \"function(doc) { if (doc.t == 'construction' && doc.planet) { emit(doc.planet, doc) } }\"
+    }
+  }
+}">>, Info),
+
+    ok = design_create_if_not_exists(<<"research">>,
+<<"{
+  \"views\": {
+    \"by_user\": {
+      \"map\": \"function(doc) { if (doc.t == 'research' && doc.user) { emit(doc.user, doc) } }\"
     }
   }
 }">>, Info),
