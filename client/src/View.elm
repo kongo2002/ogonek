@@ -42,16 +42,20 @@ view model =
 
 navigation : Model -> Html Msg
 navigation model =
-  let loginRoute =
-        case model.user of
-          Just _ -> Types.LogoutRoute
-          Nothing -> Types.LoginRoute
+  let loggedIn0 = loggedIn model
+      loginRoute =
+        if loggedIn0 then Types.LogoutRoute
+        else Types.LoginRoute
+
+      loggedInRoutes =
+        if loggedIn0 then
+          [ Types.ResearchRoute ]
+        else []
 
       routes =
-        [ Types.HomeRoute
-        , Types.ResearchRoute
-        , Types.HelpRoute
-        ]
+        [ Types.HomeRoute ]
+        ++ loggedInRoutes ++
+        [ Types.HelpRoute ]
 
       link args route =
         let ref  = Routing.routeToPath route
@@ -520,6 +524,13 @@ noPlanet =
     [ p [] [ text "welcome to ogonek!" ]
     ]
   ]
+
+
+loggedIn : Model -> Bool
+loggedIn model =
+  case model.user of
+    Just _ -> True
+    Nothing -> False
 
 
 -- vim: et sw=2 sts=2
