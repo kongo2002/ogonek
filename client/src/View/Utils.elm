@@ -25,7 +25,12 @@ import Types
 
 translateBuilding : Types.BuildingInfo -> String
 translateBuilding binfo =
-  case binfo.name of
+  translateBuildingName binfo.name
+
+
+translateBuildingName : String -> String
+translateBuildingName name =
+  case name of
     "construction_center" -> "construction center"
     "research_lab" -> "research lab"
     "oil_rig" -> "oil rig"

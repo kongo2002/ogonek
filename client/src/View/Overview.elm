@@ -17,6 +17,7 @@ module View.Overview exposing ( overview )
 import Dict
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Time.Iso8601
 
 import Routing
 import Types exposing (..)
@@ -38,13 +39,40 @@ planetView info =
       name = "Planet at " ++ coordStr planet.position
       title =
         h3 [] [ a [ href link, class "no-deco", numbClick (NewUrl route) ] [ text name ] ]
+
+      construction constr =
+        let name = translateBuildingName constr.building
+            finished = Time.Iso8601.fromDateTime constr.finish
+        in  tr []
+            [ td [] [ text name ]
+            , td [] [ text finished ]
+            ]
+
+      constructions =
+        if Dict.isEmpty info.constructions then
+          div [] [ p [] [ text "no constructions" ] ]
+        else
+          table [ class "eight columns" ]
+          [ thead []
+            [ tr []
+              [ th [] [ text "Name" ]
+              , th [] [ text "Completion" ]
+              ]
+            ]
+          , tbody [] (Dict.values info.constructions |> List.map construction)
+          ]
+
   in  [ div [ class "row" ]
         [ div [ class "nine columns" ] [ title ]
         , div [ class "three columns" ]
           [ planetImg planet ]
         ]
       , div [ class "row" ]
-        [
+        [ -- constructions
+          constructions
+          -- weapons
+          -- ships
+          -- etc
         ]
       ]
 
