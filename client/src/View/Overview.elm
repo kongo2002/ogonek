@@ -37,7 +37,7 @@ planetView info =
       link = Routing.routeToPath route
       name = "Planet at " ++ coordStr planet.position
       title =
-        h3 [] [ a [ href link, numbClick (NewUrl route) ] [ text name ] ]
+        h3 [] [ a [ href link, class "no-deco", numbClick (NewUrl route) ] [ text name ] ]
   in  [ div [ class "row" ]
         [ div [ class "nine columns" ] [ title ]
         , div [ class "three columns" ]

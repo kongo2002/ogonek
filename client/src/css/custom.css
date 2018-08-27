@@ -31,12 +31,12 @@
   color: #888;
 }
 
-#brand a {
-  text-decoration: none;
-}
-
 #buildings {
   font-size: 90%;
+}
+
+.no-deco {
+  text-decoration: none;
 }
 
 thead {

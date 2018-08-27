@@ -57,8 +57,8 @@ navigation model =
       links = routesLinks ++ [loginLink] ++ userInfo
 
   in div [ class "row" ]
-     [ div [ id "brand", class "four columns" ]
-       [ a [ href "/", numbClick (NewUrl HomeRoute) ] [
+     [ div [ class "four columns" ]
+       [ a [ href "/", class "no-deco", numbClick (NewUrl HomeRoute) ] [
          h1 [] [ text "ogonek" ]
          ]
        ]
