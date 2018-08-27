@@ -17,165 +17,28 @@ module View exposing ( view )
 import Dict
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing ( onClick, onWithOptions, onInput, onSubmit )
-import Json.Decode
+import Html.Events exposing ( onClick )
 import Time.Iso8601
 
-import Assets
 import Const
 import Types exposing (..)
-import Routing
 import Utils
+import View.Login
+import View.Navigation
+import View.Research
+import View.Utils exposing (..)
 
 
 view : Model -> Html Msg
 view model =
   let content =
         case model.route of
-          LoginRoute -> login
-          ResearchRoute -> research
+          LoginRoute -> View.Login.login
+          ResearchRoute -> View.Research.research
           _ -> home
-      rows = navigation model :: content model
+      rows = View.Navigation.navigation model :: content model
   in
     div [ class "container" ] rows
-
-
-navigation : Model -> Html Msg
-navigation model =
-  let loggedIn0 = loggedIn model
-      loginRoute =
-        if loggedIn0 then Types.LogoutRoute
-        else Types.LoginRoute
-
-      loggedInRoutes =
-        if loggedIn0 then
-          [ Types.ResearchRoute ]
-        else []
-
-      routes =
-        [ Types.HomeRoute ]
-        ++ loggedInRoutes ++
-        [ Types.HelpRoute ]
-
-      link args route =
-        let ref  = Routing.routeToPath route
-            name = Routing.routeToName route
-            active = route == model.route
-            acls = if active then [ class "active" ] else []
-            clss = acls ++ args
-        in  li clss [ a [ href ref, numbClick (NewUrl route) ] [ text name ] ]
-
-      userInfo =
-        case model.user of
-          Just user -> [ li [toRight, class "username"] [ text user.name ] ]
-          Nothing -> []
-
-      routesLinks = List.map (link []) routes
-      loginLink = link [toRight] loginRoute
-      links = routesLinks ++ [loginLink] ++ userInfo
-
-  in div [ class "row" ]
-     [ div [ id "brand", class "four columns" ]
-       [ a [ href "/", numbClick (NewUrl HomeRoute) ] [
-         h1 [] [ text "ogonek" ]
-         ]
-       ]
-     , div [ id "nav", class "eight columns" ]
-       [ ul [] links
-       ]
-     ]
-
-
-research : Model -> List (Html Msg)
-research model =
-  let res = model.research
-      row (name, level) =
-        tr []
-        [ td [] [ text name ]
-        , td [] [ text (toString level) ]
-        ]
-
-      researchStatus =
-        case res.status of
-          Just status ->
-            div []
-            [ p [] [ text ("research finished at: " ++ Time.Iso8601.fromDateTime status.finish) ]
-            ]
-          Nothing ->
-            div []
-            [ p [] [ text "no current research in progress" ]
-            , button [ onClick (ApiRequest StartResearchRequest) ] [ text "Research" ]
-            ]
-
-  in  [ h2 [] [ text "Research" ]
-      , researchStatus
-      , h3 [] [ text "Overview"]
-      , div [ class "row" ]
-        [ div [ class "six columns" ]
-          [ table [ class "u-full-width" ]
-            [ thead []
-              [ tr []
-                [ th [] [ text "Research" ]
-                , th [] [ text "Level" ]
-                ]
-              ]
-            , tbody [] (List.map row res.research)
-            ]
-          ]
-        ]
-      ]
-
-
-login : Model -> List (Html Msg)
-login model =
-  let localAuth =
-        div [ class "row" ]
-        [ h3 [] [ text "local login" ]
-        , Html.form [ onSubmit LocalLogin ]
-          [ div [ class "row" ]
-            [ label [ for "localUserInput" ] [ text "user" ]
-            , input [ type_ "email", id "localUserInput", placeholder "user@email.com", onInput (FormContent "localUserInput") ] []
-            ]
-          , div [ class "row" ]
-            [ label [ for "localPasswordInput" ] [ text "password" ]
-            , input [ type_ "password", id "localPasswordInput", placeholder "password", onInput (FormContent "localPasswordInput") ] []
-            ]
-          , div [ class "row" ]
-            [ input [ class "button-primary", type_ "submit", value "login" ] []
-            ]
-          ]
-        ]
-
-      fromAuth auth =
-        let provider = auth.provider
-            login = auth.loginUrl
-            viaProvider =
-              div [ class "row" ]
-              [ h3 [] [ text ("via " ++ provider) ]
-              , p []
-                [ a [ class "button button-primary", href login ] [ text "login" ]
-                ]
-              ]
-        in if provider == "local" then localAuth else viaProvider
-
-      providers =
-        if Dict.isEmpty model.authInfo then
-          -- fallback to local auth in case no providers given at all
-          [ localAuth ]
-        else Dict.values model.authInfo |> List.map fromAuth
-  in [ div [ class "row" ]
-       [ h2 [] [ text "login" ] ]
-     ] ++ providers
-
-
-numbClick : a -> Attribute a
-numbClick msg =
-  let opts = { stopPropagation = False, preventDefault = True }
-  in  onWithOptions "click" opts (Json.Decode.succeed msg)
-
-
-toRight : Attribute a
-toRight = class "u-pull-right"
 
 
 home : Model -> List (Html Msg)
@@ -183,14 +46,6 @@ home model =
   case model.planet of
     Just planet -> homePlanet planet model
     Nothing -> noPlanet
-
-
-planetImg : PlanetInfo -> Html Msg
-planetImg planet =
-  let typ = planet.planetType
-      asset = Assets.planetAsset typ
-      path = Assets.path asset
-  in  img [ class "planet", src path ] []
 
 
 homePlanet : ActivePlanet -> Model -> List (Html Msg)
@@ -365,42 +220,6 @@ maxConcurrentConstructions planet =
   in  (ccLevel + 9) // 10
 
 
-numberSpan : Int -> Html Msg
-numberSpan = numberSpanTo -1
-
-
-numberSpanTo : Int -> Int -> Html Msg
-numberSpanTo relativeTo value =
-  let negative = value < 0
-      range =
-        if relativeTo < 0 then
-          "zero"
-        else if value > relativeTo then
-          "negative"
-        else if value < relativeTo then
-          "positive"
-        else
-          "zero"
-      strValue = toString value
-      trimmed = if negative then String.dropLeft 1 strValue else strValue
-      splitted = String.join "," (splitThousands trimmed)
-      result = if negative then "-" ++ splitted else splitted
-  in span [ class ("number " ++ range) ] [ text result ]
-
-
-splitThousands : String -> List String
-splitThousands integers =
-    let reversedSplit value =
-          if String.length value > 3 then
-            value
-            |> String.dropRight 3
-            |> reversedSplit
-            |> (::) (String.right 3 value)
-          else
-            [ value ]
-    in integers |> reversedSplit |> List.reverse
-
-
 buildingRow : ActivePlanet -> Bool -> BuildingInfo -> Html Msg
 buildingRow planet constrPossible binfo =
   let col label val relative =
@@ -486,12 +305,6 @@ buildPossible res info =
   res.kyanite >= info.kyanite
 
 
-icon : String -> Html Msg
-icon name =
-  let clazz = "fas fa-" ++ name
-  in  i [ class clazz ] []
-
-
 translateBuilding : BuildingInfo -> String
 translateBuilding binfo =
   case binfo.name of
@@ -512,25 +325,12 @@ translateBuilding binfo =
     unknown -> unknown
 
 
-coordStr : (Int, Int, Int) -> String
-coordStr coord =
-  let (x, y, z) = coord
-  in  "(" ++ toString x ++ "," ++ toString y ++ "," ++ toString z ++ ")"
-
-
 noPlanet : List (Html Msg)
 noPlanet =
   [ div [ class "row" ]
     [ p [] [ text "welcome to ogonek!" ]
     ]
   ]
-
-
-loggedIn : Model -> Bool
-loggedIn model =
-  case model.user of
-    Just _ -> True
-    Nothing -> False
 
 
 -- vim: et sw=2 sts=2
