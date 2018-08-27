@@ -21,13 +21,27 @@ import Time.Iso8601
 
 import Routing
 import Types exposing (..)
+import View.Research
 import View.Utils exposing (..)
 
 
 overview : Model -> List (Html Msg)
 overview model =
   let planets = Dict.values model.planets
-  in  List.concatMap planetView planets
+      views = List.concatMap planetView planets
+  in  research model.research :: views
+
+
+research : ResearchInfo -> Html Msg
+research res =
+  let link = Routing.routeToPath ResearchRoute
+      click = numbClick (NewUrl ResearchRoute)
+      status = View.Research.researchStatus res
+  in  div [ class "research" ]
+      [ h3 [] [ a [ href link, class "no-deco", click ] [ text "Research" ] ]
+      , div [ class "row" ]
+        [ p [] [ text status ] ]
+      ]
 
 
 planetView : ActivePlanet -> List (Html Msg)

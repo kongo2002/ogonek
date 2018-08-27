@@ -12,7 +12,7 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-module View.Research exposing ( research )
+module View.Research exposing ( research, researchStatus )
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -31,20 +31,21 @@ research model =
         , td [] [ text (toString level) ]
         ]
 
-      researchStatus =
+      statusText = researchStatus res
+      status =
         case res.status of
           Just status ->
             div []
-            [ p [] [ text ("research finished at: " ++ Time.Iso8601.fromDateTime status.finish) ]
+            [ p [] [ text statusText ]
             ]
           Nothing ->
             div []
-            [ p [] [ text "no current research in progress" ]
+            [ p [] [ text statusText ]
             , button [ onClick (ApiRequest StartResearchRequest) ] [ text "Research" ]
             ]
 
   in  [ h2 [] [ text "Research" ]
-      , researchStatus
+      , status
       , h3 [] [ text "Overview"]
       , div [ class "row" ]
         [ div [ class "six columns" ]
@@ -60,6 +61,15 @@ research model =
           ]
         ]
       ]
+
+
+researchStatus : ResearchInfo -> String
+researchStatus research =
+  case research.status of
+    Just status ->
+      "research finished at: " ++ Time.Iso8601.fromDateTime status.finish
+    Nothing ->
+      "no current research in progress"
 
 
 -- vim: et sw=2 sts=2
