@@ -43,4 +43,15 @@ planetToString planet =
     IcePlanet -> "ice"
 
 
+nothing : Maybe a -> Bool
+nothing maybe =
+  case maybe of
+    Nothing -> True
+    _ -> False
+
+
+just : Maybe a -> Bool
+just = nothing >> not
+
+
 -- vim: et sw=2 sts=2

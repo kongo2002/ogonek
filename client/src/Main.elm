@@ -133,8 +133,14 @@ update msg model =
 
     ApiResponse (Research info) ->
       let _ = Debug.log "research information received" info
+          finished = Utils.nothing info.status && Utils.just model.research.status
+          actions =
+            if finished then
+              let title = "ogonek: research finished"
+              in [ Notification.notify Ports.notification title Nothing Nothing ]
+            else []
           updated = { model | research = info }
-      in  updated ! []
+      in  updated ! actions
 
     ApiResponse (Building info) ->
       let _ = Debug.log "building information received" info
