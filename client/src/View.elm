@@ -15,7 +15,7 @@
 module View exposing ( view )
 
 import Dict
-import Html exposing ( Html, div )
+import Html exposing ( Html, div, p, text )
 import Html.Attributes exposing ( class )
 
 import Types
@@ -24,11 +24,21 @@ import View.Navigation
 import View.Overview
 import View.Planet
 import View.Research
+import View.Utils exposing ( loggedIn )
 
 
 view : Types.Model -> Html Types.Msg
 view model =
-  let content =
+  let loggedOutContent =
+        case model.route of
+          Types.HomeRoute ->
+            home
+          Types.LoginRoute ->
+            View.Login.login
+          _ ->
+            home
+
+      loggedInContent =
         case model.route of
           -- home/overview
           Types.HomeRoute ->
@@ -49,11 +59,24 @@ view model =
           Types.LoginRoute ->
             View.Login.login
           -- general fallback to home/overview
-          _ -> View.Overview.overview
+          _ ->
+            View.Overview.overview
+
+      content =
+        if loggedIn model then loggedInContent
+        else loggedOutContent
 
       rows = View.Navigation.navigation model :: content model
   in
     div [ class "container" ] rows
+
+
+home : Types.Model -> List (Html Types.Msg)
+home _ =
+  [ div []
+    [ p [] [ text "Welcome to ogonek!" ]
+    ]
+  ]
 
 
 -- vim: et sw=2 sts=2
