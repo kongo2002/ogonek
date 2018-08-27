@@ -25,6 +25,7 @@ import Types exposing (..)
 import Utils
 import View.Login
 import View.Navigation
+import View.Overview
 import View.Research
 import View.Utils exposing (..)
 
@@ -33,19 +34,17 @@ view : Model -> Html Msg
 view model =
   let content =
         case model.route of
+          HomeRoute -> View.Overview.overview
+          PlanetRoute planet ->
+            case Dict.get planet model.planets of
+              Just p -> homePlanet p
+              Nothing -> View.Overview.overview
           LoginRoute -> View.Login.login
           ResearchRoute -> View.Research.research
-          _ -> home
+          _ -> View.Overview.overview
       rows = View.Navigation.navigation model :: content model
   in
     div [ class "container" ] rows
-
-
-home : Model -> List (Html Msg)
-home model =
-  case model.planet of
-    Just planet -> homePlanet planet model
-    Nothing -> noPlanet
 
 
 homePlanet : ActivePlanet -> Model -> List (Html Msg)

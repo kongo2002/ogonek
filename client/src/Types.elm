@@ -42,6 +42,7 @@ type Route
   | ResearchRoute
   | LoginRoute
   | LogoutRoute
+  | PlanetRoute String
   -- auth (code, state, scope, provider)
   | AuthRoute (Maybe String) (Maybe String) (Maybe String) (Maybe String)
   | HelpRoute
@@ -210,8 +211,7 @@ type alias Model =
   { route : Route
   , user : Maybe UserInfo
   , authInfo : Dict String AuthInformation
-  , planets : Dict String PlanetInfo
-  , planet : Maybe ActivePlanet
+  , planets : Dict String ActivePlanet
   , research : ResearchInfo
   , websocketHost : String
   , formContents : Dict String String

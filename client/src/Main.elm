@@ -33,7 +33,7 @@ init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
 init flags location =
   let route = Routing.parse location
       research = ResearchInfo [] Nothing
-      model = Model route Nothing Dict.empty Dict.empty Nothing research flags.websocketHost Dict.empty Nothing
+      model = Model route Nothing Dict.empty Dict.empty research flags.websocketHost Dict.empty Nothing
       actions = routeActions model
   in  model ! actions
 
@@ -108,11 +108,14 @@ update msg model =
       in  model ! [ Api.send model req ]
 
     SetBuildingsFilter filter ->
-      let active =
-            case model.planet of
-              Just active -> Just { active | buildingsFilter = filter }
-              Nothing -> Nothing
-      in  { model | planet = active } ! []
+      let model0 =
+            case currentPlanet model of
+              Just active ->
+                let updated = { active | buildingsFilter = filter }
+                    planets0 = Dict.insert active.planet.id updated model.planets
+                in { model | planets = planets0 }
+              Nothing -> model
+      in  model0 ! []
 
     ApiRequest msg ->
       model ! [ Api.send model msg ]
@@ -160,13 +163,7 @@ update msg model =
 
     ApiResponse (Planet info) ->
       let _ = Debug.log "planet information received" info
-          planets0 = Dict.insert info.id info model.planets
-          current =
-            -- set the current/active planet if none is set already
-            case model.planet of
-              Nothing -> Just (initialPlanet info)
-              p -> p
-          model0 = { model | planets = planets0, planet = current }
+          model0 = updatePlanet model info
       in  model0 ! []
 
     ApiResponse (User info) ->
@@ -182,6 +179,16 @@ update msg model =
       in  model ! []
 
 
+updatePlanet : Model -> PlanetInfo -> Model
+updatePlanet model info =
+  let updated =
+        case Dict.get info.id model.planets of
+          Just active -> { active | planet = info }
+          Nothing -> initialPlanet info
+      planets0 = Dict.insert info.id updated model.planets
+  in { model | planets = planets0 }
+
+
 afterLogin : Model -> List (Cmd Msg)
 afterLogin model =
   case model.route of
@@ -192,9 +199,9 @@ afterLogin model =
 
 requestPlanetInfo : Model -> List (Cmd Msg)
 requestPlanetInfo model =
-  case model.planet of
-    Nothing -> [ Api.send model PlanetInfoRequest ]
-    _ -> []
+  if Dict.isEmpty model.planets then
+    [ Api.send model PlanetInfoRequest ]
+  else []
 
 
 initialPlanet : PlanetInfo -> ActivePlanet
@@ -209,54 +216,48 @@ initialPlanet info =
 
 updateCapacity : Model -> CapacityInfo -> Model
 updateCapacity model info =
-  case model.planet of
+  case Dict.get info.planetId model.planets of
     Just active ->
-      if active.planet.id == info.planetId then
-        let updated = { active | capacity = info }
-        in  { model | planet = Just updated }
-      else
-        model
+      let updated = { active | capacity = info }
+          planets0 = Dict.insert info.planetId updated model.planets
+      in  { model | planets = planets0 }
     Nothing ->
       model
 
 
 updateProduction : Model -> ResourceInfo -> Model
 updateProduction model info =
-  case model.planet of
+  case Dict.get info.planetId model.planets of
     Just active ->
-      if active.planet.id == info.planetId then
-        let updated = { active | production = info }
-        in  { model | planet = Just updated }
-      else
-        model
+      let updated = { active | production = info }
+          planets0 = Dict.insert info.planetId updated model.planets
+      in  { model | planets = planets0 }
     Nothing ->
       model
 
 
 updateBuilding : Model -> BuildingInfo -> ( Model, Cmd Msg )
 updateBuilding model info =
-  case model.planet of
+  case Dict.get info.planetId model.planets of
     Just active ->
-      if active.planet.id == info.planetId then
-        let buildings = active.buildings
-            buildings0 = Dict.insert info.name info buildings
-            -- any building information with a greater or equal level
-            -- will remove any pending construction entries
-            constructions0 = removeConstruction active info
-            updated = { active | buildings = buildings0, constructions = constructions0 }
-            -- if this building update removed at least one construction this
-            -- means we just finished a building:
-            -- send a push notification in that case
-            finished = Dict.size constructions0 < Dict.size active.constructions
-            actions =
-              if finished then
-                let title = "ogonek: building finished"
-                    body = info.name ++ " (level " ++ toString info.level ++ ") finished" |> Just
-                in [ Notification.notify Ports.notification title body Nothing ]
-              else []
-        in  { model | planet = Just updated } ! actions
-      else
-        model ! []
+      let buildings = active.buildings
+          buildings0 = Dict.insert info.name info buildings
+          -- any building information with a greater or equal level
+          -- will remove any pending construction entries
+          constructions0 = removeConstruction active info
+          updated = { active | buildings = buildings0, constructions = constructions0 }
+          -- if this building update removed at least one construction this
+          -- means we just finished a building:
+          -- send a push notification in that case
+          finished = Dict.size constructions0 < Dict.size active.constructions
+          actions =
+            if finished then
+              let title = "ogonek: building finished"
+                  body = info.name ++ " (level " ++ toString info.level ++ ") finished" |> Just
+              in [ Notification.notify Ports.notification title body Nothing ]
+            else []
+          planets0 = Dict.insert info.planetId updated model.planets
+      in  { model | planets = planets0 } ! actions
     Nothing ->
       model ! []
 
@@ -280,24 +281,34 @@ updateConstructionTimes model now =
       let delta = Time.DateTime.delta info.finish now
           diffStr = Utils.deltaToString delta
       in { info | timeLeft = Just diffStr }
-  in case model.planet of
+  in case currentPlanet model of
     Just active ->
       let cs = Dict.map toDelta active.constructions
           updated = { active | constructions = cs }
-      in  { model | planet = Just updated }
+          planets0 = Dict.insert active.planet.id updated model.planets
+      in  { model | planets = planets0 }
     Nothing ->
       model
 
 
+currentPlanet : Model -> Maybe ActivePlanet
+currentPlanet model =
+  case model.route of
+    PlanetRoute planet ->
+      Dict.get planet model.planets
+    _ -> Nothing
+
+
 updateConstruction : Model -> ConstructionInfo -> Model
 updateConstruction model info =
-  case model.planet of
+  case Dict.get info.planetId model.planets of
     Just active ->
-      if active.planet.id == info.planetId && constructionValid active info then
+      if constructionValid active info then
         let constructions = active.constructions
             constructions0 = Dict.insert info.building info constructions
             updated = { active | constructions = constructions0 }
-        in  { model | planet = Just updated }
+            planets0 = Dict.insert info.planetId updated model.planets
+        in  { model | planets = planets0 }
       else
         model
     Nothing ->
@@ -329,13 +340,11 @@ emptyCapacity planet =
 
 updateResources : Model -> ResourceInfo -> Model
 updateResources model info =
-  case model.planet of
+  case Dict.get info.planetId model.planets of
     Just active ->
-      if active.planet.id == info.planetId then
-        let updated = { active | resources = info }
-        in  { model | planet = Just updated }
-      else
-        model
+      let updated = { active | resources = info }
+          planets0 = Dict.insert info.planetId updated model.planets
+      in  { model | planets = planets0 }
     Nothing ->
       model
 
