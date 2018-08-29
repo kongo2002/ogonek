@@ -21,6 +21,7 @@
 
 -export([register_socket/2,
          register_socket/3,
+         publish_to_user/2,
          publish_to_user/3,
          publish_to_sockets/2,
          close_socket/1,
@@ -72,6 +73,11 @@ register_socket(UserId, SessionId) ->
 -spec register_socket(pid(), binary(), binary()) -> ok.
 register_socket(Socket, UserId, SessionId) ->
     gen_server:cast(?MODULE, {register_socket, Socket, UserId, SessionId}).
+
+
+-spec publish_to_user(binary(), term()) -> ok.
+publish_to_user(UserId, Msg) ->
+    gen_server:cast(?MODULE, {publish_to_user, UserId, undefined, Msg}).
 
 
 -spec publish_to_user(binary(), binary(), term()) -> ok.

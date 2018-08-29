@@ -512,6 +512,24 @@ handle_info({process_constructions, PlanetId}, #state{id=Id}=State) ->
             {noreply, State#state{planets=Planets0}}
     end;
 
+handle_info({planet_claim, Planet}, State) ->
+    PlanetId = Planet#planet.id,
+    Planets = State#state.planets,
+    Planet0 = bootstrap_free_planet(Planet),
+    PState = #planet_state{
+                planet=Planet0,
+                buildings=[],
+                constructions=[],
+                capacity=ogonek_capacity:empty(PlanetId)},
+    Planets0 = maps:put(PlanetId, PState, Planets),
+
+    % update resources in db
+    ogonek_db:planet_update_resources(PlanetId, Planet0#planet.resources),
+
+    self() ! {planet_info, PlanetId},
+
+    {noreply, State#state{planets=Planets0}};
+
 handle_info(Info, #state{id=Id}=State) ->
     lager:warning("user ~s - unhandled message: ~p", [Id, Info]),
     {noreply, State}.
@@ -553,9 +571,10 @@ fetch_planets(State) ->
     case Planets of
         [] ->
             lager:info("user ~s has no planets yet - assigning a free one now", [UserId]),
-            {ok, Planet} = ogonek_planet_manager:claim_free_planet(UserId),
-            Planet0 = bootstrap_free_planet(Planet),
-            [Planet0];
+
+            % TODO: race until the new planet is claimed
+            ogonek_planet_manager:claim_free_planet(UserId),
+            [];
         Ps -> Ps
     end.
 

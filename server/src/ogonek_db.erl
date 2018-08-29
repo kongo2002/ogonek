@@ -49,7 +49,8 @@
          construction_remove/3]).
 
 %% Planet API
--export([planet_exists/3,
+-export([planet_exists/1,
+         planet_exists/3,
          planet_create/1,
          planet_claim/2,
          planet_free/0,
@@ -257,6 +258,12 @@ constructions_of_planet(PlanetId) ->
                   end, Results).
 
 
+-spec planet_exists(planet()) -> boolean().
+planet_exists(#planet{position=Pos}) ->
+    {X, Y, Z} = Pos,
+    planet_exists(X, Y, Z).
+
+
 -spec planet_exists(integer(), integer(), integer()) -> boolean().
 planet_exists(X, Y, Z) ->
     case singleton_from_view(<<"planet">>, <<"by_coordinate">>, [X, Y, Z], get_info()) of
@@ -273,7 +280,7 @@ planet_create(Planet) ->
 -spec planet_claim(planet(), binary()) -> ok.
 planet_claim(Planet, UserId) ->
     Updated = Planet#planet{owner=UserId},
-    gen_server:cast(?MODULE, {planet_update, Updated}).
+    gen_server:cast(?MODULE, {planet_claim, Updated, self()}).
 
 
 -spec planet_free() -> {ok, planet()} | {error, not_found} | {error, invalid}.
@@ -670,6 +677,28 @@ handle_cast({construction_create, Construction, Sender}, #state{info=Info}=State
 handle_cast({planet_create, Planet}, #state{info=Info}=State) ->
     Json = ogonek_planet:to_json(Planet),
     insert(Json, Info),
+    {noreply, State};
+
+handle_cast({planet_claim, #planet{id=undefined}=P, Sender}, #state{info=Info}=State) ->
+    Json = ogonek_planet:to_json(P),
+    case insert(Json, Info) of
+        {ok, Id, _Rev} ->
+            WithId = P#planet{id=Id},
+            Sender ! {planet_claim, WithId};
+        _Otherwise ->
+            ok
+    end,
+    {noreply, State};
+
+handle_cast({planet_claim, Planet, Sender}, #state{info=Info}=State) ->
+    Json = ogonek_planet:to_json(Planet),
+    case replace(Planet#planet.id, Json, Info) of
+        {ok, 201, _Hs, _Body} ->
+            Sender ! {planet_claim, Planet},
+            ok;
+        Error ->
+            lager:error("failed to update planet: ~p", [Error])
+    end,
     {noreply, State};
 
 handle_cast({planet_update, Planet}, #state{info=Info}=State) ->

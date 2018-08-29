@@ -57,9 +57,9 @@ start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 
--spec claim_free_planet(binary()) -> {ok, planet()} | {error, not_found} | {error, invalid}.
+-spec claim_free_planet(binary()) -> ok.
 claim_free_planet(UserId) ->
-    gen_server:call(?MODULE, {claim_free_planet, UserId}).
+    gen_server:cast(?MODULE, {claim_free_planet, UserId}).
 
 
 -spec user_planets(binary()) -> [planet()].
@@ -101,17 +101,6 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({claim_free_planet, UserId}, _From, State) ->
-    case ogonek_db:planet_free() of
-        {ok, Free} ->
-            ogonek_db:planet_claim(Free, UserId),
-            Planet = Free#planet{owner=UserId},
-            {reply, {ok, Planet}, track_planet(Planet, State)};
-        Error ->
-            lager:error("there is no free planet to claim for user '~s': ~p", [UserId, Error]),
-            {reply, Error, State}
-    end;
-
 handle_call({user_planets, UserId}, _From, State) ->
     UserPlanets = ogonek_db:planets_of_user(UserId),
     State0 = lists:foldl(fun track_planet/2, State, UserPlanets),
@@ -131,6 +120,10 @@ handle_call(_Request, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_cast({claim_free_planet, UserId}, State) ->
+    claim_random_planet(UserId),
+    {noreply, State};
+
 handle_cast(prepare, State) ->
     self() ! create_planet,
 
@@ -149,19 +142,19 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_info({planet_claim, Planet}=Msg, State) ->
+    State0 = track_planet(Planet, State),
+
+    % forward to user lifecycle
+    ogonek_session_manager:publish_to_user(Planet#planet.owner, Msg),
+
+    {noreply, State0};
+
 handle_info(create_planet, State) ->
     % create a random planet
-    [X, Y, Z] = [rand:uniform(100) || _ <- lists:seq(1, 3)],
-    Size = rand:uniform(4),
-    Index = rand:uniform(8),
-    Type = ogonek_util:choose_random([earth, water, fire, ice]),
-    Planet = #planet{type=Type,
-                     size=Size,
-                     position={X, Y, Z},
-                     index=Index,
-                     resources=ogonek_resources:empty()},
+    Planet = random_planet(false),
 
-    case ogonek_db:planet_exists(X, Y, Z) of
+    case ogonek_db:planet_exists(Planet) of
         false -> ogonek_db:planet_create(Planet);
         true -> ok
     end,
@@ -201,6 +194,40 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+-spec random_planet() -> planet().
+random_planet() ->
+    random_planet(true).
+
+
+-spec random_planet(ForUser :: boolean()) -> planet().
+random_planet(ForUser) ->
+    [X, Y, Z] = [rand:uniform(100) || _ <- lists:seq(1, 3)],
+    Size = case ForUser of
+               true -> 3;
+               _ -> rand:uniform(4)
+           end,
+    Index = rand:uniform(8),
+    Type = ogonek_util:choose_random([earth, water, fire, ice]),
+    #planet{type=Type,
+            size=Size,
+            position={X, Y, Z},
+            index=Index,
+            resources=ogonek_resources:empty()}.
+
+
+-spec claim_random_planet(UserId :: binary()) -> ok.
+claim_random_planet(UserId) ->
+    Planet = random_planet(),
+    case ogonek_db:planet_exists(Planet) of
+        false ->
+            % TODO: race between 'exists' and 'claim'
+            ogonek_db:planet_claim(Planet, UserId),
+            ok;
+        true ->
+            claim_random_planet(UserId)
+    end.
+
 
 -spec track_planet(planet(), state()) -> state().
 track_planet(Planet, State) ->

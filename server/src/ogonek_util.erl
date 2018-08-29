@@ -35,6 +35,7 @@
          path/2,
          replace_with/2,
          doc/2,
+         remove_key/2,
          choose_random/1,
          if_defined/2,
          now8601/0
@@ -112,6 +113,13 @@ replace_with({PList}, Values) ->
 replace_with(PList, Values) when is_list(PList) ->
     Combined = Values ++ PList,
     lists:usort(fun({K1, _}, {K2, _}) -> K1 =< K2 end, Combined).
+
+
+remove_key({PList}, Key) ->
+    {remove_key(PList, Key)};
+
+remove_key(PList, Key) ->
+    lists:keydelete(Key, 1, PList).
 
 
 json_get(Target) ->
