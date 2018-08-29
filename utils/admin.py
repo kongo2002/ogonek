@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 
+import hashlib
 import json
 import sys
 
@@ -69,6 +70,11 @@ def _local_users():
     return [x['_id'] for x in __view_results(req)]
 
 
+def _hash_local_pw(pw):
+    salted = ':ogonek:#%s' % pw
+    return hashlib.sha256(salted).hexdigest().upper()
+
+
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print('usage: %s <operation> [<arg>...]' % sys.argv[0], file=sys.stderr)
@@ -90,6 +96,11 @@ if __name__ == '__main__':
             __pretty(_local_user(EMAIL))
         else:
             __pretty(_local_users())
+    elif OP == 'hash':
+        if len(sys.argv) > 2:
+            print('hashed: %s' % _hash_local_pw(sys.argv[2]))
+        else:
+            print('usage: %s hash <pw>' % sys.argv[0], file=sys.stderr)
     else:
         print('unknown operation "%s"' % OP)
         sys.exit(2)
