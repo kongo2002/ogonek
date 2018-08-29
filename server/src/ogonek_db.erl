@@ -53,7 +53,6 @@
          planet_exists/3,
          planet_create/1,
          planet_claim/2,
-         planet_free/0,
          planets_of_user/1,
          planet_update_resources/2]).
 
@@ -281,39 +280,6 @@ planet_create(Planet) ->
 planet_claim(Planet, UserId) ->
     Updated = Planet#planet{owner=UserId},
     gen_server:cast(?MODULE, {planet_claim, Updated, self()}).
-
-
--spec planet_free() -> {ok, planet()} | {error, not_found} | {error, invalid}.
-planet_free() ->
-    planet_free0(25, get_info()).
-
-
-planet_free0(Limit, Info) ->
-    planet_free0(0, Limit, Info).
-
-planet_free0(Skip, Limit, Info) ->
-    OwnerKey = [<<"owner">>],
-    PlanetFree = fun(Planet) ->
-                         case ogonek_util:keys(OwnerKey, Planet) of
-                             [] -> true;
-                             [undefined] -> true;
-                             [null] -> true;
-                             _Otherwise -> false
-                         end
-                 end,
-
-    Results = list_from_view(<<"planet">>, <<"by_coordinate">>, Skip, Limit, Info),
-
-    case Results of
-        [] -> {error, not_found};
-        Res ->
-            case lists:filter(PlanetFree, Res) of
-                [Hd | _] ->
-                    ogonek_planet:from_json(Hd);
-                _Otherwise ->
-                    planet_free0(Skip + Limit, Limit, Info)
-            end
-    end.
 
 
 -spec planets_of_user(binary()) -> [planet()].
@@ -1002,31 +968,6 @@ singleton_from_view(Db, Design, View, Key, Info) ->
             end;
         _Error ->
             {error, not_found}
-    end.
-
-
-list_from_view(Design, View, Skip, Limit, Info) ->
-    list_from_view(?OGONEK_DB_NAME, Design, View, Skip, Limit, Info).
-
-list_from_view(Db, Design, View, Skip, Limit, Info) ->
-    Skip0 = list_to_binary(integer_to_list(Skip)),
-    Limit0 = list_to_binary(integer_to_list(Limit)),
-    Target = <<"/", Db/binary, "/_design/", Design/binary,
-               "/_view/", View/binary,
-               "?skip=", Skip0/binary,
-               "&limit=", Limit0/binary>>,
-
-    case get_(Target, Info) of
-        {ok, 200, _Hs, Body} ->
-            case ogonek_util:keys([<<"rows">>], Body) of
-                [] -> [];
-                [[]] -> [];
-                [Results] when is_list(Results) ->
-                    ValueKey = [<<"value">>],
-                    lists:flatmap(fun(Elem) -> ogonek_util:keys(ValueKey, Elem) end, Results);
-                _Otherwise -> []
-            end;
-        _Otherwise -> []
     end.
 
 
