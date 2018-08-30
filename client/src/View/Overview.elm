@@ -23,6 +23,7 @@ import Routing
 import Types exposing (..)
 import View.Research
 import View.Utils exposing (..)
+import Utils exposing ( orEmpty )
 
 
 overview : Model -> List (Html Msg)
@@ -57,20 +58,23 @@ planetView info =
       construction constr =
         let name = translateBuildingName constr.building
             finished = Time.Iso8601.fromDateTime constr.finish
+            duration = constr.timeLeft |> orEmpty
         in  tr []
             [ td [] [ text name ]
-            , td [] [ text finished ]
+            , td [] [ text duration ]
+            , td [ class "no-mobile" ] [ text finished ]
             ]
 
       constructions =
         if Dict.isEmpty info.constructions then
           div [] [ p [] [ text "no constructions" ] ]
         else
-          table [ class "eight columns" ]
+          table [ class "twelve columns" ]
           [ thead []
             [ tr []
               [ th [] [ text "Name" ]
-              , th [] [ text "Completion" ]
+              , th [] [ text "Duration" ]
+              , th [ class "no-mobile" ] [ text "Completion" ]
               ]
             ]
           , tbody [] (Dict.values info.constructions |> List.map construction)

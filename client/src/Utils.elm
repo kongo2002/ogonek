@@ -34,6 +34,13 @@ deltaToString delta =
         fmt delta.seconds "second" "seconds"
 
 
+orEmpty : Maybe String -> String
+orEmpty value =
+  case value of
+    Just str -> str
+    Nothing -> ""
+
+
 planetToString : PlanetType -> String
 planetToString planet =
   case planet of

@@ -25,7 +25,7 @@ import Notification
 import Ports
 import Routing
 import Types exposing (..)
-import Utils
+import Utils exposing ( orEmpty )
 import View
 
 
@@ -52,13 +52,6 @@ routeActions model =
           resetLocation = Navigation.newUrl (Routing.routeToPath emptyAuth)
       in  [ Api.send model req, resetLocation ]
     _ -> []
-
-
-orEmpty : Maybe String -> String
-orEmpty value =
-  case value of
-    Just str -> str
-    Nothing -> ""
 
 
 atAuth : Route -> Bool
@@ -287,14 +280,14 @@ updateConstructionTimes model now =
       let delta = Time.DateTime.delta info.finish now
           diffStr = Utils.deltaToString delta
       in { info | timeLeft = Just diffStr }
-  in case currentPlanet model of
-    Just active ->
-      let cs = Dict.map toDelta active.constructions
-          updated = { active | constructions = cs }
-          planets0 = Dict.insert active.planet.id updated model.planets
-      in  { model | planets = planets0 }
-    Nothing ->
-      model
+
+      updatePlanet id planet =
+        let cs = Dict.map toDelta planet.constructions
+        in { planet | constructions = cs }
+
+      planets0 = Dict.map updatePlanet model.planets
+
+  in { model | planets = planets0 }
 
 
 currentPlanet : Model -> Maybe ActivePlanet
