@@ -48,7 +48,8 @@
           id :: binary(),
           planets :: #{binary() => planet_state()},
           session :: pid(),
-          research :: [research()]
+          research :: [research()],
+          research_timer :: undefined | reference()
          }).
 
 -type state() :: #state{}.
@@ -314,6 +315,8 @@ handle_info(start_research, State) ->
             ogonek_db:research_create(Res),
             Rss = update_research(State#state.research, Res),
 
+            trigger_research_check(Res),
+
             {noreply, State#state{research=Rss}};
         _Otherwise ->
             % research already ongoing
@@ -326,7 +329,11 @@ handle_info({research_create, _Research}, State) ->
 
 handle_info({research_finish, _Research}, State) ->
     self() ! get_research,
-    {noreply, State};
+
+    % reset research timer
+    State0 = State#state{research_timer=undefined},
+
+    {noreply, State0};
 
 handle_info({planet_info, PlanetId}, State) ->
     case maps:get(PlanetId, State#state.planets, undefined) of
@@ -423,8 +430,10 @@ handle_info(get_research, State) ->
     {Pending, Finished, Research0} =
     case current_research(Research) of
         {undefined, Finished0} ->
+            % no ongoing research at all
             {undefined, Finished0, Research};
         {Pending0, Finished0} when Pending0#research.finish =< Now ->
+            % a research was finished in the meantime:
             % unset progress and move into finished-set
             Pending1 = Pending0#research{progress=false},
 
@@ -433,15 +442,25 @@ handle_info(get_research, State) ->
             Updated = update_research(Finished0, Pending1),
             {undefined, Updated, Updated};
         {P, F} ->
+            % there is a pending research that is not finished yet
             {P, F, Research}
     end,
 
+    % create new research completion timer if not set yet
+    State0 =
+    case {Pending, State#state.research_timer} of
+        {#research{}, undefined} ->
+            State#state{research_timer=trigger_research_check(Pending)};
+        _Otherwise ->
+            State
+    end,
+
     Json = ogonek_research:research_info_json(Pending, Finished),
-    gen_server:cast(State#state.session, {json_to_sockets, Json}),
+    gen_server:cast(State0#state.session, {json_to_sockets, Json}),
 
-    State0 = State#state{research=Research0},
+    State1 = State0#state{research=Research0},
 
-    {noreply, State0};
+    {noreply, State1};
 
 handle_info({get_buildings, Planet, Silent}, State) ->
     case maps:get(Planet, State#state.planets, undefined) of
@@ -839,6 +858,12 @@ json_to_sockets(Module, Obj, State) ->
 json_to_sockets(_Module, _Obj, _State, true) -> ok;
 json_to_sockets(Module, Obj, State, _) ->
     json_to_sockets(Module, Obj, State).
+
+
+-spec trigger_research_check(research()) -> reference().
+trigger_research_check(Research) ->
+    DueIn = seconds_since(Research#research.finish) + 1,
+    erlang:send_after(DueIn * 1000, self(), get_research).
 
 
 -spec trigger_construction_checks([construction()]) -> ok.
