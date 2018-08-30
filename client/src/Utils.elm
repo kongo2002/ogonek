@@ -24,9 +24,9 @@ deltaToString delta =
   let fmt value oneUnit multiples =
       let unit = if value == 1 then oneUnit else multiples
       in  toString value ++ " " ++ unit
-  in  if delta.days > 0 then
+  in  if delta.days > 0 && delta.hours >= 24 then
         fmt delta.days "day" "days"
-      else if delta.hours > 0 then
+      else if delta.hours > 0 && delta.minutes >= 60 then
         fmt delta.hours "hour" "hours"
       else if delta.minutes > 0 then
         fmt delta.minutes "minute" "minutes"
