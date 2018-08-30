@@ -17,9 +17,9 @@ module View.Research exposing ( research, researchStatus )
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing ( onClick )
-import Time.Iso8601
 
 import Types exposing (..)
+import Utils exposing ( zonedIso8601 )
 
 
 research : Model -> List (Html Msg)
@@ -31,7 +31,7 @@ research model =
         , td [] [ text (toString level) ]
         ]
 
-      statusText = researchStatus res
+      statusText = researchStatus model res
       status =
         case res.status of
           Just status ->
@@ -63,11 +63,11 @@ research model =
       ]
 
 
-researchStatus : ResearchInfo -> String
-researchStatus research =
+researchStatus : Model -> ResearchInfo -> String
+researchStatus model research =
   case research.status of
     Just status ->
-      "research finished at: " ++ Time.Iso8601.fromDateTime status.finish
+      "research finished at: " ++ zonedIso8601 model status.finish
     Nothing ->
       "no current research in progress"
 

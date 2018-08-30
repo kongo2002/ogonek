@@ -17,27 +17,28 @@ module View.Overview exposing ( overview )
 import Dict
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Time.Iso8601
 
 import Routing
 import Types exposing (..)
 import View.Research
 import View.Utils exposing (..)
-import Utils exposing ( orEmpty )
+import Utils exposing ( orEmpty, zonedIso8601 )
 
 
 overview : Model -> List (Html Msg)
 overview model =
   let planets = Dict.values model.planets
-      views = List.concatMap planetView planets
-  in  research model.research :: views
+      perPlanet = planetView model
+      views = List.concatMap perPlanet planets
+  in  research model :: views
 
 
-research : ResearchInfo -> Html Msg
-research res =
-  let link = Routing.routeToPath ResearchRoute
+research : Model -> Html Msg
+research model =
+  let res = model.research
+      link = Routing.routeToPath ResearchRoute
       click = numbClick (NewUrl ResearchRoute)
-      status = View.Research.researchStatus res
+      status = View.Research.researchStatus model res
   in  div [ class "research" ]
       [ h3 [] [ a [ href link, class "no-deco", click ] [ text "Research" ] ]
       , div [ class "row" ]
@@ -45,8 +46,8 @@ research res =
       ]
 
 
-planetView : ActivePlanet -> List (Html Msg)
-planetView info =
+planetView : Model -> ActivePlanet -> List (Html Msg)
+planetView model info =
   let planet = info.planet
       id = planet.id
       route = PlanetRoute id
@@ -57,7 +58,7 @@ planetView info =
 
       construction constr =
         let name = translateBuildingName constr.building
-            finished = Time.Iso8601.fromDateTime constr.finish
+            finished = zonedIso8601 model constr.finish
             duration = constr.timeLeft |> orEmpty
         in  tr []
             [ td [] [ text name ]

@@ -18,12 +18,11 @@ import Dict
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing ( onClick )
-import Time.Iso8601
 
 import Const
 import Types exposing (..)
 import View.Utils exposing (..)
-import Utils
+import Utils exposing ( zonedIso8601 )
 
 
 planet : ActivePlanet -> Model -> List (Html Msg)
@@ -37,7 +36,7 @@ planet active model =
       res = active.resources
       maxConstr = maxConcurrentConstructions active
       numConstr = Dict.size active.constructions
-      toRow = buildingRow active (maxConstr > numConstr)
+      toRow = buildingRow model active (maxConstr > numConstr)
 
       desc (name, value, capacity, production) =
         let progress = value * 100 // capacity
@@ -198,8 +197,8 @@ maxConcurrentConstructions planet =
   in  (ccLevel + 9) // 10
 
 
-buildingRow : ActivePlanet -> Bool -> BuildingInfo -> Html Msg
-buildingRow planet constrPossible binfo =
+buildingRow : Model -> ActivePlanet -> Bool -> BuildingInfo -> Html Msg
+buildingRow model planet constrPossible binfo =
   let col label val relative =
       let dataLabel = attribute "data-label" label
           attrs =
@@ -228,7 +227,7 @@ buildingRow planet constrPossible binfo =
       columns =
         case construction of
           Just constr ->
-            [ td [ class "operations", colspan 12 ] [ constructionOperation constr ] ]
+            [ td [ class "operations", colspan 12 ] [ constructionOperation model constr ] ]
           Nothing ->
             buildColumns ++
             [ td [ class "operations" ] [ buildOperation constrPossible res binfo ] ]
@@ -239,9 +238,9 @@ buildingRow planet constrPossible binfo =
     ] ++ columns)
 
 
-constructionOperation : ConstructionInfo -> Html Msg
-constructionOperation constr =
-  let finishStr = Time.Iso8601.fromDateTime constr.finish
+constructionOperation : Model -> ConstructionInfo -> Html Msg
+constructionOperation model constr =
+  let finishStr = zonedIso8601 model constr.finish
       finish = title ("finished: " ++ finishStr)
       durationDesc =
         case constr.timeLeft of

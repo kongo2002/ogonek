@@ -16,6 +16,7 @@ module Types exposing (..)
 
 import Dict exposing ( Dict )
 import Time.DateTime
+import Time.TimeZone
 
 import Navigation exposing ( Location )
 
@@ -115,7 +116,8 @@ type alias PlanetInfo =
 
 
 type alias Flags =
-  { websocketHost : String
+  { defaultTimeZone : String
+  , websocketHost : String
   }
 
 
@@ -213,6 +215,7 @@ type alias Model =
   , authInfo : Dict String AuthInformation
   , planets : Dict String ActivePlanet
   , research : ResearchInfo
+  , timeZone : Time.TimeZone.TimeZone
   , websocketHost : String
   , formContents : Dict String String
   , lastTimeStamp : Maybe Time.DateTime.DateTime

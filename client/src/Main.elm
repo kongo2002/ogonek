@@ -19,6 +19,7 @@ import Dict
 import Navigation
 import Time
 import Time.DateTime exposing ( DateTime )
+import Time.TimeZones
 
 import Api
 import Notification
@@ -33,7 +34,10 @@ init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
 init flags location =
   let route = Routing.parse location
       research = ResearchInfo [] Nothing
-      model = Model route Nothing Dict.empty Dict.empty research flags.websocketHost Dict.empty Nothing
+      timeZone =
+        Time.TimeZones.fromName flags.defaultTimeZone
+        |> Maybe.withDefault (Time.TimeZones.etc_utc ())
+      model = Model route Nothing Dict.empty Dict.empty research timeZone flags.websocketHost Dict.empty Nothing
       actions = routeActions model
   in  model ! actions
 

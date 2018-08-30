@@ -38,8 +38,15 @@ var elmNotify = (function() {
 
 /* build websocket target host based on current location */
 var wsHost = ((window.location.protocol === "https:") ? "wss://" : "ws://") + window.location.host + "/.ws"
+
+/* try to determine the browser's timezone to use as a default at least */
+var timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+
 var elm = require('./Main.elm');
-var app = elm.Main.fullscreen({websocketHost: wsHost});
+var app = elm.Main.fullscreen({
+  defaultTimeZone: timeZone,
+  websocketHost: wsHost
+});
 
 app.ports.notification.subscribe(function(data) {
   if (data.title) {

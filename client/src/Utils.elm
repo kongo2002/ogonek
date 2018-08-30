@@ -17,6 +17,8 @@ module Utils exposing (..)
 import Types exposing (..)
 
 import Time.DateTime
+import Time.Iso8601
+import Time.ZonedDateTime
 
 
 deltaToString : Time.DateTime.DateTimeDelta -> String
@@ -32,6 +34,13 @@ deltaToString delta =
         fmt delta.minutes "minute" "minutes"
       else
         fmt delta.seconds "second" "seconds"
+
+
+zonedIso8601 : Model -> Time.DateTime.DateTime -> String
+zonedIso8601 model date =
+  let timeZone = model.timeZone
+      zoned = Time.ZonedDateTime.fromDateTime timeZone date
+  in  Time.Iso8601.fromZonedDateTime zoned
 
 
 orEmpty : Maybe String -> String
