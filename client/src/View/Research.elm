@@ -12,11 +12,12 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-module View.Research exposing ( research, researchStatus )
+module View.Research exposing ( research, status, progress )
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing ( onClick )
+import Time.DateTime
 
 import Types exposing (..)
 import Utils exposing ( zonedIso8601 )
@@ -31,8 +32,8 @@ research model =
         , td [] [ text (toString level) ]
         ]
 
-      statusText = researchStatus model res
-      status =
+      statusText = status model res
+      status0 =
         case res.status of
           Just status ->
             div []
@@ -45,7 +46,7 @@ research model =
             ]
 
   in  [ h2 [] [ text "Research" ]
-      , status
+      , status0
       , h3 [] [ text "Overview"]
       , div [ class "row" ]
         [ div [ class "six columns" ]
@@ -63,13 +64,30 @@ research model =
       ]
 
 
-researchStatus : Model -> ResearchInfo -> String
-researchStatus model research =
+status : Model -> ResearchInfo -> String
+status model research =
   case research.status of
     Just status ->
-      "research finished at: " ++ zonedIso8601 model status.finish
+      case model.lastTimeStamp of
+        Just now ->
+          let progress0 = progress status now
+              duration = Time.DateTime.delta status.finish now
+              durStr = Utils.deltaToString duration
+          in  "research finished in: " ++ durStr ++ " (" ++ toString progress0 ++ " %)"
+        Nothing ->
+          "research finished at: " ++ zonedIso8601 model status.finish
     Nothing ->
-      "no current research in progress"
+      "no research in progress"
+
+
+progress : ResearchStatusInfo -> Time.DateTime.DateTime -> Int
+progress status now =
+  let started = Time.DateTime.toTimestamp status.created
+      finished = Time.DateTime.toTimestamp status.finish
+      now0 = Time.DateTime.toTimestamp now
+      durationMs = finished - started
+      progress = now0 - started
+  in  progress * 100 / durationMs |> round |> Basics.max 0 |> Basics.min 100
 
 
 -- vim: et sw=2 sts=2
