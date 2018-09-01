@@ -31,20 +31,25 @@ translateBuilding binfo =
 translateBuildingName : String -> String
 translateBuildingName name =
   case name of
-    "construction_center" -> "construction center"
-    "research_lab" -> "research lab"
-    "oil_rig" -> "oil rig"
-    "water_rig" -> "water rig"
-    "ore_mine" -> "ore mine"
-    "gold_mine" -> "gold mine"
-    "oil_tank" -> "oil tank"
-    "water_tank" -> "water tank"
-    "ore_depot" -> "ore depot"
-    "gold_depot" -> "gold depot"
-    "power_plant" -> "power plant"
-    "wind_turbine" -> "wind turbine"
     "apartment" -> "apartment"
     "apartment_block" -> "apartment block"
+    "construction_center" -> "construction center"
+    "ext_gold_mine" -> "extended gold mine"
+    "ext_oil_rig" -> "extended oil rig"
+    "ext_ore_mine" -> "extended ore mine"
+    "ext_water_rig" -> "extended water rig"
+    "gold_depot" -> "gold depot"
+    "gold_mine" -> "gold mine"
+    "hydro_plant" -> "hydro plant"
+    "oil_rig" -> "oil rig"
+    "oil_tank" -> "oil tank"
+    "ore_depot" -> "ore depot"
+    "ore_mine" -> "ore mine"
+    "power_plant" -> "power plant"
+    "research_lab" -> "research lab"
+    "water_rig" -> "water rig"
+    "water_tank" -> "water tank"
+    "wind_turbine" -> "wind turbine"
     unknown -> unknown
 
 
