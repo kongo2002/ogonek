@@ -21,6 +21,8 @@
          to_json/2]).
 
 -export([all_researches/0,
+         has_requirement/2,
+         has_requirements/2,
          possible_research/1,
          possible_research/2,
          research_info_json/2]).
@@ -50,7 +52,7 @@ research_available(Research, #rdef{requirements=Reqs}) ->
     lists:all(fun(Req) -> has_requirement(Research, Req) end, Reqs).
 
 
--spec has_requirement([research()], {atom(), integer()}) -> boolean().
+-spec has_requirement([research()], research_requirement()) -> boolean().
 has_requirement([], _Requirement) -> false;
 has_requirement([Research | Rs], {Name, MinLevel}=Req) ->
     if Research#research.research == Name andalso Research#research.level >= MinLevel ->
@@ -58,6 +60,11 @@ has_requirement([Research | Rs], {Name, MinLevel}=Req) ->
        true ->
            has_requirement(Rs, Req)
     end.
+
+
+-spec has_requirements([research()], [research_requirement()]) -> boolean().
+has_requirements(Research, Requirements) ->
+    lists:all(fun(Req) -> has_requirement(Research, Req) end, Requirements).
 
 
 -spec from_json(json_doc()) -> {ok, research()} | {error, invalid}.

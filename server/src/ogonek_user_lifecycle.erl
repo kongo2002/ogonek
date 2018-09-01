@@ -333,6 +333,16 @@ handle_info({research_finish, _Research}, State) ->
     % reset research timer
     State0 = State#state{research_timer=undefined},
 
+    Researches = State#state.research,
+
+    lists:foreach(fun({PId, Planet}) ->
+                          Buildings = Planet#planet_state.buildings,
+                          Unlocked = ogonek_buildings:unlocked_buildings(Buildings, Researches),
+
+                          lager:info("user ~s - unlocked buildings on planet ~s: ~p",
+                                     [State#state.id, PId, Unlocked])
+                  end, maps:to_list(State#state.planets)),
+
     {noreply, State0};
 
 handle_info({planet_info, PlanetId}, State) ->

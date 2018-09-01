@@ -137,6 +137,9 @@
 -type planet() :: #planet{}.
 
 
+-type research_requirement() :: {atom(), integer()}.
+
+
 -record(bdef, {
           name :: atom(),
           workers :: integer(),
@@ -149,7 +152,8 @@
           uranium :: integer(),
           pvc :: integer(),
           titan :: integer(),
-          kyanite :: integer()
+          kyanite :: integer(),
+          requirements :: [research_requirement()]
          }).
 
 -type bdef() :: #bdef{}.
@@ -180,7 +184,7 @@
 
 -record(rdef, {
           name :: atom(),
-          requirements :: [{atom(), integer()}]
+          requirements :: [research_requirement()]
     }).
 
 -type rdef() :: #rdef{}.

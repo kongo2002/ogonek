@@ -21,6 +21,7 @@
          get_definition/1,
          to_building_type/1,
          try_building_type/1,
+         unlocked_buildings/2,
          calculate_power/1,
          calculate_workers/1,
          calculate_power_workers/1,
@@ -56,6 +57,17 @@ get_definition(_Name, []) -> error;
 get_definition(Name, [#bdef{name=Name}=Def | _Ds]) -> Def;
 get_definition(Name, [_ | Ds]) ->
     get_definition(Name, Ds).
+
+
+-spec unlocked_buildings([building()], [research()]) -> [bdef()].
+unlocked_buildings(Buildings, Research) ->
+    StillLocked = lists:filter(fun(#bdef{name=Name}) ->
+                                       not(lists:keymember(Name, 4, Buildings))
+                               end, definitions()),
+
+    lists:filter(fun(#bdef{requirements=Rs}) ->
+                         ogonek_research:has_requirements(Research, Rs)
+                 end, StillLocked).
 
 
 -spec to_building_type(binary()) -> atom().
@@ -109,16 +121,31 @@ calculate_power_workers(Buildings) ->
 -spec calculate_building_production([building()]) -> resources().
 calculate_building_production(Buildings) ->
     % TODO: we need a proper distribution from level to production
-    lists:foldl(fun(#building{type=ore_mine, level=L}, R) ->
-                        R#resources{iron_ore=L};
-                   (#building{type=gold_mine, level=L}, R) ->
-                        R#resources{gold=L};
-                   (#building{type=water_rig, level=L}, R) ->
-                        R#resources{h2o=L};
-                   (#building{type=oil_rig, level=L}, R) ->
-                        R#resources{oil=L};
-                   (_OtherBuilding, R) -> R
-                end, ogonek_resources:empty(), Buildings).
+
+    lists:foldl(
+         % iron ore
+      fun(#building{type=ore_mine, level=L}, R) ->
+              R#resources{iron_ore=R#resources.iron_ore + L};
+         (#building{type=ext_ore_mine, level=L}, R) ->
+              R#resources{iron_ore=R#resources.iron_ore + L * 3};
+         % gold
+         (#building{type=gold_mine, level=L}, R) ->
+              R#resources{gold=R#resources.gold + L};
+         (#building{type=ext_gold_mine, level=L}, R) ->
+              R#resources{gold=R#resources.gold + L * 3};
+         % h2o
+         (#building{type=water_rig, level=L}, R) ->
+              R#resources{h2o=R#resources.h2o + L};
+         (#building{type=ext_water_rig, level=L}, R) ->
+              R#resources{h2o=R#resources.h2o + L * 3};
+         % oil
+         (#building{type=oil_rig, level=L}, R) ->
+              R#resources{oil=R#resources.oil + L};
+         (#building{type=ext_oil_rig, level=L}, R) ->
+              R#resources{oil=R#resources.oil + L * 3};
+
+         (_OtherBuilding, R) -> R
+      end, ogonek_resources:empty(), Buildings).
 
 
 -spec calculate_construction_duration(building()) -> integer().
@@ -147,8 +174,13 @@ base_construction_duration(ore_depot) -> 800;
 base_construction_duration(gold_depot) -> 800;
 base_construction_duration(power_plant) -> 1000;
 base_construction_duration(wind_turbine) -> 1200;
+base_construction_duration(hydro_plant) -> 3500;
 base_construction_duration(apartment) -> 600;
-base_construction_duration(apartment_block) -> 1100.
+base_construction_duration(apartment_block) -> 1100;
+base_construction_duration(ext_oil_rig) -> 3000;
+base_construction_duration(ext_water_rig) -> 3000;
+base_construction_duration(ext_ore_mine) -> 3000;
+base_construction_duration(ext_gold_mine) -> 3000.
 
 
 -spec calculate_building_costs(Building :: building()) -> bdef() | error.
