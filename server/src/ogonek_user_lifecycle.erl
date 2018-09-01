@@ -329,21 +329,32 @@ handle_info({research_create, _Research}, State) ->
 
 handle_info({research_finish, _Research}, State) ->
     self() ! get_research,
+    self() ! unlock_buildings,
 
     % reset research timer
     State0 = State#state{research_timer=undefined},
 
+    {noreply, State0};
+
+handle_info(unlock_buildings, State) ->
+    UserId = State#state.id,
     Researches = State#state.research,
 
     lists:foreach(fun({PId, Planet}) ->
                           Buildings = Planet#planet_state.buildings,
-                          Unlocked = ogonek_buildings:unlocked_buildings(Buildings, Researches),
+                          case ogonek_buildings:unlocked_buildings(Buildings, Researches) of
+                              [] -> ok;
+                              Unlocked ->
+                                  lager:info("user ~s - unlocked new buildings on planet ~s: ~p",
+                                             [UserId, PId, Unlocked]),
 
-                          lager:info("user ~s - unlocked buildings on planet ~s: ~p",
-                                     [State#state.id, PId, Unlocked])
+                                  lists:foreach(fun(Def) ->
+                                                        finish_building(Def, PId, 0)
+                                                end, Unlocked)
+                          end
                   end, maps:to_list(State#state.planets)),
 
-    {noreply, State0};
+    {noreply, State};
 
 handle_info({planet_info, PlanetId}, State) ->
     case maps:get(PlanetId, State#state.planets, undefined) of
