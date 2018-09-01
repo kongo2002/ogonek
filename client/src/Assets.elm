@@ -47,6 +47,10 @@ firePlanet : Asset
 firePlanet = Asset "mars.png"
 
 
+physics : Asset
+physics = Asset "physics.png"
+
+
 path : Asset -> String
 path (Asset str) =
     "/static/" ++ str

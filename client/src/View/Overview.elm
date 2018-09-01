@@ -18,6 +18,7 @@ import Dict
 import Html exposing (..)
 import Html.Attributes exposing (..)
 
+import Assets
 import Routing
 import Types exposing (..)
 import View.Research
@@ -39,8 +40,17 @@ research model =
       link = Routing.routeToPath ResearchRoute
       click = numbClick (NewUrl ResearchRoute)
       status = View.Research.researchStatus model res
+      iconPath = Assets.path Assets.physics
+      icon = img [ class "planet", src iconPath ] []
+      title =
+        div [ class "row" ]
+        [ div [ class "nine columns" ]
+          [ h3 [] [ a [ href link, class "no-deco", click ] [ text "Research" ] ]
+          ]
+        , div [ class "three columns" ] [ icon ]
+        ]
   in  div [ class "research" ]
-      [ h3 [] [ a [ href link, class "no-deco", click ] [ text "Research" ] ]
+      [ title
       , div [ class "row" ]
         [ p [] [ text status ] ]
       ]
