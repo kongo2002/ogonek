@@ -118,6 +118,11 @@ calculate_power_workers(Buildings) ->
                 end, {0, 0}, Buildings).
 
 
+-define(OGONEK_CHEMICAL_FACTORY_PROD, 10).
+-define(OGONEK_SMELTING_PLANT_PROD, 13).
+-define(OGONEK_PLASTIC_FACTORY_PROD, 15).
+
+
 -spec calculate_building_production([building()]) -> resources().
 calculate_building_production(Buildings) ->
     % TODO: we need a proper distribution from level to production
@@ -143,9 +148,18 @@ calculate_building_production(Buildings) ->
               R#resources{oil=R#resources.oil + L};
          (#building{type=ext_oil_rig, level=L}, R) ->
               R#resources{oil=R#resources.oil + L * 3};
+         % h2
+         (#building{type=chemical_factory, level=L}, R) ->
+              R#resources{h2=R#resources.h2 + L * ?OGONEK_CHEMICAL_FACTORY_PROD};
          % uranium
          (#building{type=uranium_mine, level=L}, R) ->
               R#resources{uranium=R#resources.uranium + L};
+         % pvc
+         (#building{type=plastic_factory, level=L}, R) ->
+              R#resources{pvc=R#resources.pvc + L * ?OGONEK_PLASTIC_FACTORY_PROD};
+         % titan
+         (#building{type=smelting_plant, level=L}, R) ->
+              R#resources{titan=R#resources.titan + L * ?OGONEK_SMELTING_PLANT_PROD};
          % kyanite
          (#building{type=kyanite_mine, level=L}, R) ->
               R#resources{kyanite=R#resources.kyanite + L};
@@ -173,17 +187,23 @@ calculate_construction_duration(Type, Level) ->
 base_construction_duration(construction_center) -> 15000;
 base_construction_duration(research_lab) -> 8000;
 base_construction_duration(oil_rig) -> 1000;
-base_construction_duration(water_rig) -> 1000;
-base_construction_duration(ore_mine) -> 1000;
-base_construction_duration(gold_mine) -> 1000;
 base_construction_duration(oil_tank) -> 800;
+base_construction_duration(water_rig) -> 1000;
 base_construction_duration(water_tank) -> 800;
+base_construction_duration(ore_mine) -> 1000;
+base_construction_duration(ore_depot) -> 800;
+base_construction_duration(gold_mine) -> 1000;
+base_construction_duration(gold_depot) -> 800;
 base_construction_duration(uranium_mine) -> 1500;
 base_construction_duration(uranium_depot) -> 1000;
 base_construction_duration(kyanite_mine) -> 1750;
 base_construction_duration(kyanite_depot) -> 1100;
-base_construction_duration(ore_depot) -> 800;
-base_construction_duration(gold_depot) -> 800;
+base_construction_duration(plastic_factory) -> 1450;
+base_construction_duration(pvc_depot) -> 1000;
+base_construction_duration(smelting_plant) -> 1450;
+base_construction_duration(titan_depot) -> 1000;
+base_construction_duration(chemical_factory) -> 1450;
+base_construction_duration(h2_depot) -> 1000;
 base_construction_duration(power_plant) -> 1000;
 base_construction_duration(wind_turbine) -> 1200;
 base_construction_duration(hydro_plant) -> 3500;
