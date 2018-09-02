@@ -100,17 +100,19 @@ production(Planet) ->
 -spec production(planet_type(), integer()) -> resources().
 production(Type, Size) ->
     Factor = size_factor(Size),
-    [Iron, Gold, H2O, Oil, H2, Uranium, PVC, Titan, Kyanite] = base_production(Type),
+    [Iron, Gold, H2O, Oil, Uranium, Kyanite] = base_production(Type),
 
     #resources{iron_ore=round(Iron * Factor),
                gold=round(Gold * Factor),
                h2o=round(H2O * Factor),
                oil=round(Oil * Factor),
-               h2=round(H2 * Factor),
                uranium=round(Uranium * Factor),
-               pvc=round(PVC * Factor),
-               titan=round(Titan * Factor),
                kyanite=round(Kyanite * Factor),
+               % pvc, titan and h2 is not depending on
+               % planet's size or type
+               pvc=1,
+               titan=1,
+               h2=1,
                % bogus values
                power=0,
                workers=0
@@ -119,17 +121,17 @@ production(Type, Size) ->
 
 -spec base_production(planet_type()) -> [integer()].
 base_production(earth) ->
-    % IRON ORE , GOLD , H2O , OIL , H2 , URANIUM , PVC , TITAN , KYANITE
-    [200       , 80   , 100 , 150 , 10 , 15      , 25  , 15    , 5];
+    % IRON ORE , GOLD , H2O , OIL , URANIUM , KYANITE
+    [200       , 80   , 100 , 150 , 15      , 5];
 base_production(water) ->
-    % IRON ORE , GOLD , H2O , OIL , H2 , URANIUM , PVC , TITAN , KYANITE
-    [80        , 150  , 200 , 100 , 25 , 10      , 15  , 15    , 4];
+    % IRON ORE , GOLD , H2O , OIL , URANIUM , KYANITE
+    [80        , 150  , 200 , 100 , 10      , 4];
 base_production(fire) ->
-    % IRON ORE , GOLD , H2O , OIL , H2 , URANIUM , PVC , TITAN , KYANITE
-    [150       , 100  , 80  , 200 , 10 , 30      , 15  , 15    , 3];
+    % IRON ORE , GOLD , H2O , OIL , URANIUM , KYANITE
+    [150       , 100  , 80  , 200 , 30      , 3];
 base_production(ice) ->
-    % IRON ORE , GOLD , H2O , OIL , H2 , URANIUM , PVC , TITAN , KYANITE
-    [100       , 200  , 150 , 80  , 25 , 15      , 10  , 15    , 7].
+    % IRON ORE , GOLD , H2O , OIL , URANIUM , KYANITE
+    [100       , 200  , 150 , 80  , 15      , 7].
 
 
 -spec size_factor(integer()) -> float().
