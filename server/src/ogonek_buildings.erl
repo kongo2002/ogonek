@@ -143,6 +143,9 @@ calculate_building_production(Buildings) ->
               R#resources{oil=R#resources.oil + L};
          (#building{type=ext_oil_rig, level=L}, R) ->
               R#resources{oil=R#resources.oil + L * 3};
+         % uranium
+         (#building{type=uranium_mine, level=L}, R) ->
+              R#resources{uranium=R#resources.uranium + L};
 
          (_OtherBuilding, R) -> R
       end, ogonek_resources:empty(), Buildings).
@@ -170,6 +173,8 @@ base_construction_duration(ore_mine) -> 1000;
 base_construction_duration(gold_mine) -> 1000;
 base_construction_duration(oil_tank) -> 800;
 base_construction_duration(water_tank) -> 800;
+base_construction_duration(uranium_mine) -> 1500;
+base_construction_duration(uranium_depot) -> 1000;
 base_construction_duration(ore_depot) -> 800;
 base_construction_duration(gold_depot) -> 800;
 base_construction_duration(power_plant) -> 1000;

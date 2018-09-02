@@ -69,6 +69,8 @@ from_buildings(PlanetId, Buildings) ->
                         Cap#capacity{h2o=base_storage(Level)};
                    (#building{type=oil_tank, level=Level}, Cap) ->
                         Cap#capacity{oil=base_storage(Level)};
+                   (#building{type=uranium_depot, level=Level}, Cap) ->
+                        Cap#capacity{uranium=advanced_storage(Level)};
                    (_Building, Cap) ->
                         Cap
                 end, empty(PlanetId), Buildings).
@@ -79,6 +81,13 @@ base_storage(Level) ->
     storage_from_level(25000, Level).
 
 
+-spec advanced_storage(Level :: integer()) -> integer().
+advanced_storage(Level) ->
+    storage_from_level(10000, Level).
+
+
 -spec storage_from_level(Base :: integer(), Level :: integer()) -> integer().
 storage_from_level(Base, Level) ->
-    round(Base * math:pow(Level, 1.5)).
+    % storage will be at least level 1
+    MinLevel = max(Level, 1),
+    round(Base * math:pow(MinLevel, 1.5)).
