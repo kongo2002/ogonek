@@ -47,6 +47,8 @@ translateBuildingName name =
     "ore_mine" -> "ore mine"
     "power_plant" -> "power plant"
     "research_lab" -> "research lab"
+    "uranium_depot" -> "uranium depot"
+    "uranium_mine" -> "uranium mine"
     "water_rig" -> "water rig"
     "water_tank" -> "water tank"
     "wind_turbine" -> "wind turbine"
