@@ -54,6 +54,8 @@ to_json(Building, Db) ->
     Vs = case Db of
              true -> [];
              false ->
+                 % add additional meta information in case the json
+                 % is targetted towards the client/non-db
                  Def = ogonek_buildings:calculate_building_costs(Building),
                  Duration = ogonek_buildings:calculate_construction_duration(Building),
                  [{<<"duration">>, Duration} | json_from_definition(Def)]
@@ -75,5 +77,6 @@ json_from_definition(Def) ->
      {<<"uranium">>, Def#bdef.uranium},
      {<<"pvc">>, Def#bdef.pvc},
      {<<"titan">>, Def#bdef.titan},
-     {<<"kyanite">>, Def#bdef.kyanite}
+     {<<"kyanite">>, Def#bdef.kyanite},
+     {<<"group">>, Def#bdef.group}
     ].

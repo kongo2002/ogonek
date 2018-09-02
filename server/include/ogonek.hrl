@@ -153,6 +153,7 @@
           pvc :: integer(),
           titan :: integer(),
           kyanite :: integer(),
+          group :: atom(),
           requirements :: [research_requirement()]
          }).
 
