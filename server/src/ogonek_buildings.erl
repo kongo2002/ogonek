@@ -146,6 +146,9 @@ calculate_building_production(Buildings) ->
          % uranium
          (#building{type=uranium_mine, level=L}, R) ->
               R#resources{uranium=R#resources.uranium + L};
+         % kyanite
+         (#building{type=kyanite_mine, level=L}, R) ->
+              R#resources{kyanite=R#resources.kyanite + L};
 
          (_OtherBuilding, R) -> R
       end, ogonek_resources:empty(), Buildings).
@@ -164,6 +167,8 @@ calculate_construction_duration(Type, Level) ->
     round(BaseDuration + LevelDuration).
 
 
+% TODO: rather move into buildings configuration
+% so we can't forget this for some building
 -spec base_construction_duration(atom()) -> integer().
 base_construction_duration(construction_center) -> 15000;
 base_construction_duration(research_lab) -> 8000;
@@ -175,6 +180,8 @@ base_construction_duration(oil_tank) -> 800;
 base_construction_duration(water_tank) -> 800;
 base_construction_duration(uranium_mine) -> 1500;
 base_construction_duration(uranium_depot) -> 1000;
+base_construction_duration(kyanite_mine) -> 1750;
+base_construction_duration(kyanite_depot) -> 1100;
 base_construction_duration(ore_depot) -> 800;
 base_construction_duration(gold_depot) -> 800;
 base_construction_duration(power_plant) -> 1000;

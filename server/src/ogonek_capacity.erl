@@ -71,6 +71,8 @@ from_buildings(PlanetId, Buildings) ->
                         Cap#capacity{oil=base_storage(Level)};
                    (#building{type=uranium_depot, level=Level}, Cap) ->
                         Cap#capacity{uranium=advanced_storage(Level)};
+                   (#building{type=kyanite_depot, level=Level}, Cap) ->
+                        Cap#capacity{kyanite=advanced_storage(Level)};
                    (_Building, Cap) ->
                         Cap
                 end, empty(PlanetId), Buildings).
