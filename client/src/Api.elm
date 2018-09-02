@@ -143,6 +143,7 @@ buildingInfoDecoder =
     |: (JD.field "planet" JD.string)
     |: (JD.field "level" JD.int)
     |: (JD.field "duration" dateTimeDeltaDecoder)
+    |: (JD.field "group" JD.string)
 
 
 resourceInfoDecoder : JD.Decoder Types.ResourceInfo

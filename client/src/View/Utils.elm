@@ -55,6 +55,16 @@ translateBuildingName name =
     unknown -> unknown
 
 
+translateBuildingGroup : String -> String
+translateBuildingGroup name =
+  case name of
+    "general" -> "general buildings"
+    "resource" -> "resource gathering"
+    "storage" -> "depots and tanks"
+    "power_living" -> "power and living buildings"
+    unknown -> unknown
+
+
 planetImg : Types.PlanetInfo -> Html Types.Msg
 planetImg planet =
   let typ = planet.planetType

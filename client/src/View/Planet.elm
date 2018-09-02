@@ -98,6 +98,17 @@ planet active model =
             let inProgress b = Dict.member b.name active.constructions
             in  List.filter inProgress buildings
 
+      groupedBuildings =
+        Utils.groupBy .group filteredBuildings
+
+      groupedRows (group, buildings) =
+        let translated = translateBuildingGroup group
+            header =
+              tr [ class "subheader" ]
+              [ td [ colspan 14 ] [ text translated ] ]
+            rows = List.map toRow buildings
+        in  header :: rows
+
       energies =
         [ (Const.workers, res.workers, 0, 0)
         , (Const.power, res.power, 0, 0)
@@ -173,7 +184,7 @@ planet active model =
             , header ""
             ]
           ]
-        , tbody [] (List.map toRow filteredBuildings)
+        , tbody [] (Dict.toList groupedBuildings |> List.concatMap groupedRows)
         ]
       ]
     ]

@@ -137,6 +137,7 @@ type alias BuildingInfo =
   , planetId : String
   , level : Int
   , duration : Time.DateTime.DateTimeDelta
+  , group : String
   }
 
 

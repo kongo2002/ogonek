@@ -39,6 +39,16 @@
   text-decoration: none;
 }
 
+.subheader {
+  text-transform: uppercase;
+  background: #eee;
+}
+
+.subheader > td {
+  padding-left: 1.5em;
+  padding-right: 1.5em;
+}
+
 thead {
   text-transform: uppercase;
 }

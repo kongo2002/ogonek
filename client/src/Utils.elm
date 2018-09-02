@@ -14,11 +14,12 @@
 
 module Utils exposing (..)
 
-import Types exposing (..)
-
+import Dict
 import Time.DateTime
 import Time.Iso8601
 import Time.ZonedDateTime
+
+import Types exposing (..)
 
 
 deltaToString : Time.DateTime.DateTimeDelta -> String
@@ -68,6 +69,29 @@ nothing maybe =
 
 just : Maybe a -> Bool
 just = nothing >> not
+
+
+find : (a -> Bool) -> List a -> Maybe a
+find predicate list =
+  case list of
+    hd :: tl ->
+      if predicate hd then Just hd
+      else find predicate tl
+    _ -> Nothing
+
+
+groupBy : (a -> comparable) -> List a -> Dict.Dict comparable (List a)
+groupBy by input =
+  let go v acc =
+        let key = by v
+            existing = Dict.get key acc
+            updated =
+              case existing of
+                Just vs -> v :: vs
+                Nothing -> [v]
+        in  Dict.insert key updated acc
+
+  in  List.foldr go Dict.empty input
 
 
 -- vim: et sw=2 sts=2
