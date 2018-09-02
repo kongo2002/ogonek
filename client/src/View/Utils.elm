@@ -41,6 +41,8 @@ translateBuildingName name =
     "gold_depot" -> "gold depot"
     "gold_mine" -> "gold mine"
     "hydro_plant" -> "hydro plant"
+    "kyanite_depot" -> "kyanite depot"
+    "kyanite_mine" -> "kyanite mine"
     "oil_rig" -> "oil rig"
     "oil_tank" -> "oil tank"
     "ore_depot" -> "ore depot"
