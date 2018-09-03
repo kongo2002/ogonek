@@ -21,6 +21,7 @@ import Time.DateTime
 
 import Types exposing (..)
 import Utils exposing ( zonedIso8601 )
+import View.Utils exposing (..)
 
 
 research : Model -> List (Html Msg)
@@ -28,7 +29,7 @@ research model =
   let res = model.research
       row (name, level) =
         tr []
-        [ td [] [ text name ]
+        [ td [] [ text (translateResearch name) ]
         , td [] [ text (toString level) ]
         ]
 

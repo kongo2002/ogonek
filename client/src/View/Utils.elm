@@ -33,6 +33,7 @@ translateBuildingName name =
   case name of
     "apartment" -> "apartment"
     "apartment_block" -> "apartment block"
+    "chemical_factory" -> "chemical factory"
     "construction_center" -> "construction center"
     "ext_gold_mine" -> "extended gold mine"
     "ext_oil_rig" -> "extended oil rig"
@@ -40,6 +41,7 @@ translateBuildingName name =
     "ext_water_rig" -> "extended water rig"
     "gold_depot" -> "gold depot"
     "gold_mine" -> "gold mine"
+    "h2_depot" -> "hydrogen depot"
     "hydro_plant" -> "hydro plant"
     "kyanite_depot" -> "kyanite depot"
     "kyanite_mine" -> "kyanite mine"
@@ -47,8 +49,12 @@ translateBuildingName name =
     "oil_tank" -> "oil tank"
     "ore_depot" -> "ore depot"
     "ore_mine" -> "ore mine"
+    "plastic_factory" -> "plastic factory"
     "power_plant" -> "power plant"
+    "pvc_depot" -> "PVC depot"
     "research_lab" -> "research lab"
+    "smelting_plant" -> "smelting plant"
+    "titan_depot" -> "titan depot"
     "uranium_depot" -> "uranium depot"
     "uranium_mine" -> "uranium mine"
     "water_rig" -> "water rig"
@@ -57,11 +63,26 @@ translateBuildingName name =
     unknown -> unknown
 
 
+translateResearch : String -> String
+translateResearch name =
+  case name of
+    "alternative_energies" -> "alternative energies"
+    "chemistry" -> "chemistry"
+    "construction" -> "construction"
+    "economy" -> "economy"
+    "mining" -> "mining"
+    "nuclear_fission" -> "nuclear fission"
+    "nuclear_fusion" -> "nuclear fusion"
+    "particle_physics" -> "particle physics"
+    "radioactivity" -> "radioactivity"
+    unknown -> unknown
+
+
 translateBuildingGroup : String -> String
 translateBuildingGroup name =
   case name of
     "general" -> "general buildings"
-    "resource" -> "resource gathering"
+    "resource" -> "resource gathering and production"
     "storage" -> "depots and tanks"
     "power_living" -> "power and living buildings"
     unknown -> unknown
