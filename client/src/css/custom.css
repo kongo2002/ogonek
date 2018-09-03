@@ -113,6 +113,12 @@ a.icon {
   margin-bottom: 0;
 }
 
+.form-disabled {
+  color: #ccc;
+  background: #eee;
+  cursor: not-allowed;
+}
+
 img.planet {
   max-height: 96px;
   max-width: 96px;
