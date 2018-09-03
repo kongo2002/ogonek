@@ -101,8 +101,16 @@ a.icon {
   color: #666;
 }
 
+.spaced {
+  padding: 5px 10px;
+}
+
 .text-right {
   text-align: right;
+}
+
+.form-inline {
+  margin-bottom: 0;
 }
 
 img.planet {
@@ -135,6 +143,11 @@ img.planet {
   text-align: right;
 }
 
+/* TODO: this is not 100% accurate yet */
+.table-responsive td:last-child, td:last-child {
+  padding-right: 15px;
+}
+
 .table-responsive td::before {
   content: attr(data-label);
   float: left;
@@ -150,7 +163,7 @@ table td.operations {
   }
 }
 
-table td.building {
+table td.header {
   font-weight: bold;
   text-transform: uppercase;
 }
@@ -225,7 +238,7 @@ button.u-full-width {
     float: none;
   }
 
-  table td.building {
+  table td.header {
     font-weight: inherit;
     text-transform: none;
   }

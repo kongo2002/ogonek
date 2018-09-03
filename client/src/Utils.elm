@@ -80,6 +80,13 @@ find predicate list =
     _ -> Nothing
 
 
+capacityPercent : Int -> Int -> String
+capacityPercent prod capacity =
+  let progress = prod * 100 // capacity
+      progress0 = toString progress
+  in  progress0 ++ "%"
+
+
 groupBy : (a -> comparable) -> List a -> Dict.Dict comparable (List a)
 groupBy by input =
   let go v acc =

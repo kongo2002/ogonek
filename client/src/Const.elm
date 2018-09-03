@@ -40,7 +40,7 @@ oil : String
 oil = "oil"
 
 h2 : String
-h2 = "H2"
+h2 = "hydrogen"
 
 uranium : String
 uranium = "uranium"

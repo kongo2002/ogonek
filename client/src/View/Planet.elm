@@ -20,9 +20,10 @@ import Html.Attributes exposing (..)
 import Html.Events exposing ( onClick )
 
 import Const
+import Routing
 import Types exposing (..)
 import View.Utils exposing (..)
-import Utils exposing ( zonedIso8601 )
+import Utils exposing ( capacityPercent, zonedIso8601 )
 
 
 planet : ActivePlanet -> Model -> List (Html Msg)
@@ -39,8 +40,7 @@ planet active model =
       toRow = buildingRow model active (maxConstr > numConstr)
 
       desc (name, value, capacity, production) =
-        let progress = value * 100 // capacity
-            progStr = (toString progress) ++ "%"
+        let progStr = capacityPercent value capacity
             hasProduction = production > 0
             prodStr = if hasProduction then (toString production) ++ " /h" else ""
             prodTitle =
@@ -131,6 +131,14 @@ planet active model =
         , (Const.titan, res.titan, cap.titan, prod.titan)
         , (Const.kyanite, res.kyanite, cap.kyanite, prod.kyanite)
         ]
+
+      productionLink =
+        let route = ProductionRoute planet.id
+            link = Routing.routeToPath route
+            click = numbClick (NewUrl route)
+            title0 = title "Production"
+        in  span [ class "spaced", toRight, title0 ]
+            [ a [ class "no-deco", href link, click ] [ icon "sliders-h" ] ]
   in
     [ h2 [] [ text name ]
     , div [ class "row" ]
@@ -154,7 +162,7 @@ planet active model =
           ]
         ]
       ]
-    , h3 [] [ text "Resources" ]
+    , h3 [] [ text "Resources", productionLink ]
     , div [ id "resources" ]
       [ div [ class "row" ] (List.map desc energies)
       , div [ class "row" ] (List.map desc resourceRow1)
@@ -244,7 +252,7 @@ buildingRow model planet constrPossible binfo =
             [ td [ class "operations" ] [ buildOperation constrPossible res binfo ] ]
   in
     tr []
-    ([ td [ class "building" ] [ text (translateBuilding binfo) ]
+    ([ td [ class "header" ] [ text (translateBuilding binfo) ]
     , col Const.level binfo.level -1
     ] ++ columns)
 

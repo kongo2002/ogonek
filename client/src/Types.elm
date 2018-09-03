@@ -44,6 +44,7 @@ type Route
   | LoginRoute
   | LogoutRoute
   | PlanetRoute String
+  | ProductionRoute String
   -- auth (code, state, scope, provider)
   | AuthRoute (Maybe String) (Maybe String) (Maybe String) (Maybe String)
   | HelpRoute

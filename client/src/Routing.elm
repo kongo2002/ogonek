@@ -49,6 +49,7 @@ routeToPath route =
   case route of
     Types.HomeRoute -> home
     Types.PlanetRoute planet -> "/planets/planet/" ++ planet
+    Types.ProductionRoute planet -> "/production/planet/" ++ planet
     Types.ResearchRoute -> research
     Types.LoginRoute -> login
     Types.LogoutRoute -> logout
@@ -61,6 +62,7 @@ routeToName route =
   case route of
     Types.HomeRoute -> "Home"
     Types.PlanetRoute _ -> "Planet"
+    Types.ProductionRoute _ -> "Production"
     Types.ResearchRoute -> "Research"
     Types.LoginRoute -> "Login"
     Types.LogoutRoute -> "Logout"
@@ -80,6 +82,7 @@ matchers =
   oneOf
     [ map Types.HomeRoute top
     , map Types.PlanetRoute (s "planets" </> s "planet" </> string)
+    , map Types.ProductionRoute (s "production" </> s "planet" </> string)
     , map Types.ResearchRoute (s "research")
     , map Types.AuthRoute (s "auth" <?> stringParam "code" <?> stringParam "state" <?> stringParam "scope" <?> stringParam "provider")
     , map Types.LoginRoute (s "login")

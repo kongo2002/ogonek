@@ -23,6 +23,7 @@ import View.Login
 import View.Navigation
 import View.Overview
 import View.Planet
+import View.Production
 import View.Research
 import View.Utils exposing ( loggedIn )
 
@@ -49,6 +50,15 @@ view model =
               Just p ->
                 -- view a specific/known planet
                 View.Planet.planet p
+              Nothing ->
+                -- unknown planet-id -> fallback to overview
+                View.Overview.overview
+          -- production
+          Types.ProductionRoute planet ->
+            case Dict.get planet model.planets of
+              Just p ->
+                -- view a specific/known planet
+                View.Production.production p
               Nothing ->
                 -- unknown planet-id -> fallback to overview
                 View.Overview.overview
