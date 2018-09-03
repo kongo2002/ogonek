@@ -377,7 +377,8 @@ handle_info({production_info, PlanetId}, State) ->
         undefined -> ok;
         #planet_state{planet=Planet, buildings=Buildings} ->
             Production = ogonek_production:of_planet(Planet, Buildings),
-            json_to_sockets(ogonek_production, Production, State)
+            WithConsumption = ogonek_buildings:apply_building_consumption(Production, Buildings),
+            json_to_sockets(ogonek_production, WithConsumption, State)
     end,
 
     {noreply, State};

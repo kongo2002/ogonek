@@ -29,6 +29,7 @@
          calculate_power/1,
          calculate_workers/1,
          calculate_power_workers/1,
+         apply_building_consumption/2,
          calculate_building_consumption/3,
          calculate_building_production/1,
          calculate_construction_duration/1,
@@ -128,13 +129,34 @@ calculate_power_workers(Buildings) ->
 -define(OGONEK_PLASTIC_FACTORY_PROD, 15).
 -define(OGONEK_CONSUMPTION_FACTOR, 2).
 
+
+-spec apply_building_consumption(resources(), [building()]) -> resources().
+apply_building_consumption(Resources, Buildings) ->
+    lists:foldl(
+      fun(#building{type=chemical_factory, level=L}, R) ->
+              Prod = L * ?OGONEK_CHEMICAL_FACTORY_PROD,
+              R#resources{h2=R#resources.h2 + Prod,
+                          h2o=R#resources.h2o - Prod * ?OGONEK_CONSUMPTION_FACTOR};
+         (#building{type=plastic_factory, level=L}, R) ->
+              Prod = L * ?OGONEK_PLASTIC_FACTORY_PROD,
+              R#resources{pvc=R#resources.pvc + Prod,
+                          oil=R#resources.oil - Prod * ?OGONEK_CONSUMPTION_FACTOR};
+         (#building{type=smelting_plant, level=L}, R) ->
+              Prod = L * ?OGONEK_SMELTING_PLANT_PROD,
+              R#resources{titan=R#resources.titan + Prod,
+                          iron_ore=R#resources.iron_ore - Prod * ?OGONEK_CONSUMPTION_FACTOR};
+
+         (_OtherBuilding, R) -> R
+      end, Resources, Buildings).
+
+
 -spec calculate_building_consumption(resources(), [building()], TimeFactor :: float()) -> resources().
 calculate_building_consumption(Resources, Buildings, TimeFactor) ->
     % TODO: we need a proper distribution from level to production
 
     % TODO: configurable production efficiency/percentage
     lists:foldl(
-         % iron ore
+         % hydrogen
       fun(#building{type=chemical_factory, level=L}, R) ->
               Prod = round(L * ?OGONEK_CHEMICAL_FACTORY_PROD * TimeFactor),
               ToConsume = Prod * ?OGONEK_CONSUMPTION_FACTOR,
