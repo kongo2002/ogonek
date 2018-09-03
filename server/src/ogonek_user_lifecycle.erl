@@ -754,7 +754,11 @@ calculate_resources(PlanetState, Buildings, RelativeTo, Force) ->
            lager:debug("user ~s - produced since ~s: ~p", [UserId, Resources#resources.updated, Produced]),
 
            Summed = ogonek_resources:sum(Resources, Produced),
-           Capped = ogonek_resources:with_capacity(Summed, Capacity),
+           AfterConsumption = ogonek_buildings:calculate_building_consumption(Summed, Buildings, SimulatedHours),
+
+           lager:debug("user ~s - after consumption: ~p", [UserId, AfterConsumption]),
+
+           Capped = ogonek_resources:with_capacity(AfterConsumption, Capacity),
            Capped#resources{updated=RelativeTo};
        true ->
            lager:debug("user ~s - skipping resources calculation [~p sec ago]",

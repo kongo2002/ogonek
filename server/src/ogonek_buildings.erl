@@ -16,6 +16,10 @@
 
 -include("ogonek.hrl").
 
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-endif.
+
 -export([definitions/0,
          definitions_map/0,
          get_definition/1,
@@ -25,6 +29,7 @@
          calculate_power/1,
          calculate_workers/1,
          calculate_power_workers/1,
+         calculate_building_consumption/3,
          calculate_building_production/1,
          calculate_construction_duration/1,
          calculate_construction_duration/2,
@@ -121,7 +126,56 @@ calculate_power_workers(Buildings) ->
 -define(OGONEK_CHEMICAL_FACTORY_PROD, 10).
 -define(OGONEK_SMELTING_PLANT_PROD, 13).
 -define(OGONEK_PLASTIC_FACTORY_PROD, 15).
+-define(OGONEK_CONSUMPTION_FACTOR, 2).
 
+-spec calculate_building_consumption(resources(), [building()], TimeFactor :: float()) -> resources().
+calculate_building_consumption(Resources, Buildings, TimeFactor) ->
+    % TODO: we need a proper distribution from level to production
+
+    % TODO: configurable production efficiency/percentage
+    lists:foldl(
+         % iron ore
+      fun(#building{type=chemical_factory, level=L}, R) ->
+              Prod = round(L * ?OGONEK_CHEMICAL_FACTORY_PROD * TimeFactor),
+              ToConsume = Prod * ?OGONEK_CONSUMPTION_FACTOR,
+              Available = R#resources.h2o,
+              if ToConsume > Available ->
+                     ToProd = Available div ?OGONEK_CONSUMPTION_FACTOR,
+                     R#resources{h2=R#resources.h2 + ToProd,
+                                 h2o=0};
+                 true ->
+                     R#resources{h2=R#resources.h2 + Prod,
+                                 h2o=R#resources.h2o - ToConsume}
+              end;
+         % pvc
+         (#building{type=plastic_factory, level=L}, R) ->
+              Prod = round(L * ?OGONEK_PLASTIC_FACTORY_PROD * TimeFactor),
+              ToConsume = Prod * ?OGONEK_CONSUMPTION_FACTOR,
+              Available = R#resources.oil,
+              if ToConsume > Available ->
+                     ToProd = Available div ?OGONEK_CONSUMPTION_FACTOR,
+                     R#resources{pvc=R#resources.pvc + ToProd,
+                                 oil=0};
+                 true ->
+                     R#resources{pvc=R#resources.pvc + Prod,
+                                 oil=R#resources.oil - ToConsume}
+              end;
+         % titan
+         (#building{type=smelting_plant, level=L}, R) ->
+              Prod = round(L * ?OGONEK_SMELTING_PLANT_PROD * TimeFactor),
+              ToConsume = Prod * ?OGONEK_CONSUMPTION_FACTOR,
+              Available = R#resources.iron_ore,
+              if ToConsume > Available ->
+                     ToProd = Available div ?OGONEK_CONSUMPTION_FACTOR,
+                     R#resources{titan=R#resources.titan + ToProd,
+                                 iron_ore=0};
+                 true ->
+                     R#resources{titan=R#resources.titan + Prod,
+                                 iron_ore=R#resources.iron_ore - ToConsume}
+              end;
+
+         (_OtherBuilding, R) -> R
+      end, Resources, Buildings).
 
 -spec calculate_building_production([building()]) -> resources().
 calculate_building_production(Buildings) ->
@@ -148,18 +202,9 @@ calculate_building_production(Buildings) ->
               R#resources{oil=R#resources.oil + L};
          (#building{type=ext_oil_rig, level=L}, R) ->
               R#resources{oil=R#resources.oil + L * 3};
-         % h2
-         (#building{type=chemical_factory, level=L}, R) ->
-              R#resources{h2=R#resources.h2 + L * ?OGONEK_CHEMICAL_FACTORY_PROD};
          % uranium
          (#building{type=uranium_mine, level=L}, R) ->
               R#resources{uranium=R#resources.uranium + L};
-         % pvc
-         (#building{type=plastic_factory, level=L}, R) ->
-              R#resources{pvc=R#resources.pvc + L * ?OGONEK_PLASTIC_FACTORY_PROD};
-         % titan
-         (#building{type=smelting_plant, level=L}, R) ->
-              R#resources{titan=R#resources.titan + L * ?OGONEK_SMELTING_PLANT_PROD};
          % kyanite
          (#building{type=kyanite_mine, level=L}, R) ->
               R#resources{kyanite=R#resources.kyanite + L};
@@ -238,3 +283,44 @@ calculate_building_costs(Definition, Level) ->
       titan=round(Definition#bdef.titan * Factor),
       kyanite=round(Definition#bdef.kyanite * Factor)
      }.
+
+%%
+%% TESTS
+%%
+
+-ifdef(TEST).
+
+calculate_building_consumption_test_() ->
+    PId = <<"planet">>,
+    Now = ogonek_util:now8601(),
+    Empty = ogonek_resources:empty(),
+    Hour = 1.0,
+    ThreeHours = 3.0,
+    Smelting1 = #building{planet=PId, type=smelting_plant, level=1, created=Now},
+    Plastic1 = #building{planet=PId, type=plastic_factory, level=1, created=Now},
+    Chemic1 = #building{planet=PId, type=chemical_factory, level=1, created=Now},
+
+    [% no consumption/production whatsoever
+     ?_assertEqual(Empty, calculate_building_consumption(Empty, [Smelting1], Hour)),
+     ?_assertEqual(Empty, calculate_building_consumption(Empty, [Plastic1], Hour)),
+     ?_assertEqual(Empty, calculate_building_consumption(Empty, [Chemic1], Hour)),
+     % enough base resources
+     ?_assertEqual(Empty#resources{iron_ore=974, titan=13},
+                   calculate_building_consumption(Empty#resources{iron_ore=1000}, [Smelting1], Hour)),
+     ?_assertEqual(Empty#resources{oil=970, pvc=15},
+                   calculate_building_consumption(Empty#resources{oil=1000}, [Plastic1], Hour)),
+     ?_assertEqual(Empty#resources{h2o=980, h2=10},
+                   calculate_building_consumption(Empty#resources{h2o=1000}, [Chemic1], Hour)),
+     % *not* enough base resources
+     ?_assertEqual(Empty#resources{iron_ore=0, titan=13},
+                   calculate_building_consumption(Empty#resources{iron_ore=26}, [Smelting1], ThreeHours)),
+     ?_assertEqual(Empty#resources{oil=0, pvc=15},
+                   calculate_building_consumption(Empty#resources{oil=30}, [Plastic1], ThreeHours)),
+     ?_assertEqual(Empty#resources{h2o=0, h2=10},
+                   calculate_building_consumption(Empty#resources{h2o=20}, [Chemic1], ThreeHours)),
+     % no consumption at all
+     ?_assertEqual(Empty#resources{h2o=1000},
+                   calculate_building_consumption(Empty#resources{h2o=1000}, [], Hour))
+    ].
+
+-endif.
