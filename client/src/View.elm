@@ -39,6 +39,13 @@ view model =
           _ ->
             home
 
+      withPlanet view0 planet =
+        case Dict.get planet model.planets of
+          -- view a specific/known planet
+          Just pl -> view0 pl
+          -- unknown planet-id -> fallback to overview
+          Nothing -> View.Overview.overview
+
       loggedInContent =
         case model.route of
           -- home/overview
@@ -46,22 +53,10 @@ view model =
             View.Overview.overview
           -- planet view
           Types.PlanetRoute planet ->
-            case Dict.get planet model.planets of
-              Just p ->
-                -- view a specific/known planet
-                View.Planet.planet p
-              Nothing ->
-                -- unknown planet-id -> fallback to overview
-                View.Overview.overview
+            withPlanet View.Planet.planet planet
           -- production
           Types.ProductionRoute planet ->
-            case Dict.get planet model.planets of
-              Just p ->
-                -- view a specific/known planet
-                View.Production.production p
-              Nothing ->
-                -- unknown planet-id -> fallback to overview
-                View.Overview.overview
+            withPlanet View.Production.production planet
           -- research
           Types.ResearchRoute ->
             View.Research.research
