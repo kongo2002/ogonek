@@ -34,7 +34,7 @@ gold : String
 gold = "gold"
 
 h2o : String
-h2o = "H2O"
+h2o = "H₂O"
 
 oil : String
 oil = "oil"
