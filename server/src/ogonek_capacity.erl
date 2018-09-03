@@ -69,8 +69,14 @@ from_buildings(PlanetId, Buildings) ->
                         Cap#capacity{h2o=base_storage(Level)};
                    (#building{type=oil_tank, level=Level}, Cap) ->
                         Cap#capacity{oil=base_storage(Level)};
+                   (#building{type=h2_depot, level=Level}, Cap) ->
+                        Cap#capacity{h2=advanced_storage(Level)};
                    (#building{type=uranium_depot, level=Level}, Cap) ->
                         Cap#capacity{uranium=advanced_storage(Level)};
+                   (#building{type=pvc_depot, level=Level}, Cap) ->
+                        Cap#capacity{pvc=advanced_storage(Level)};
+                   (#building{type=titan_depot, level=Level}, Cap) ->
+                        Cap#capacity{titan=advanced_storage(Level)};
                    (#building{type=kyanite_depot, level=Level}, Cap) ->
                         Cap#capacity{kyanite=advanced_storage(Level)};
                    (_Building, Cap) ->
