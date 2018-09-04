@@ -35,14 +35,21 @@ production active model =
 
       dataLabel = attribute "data-label"
 
+      storage resources capacity =
+        let storagePcnt = Utils.capacityPercent resources capacity
+            res0 = numberSpan resources
+            cap0 = numberSpan capacity
+            total = span [ toRight, class "no-mobile" ] [ text " (", res0, text "/", cap0 , text ")" ]
+        in [ text storagePcnt, total ]
+
       gatherRow resource production resources capacity =
-        let storage = Utils.capacityPercent resources capacity
-            name = translateResource resource
+        let name = translateResource resource
+            storage0 = storage resources capacity
         in  tr []
             [ td [ hdr ] [ text name ]
             , td [ dataLabel "Utilization" ] [ span [ light ] [ text "100 %" ] ]
             , td [ dataLabel "Production" ] [ text (toString production), span [ light ] [ text " /h" ] ]
-            , td [ dataLabel "Storage" ] [ text storage ]
+            , td [ dataLabel "Storage" ] storage0
             ]
 
       selector resource active utilization =
@@ -69,14 +76,14 @@ production active model =
             ]
 
       prodRow resource production resources capacity utilization =
-        let storage = Utils.capacityPercent resources capacity
+        let storage0 = storage resources capacity
             name = translateResource resource
             hasProduction = production > 0
         in  tr []
             [ td [ hdr ] [ text name ]
             , td [ dataLabel "Utilization" ] [ selector resource hasProduction utilization ]
             , td [ dataLabel "Production" ] [ text (toString production), span [ light ] [ text " /h" ] ]
-            , td [ dataLabel "Storage" ] [ text storage ]
+            , td [ dataLabel "Storage" ] storage0
             ]
 
       rows =
