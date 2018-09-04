@@ -91,11 +91,9 @@ base_storage(Level) ->
 
 -spec advanced_storage(Level :: integer()) -> integer().
 advanced_storage(Level) ->
-    storage_from_level(10000, Level).
+    10000 + storage_from_level(10000, Level).
 
 
 -spec storage_from_level(Base :: integer(), Level :: integer()) -> integer().
 storage_from_level(Base, Level) ->
-    % storage will be at least level 1
-    MinLevel = max(Level, 1),
-    round(Base * math:pow(MinLevel, 1.5)).
+    round(Base * math:pow(Level, 1.5)).
