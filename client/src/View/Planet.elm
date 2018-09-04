@@ -213,7 +213,7 @@ maxConcurrentConstructions planet =
         Dict.get "construction_center" buildings
         |> Maybe.map .level
         |> Maybe.withDefault 0
-  in  (ccLevel + 9) // 10
+  in  ccLevel // 10 + 1
 
 
 buildingRow : Model -> ActivePlanet -> Bool -> BuildingInfo -> Html Msg

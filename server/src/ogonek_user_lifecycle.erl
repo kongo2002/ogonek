@@ -1029,7 +1029,7 @@ construction_possible(PlanetState, Costs) ->
 -spec max_concurrent_constructions([building()]) -> integer().
 max_concurrent_constructions(Buildings) ->
     CCLevel = construction_center_level(Buildings),
-    (CCLevel + 9) div 10.
+    CCLevel div 10 + 1.
 
 
 -spec construction_center_level([building()]) -> integer().
