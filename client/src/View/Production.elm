@@ -17,7 +17,6 @@ module View.Production exposing ( production )
 import Html exposing (..)
 import Html.Attributes exposing (..)
 
-import Const
 import Types exposing (..)
 import View.Utils exposing (..)
 import Utils
@@ -36,8 +35,9 @@ production active model =
 
       dataLabel = attribute "data-label"
 
-      gatherRow name production resources capacity =
+      gatherRow resource production resources capacity =
         let storage = Utils.capacityPercent resources capacity
+            name = translateResource resource
         in  tr []
             [ td [ hdr ] [ text name ]
             , td [ dataLabel "Utilization" ] [ span [ light ] [ text "100 %" ] ]
@@ -45,11 +45,12 @@ production active model =
             , td [ dataLabel "Storage" ] [ text storage ]
             ]
 
-      selector active utilization =
-        let attrs =
-            if active then [ class "form-inline" ]
-            else [ attribute "disabled" "", class "form-inline form-disabled" ]
-            selected = toString utilization
+      selector resource active utilization =
+        let selected = toString utilization
+            action = onChange (SetUtilizationRequest planet.id resource >> ApiRequest)
+            attrs =
+              if active then [ action, class "form-inline" ]
+              else [ action, attribute "disabled" "", class "form-inline form-disabled" ]
             opt value0 =
               if value0 == selected then [ value value0, attribute "selected" "" ]
               else [ value value0 ]
@@ -67,26 +68,27 @@ production active model =
             , option ( opt "0" ) [ text "0%" ]
             ]
 
-      prodRow name production resources capacity utilization =
+      prodRow resource production resources capacity utilization =
         let storage = Utils.capacityPercent resources capacity
+            name = translateResource resource
             hasProduction = production > 0
         in  tr []
             [ td [ hdr ] [ text name ]
-            , td [ dataLabel "Utilization" ] [ selector hasProduction utilization ]
+            , td [ dataLabel "Utilization" ] [ selector resource hasProduction utilization ]
             , td [ dataLabel "Production" ] [ text (toString production), span [ light ] [ text " /h" ] ]
             , td [ dataLabel "Storage" ] [ text storage ]
             ]
 
       rows =
-        [ gatherRow Const.ironOre prod.ironOre res.ironOre cap.ironOre
-        , gatherRow Const.h2o prod.h2o res.h2o cap.h2o
-        , gatherRow Const.gold prod.gold res.gold cap.gold
-        , gatherRow Const.oil prod.oil res.oil cap.oil
-        , prodRow Const.h2 prod.h2 res.h2 cap.h2 util.h2
-        , gatherRow Const.uranium prod.uranium res.uranium cap.uranium
-        , prodRow Const.pvc prod.pvc res.pvc cap.pvc util.pvc
-        , prodRow Const.titan prod.titan res.titan cap.titan util.titan
-        , gatherRow Const.kyanite prod.kyanite res.kyanite cap.kyanite
+        [ gatherRow "iron_ore" prod.ironOre res.ironOre cap.ironOre
+        , gatherRow "h2o" prod.h2o res.h2o cap.h2o
+        , gatherRow "gold" prod.gold res.gold cap.gold
+        , gatherRow "oil" prod.oil res.oil cap.oil
+        , prodRow "h2" prod.h2 res.h2 cap.h2 util.h2
+        , gatherRow "uranium" prod.uranium res.uranium cap.uranium
+        , prodRow "pvc" prod.pvc res.pvc cap.pvc util.pvc
+        , prodRow "titan" prod.titan res.titan cap.titan util.titan
+        , gatherRow "kyanite" prod.kyanite res.kyanite cap.kyanite
         ]
   in
     [ h2 [] [ text "Production" ]

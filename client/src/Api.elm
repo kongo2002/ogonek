@@ -65,6 +65,13 @@ requestEncoder req =
         [ requestType "get_utilization"
         , ("planet", JE.string planet)
         ]
+    Types.SetUtilizationRequest planet resource value ->
+      JE.object
+        [ requestType "set_utilization"
+        , ("planet", JE.string planet)
+        , ("resource", JE.string resource)
+        , ("value", JE.string value)
+        ]
     Types.PlanetInfoRequest ->
       JE.object [ requestType "planet_info" ]
     Types.StartResearchRequest ->

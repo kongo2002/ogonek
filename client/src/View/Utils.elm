@@ -20,6 +20,7 @@ import Html.Events exposing ( onWithOptions )
 import Json.Decode
 
 import Assets
+import Const
 import Types
 
 
@@ -88,6 +89,23 @@ translateBuildingGroup name =
     unknown -> unknown
 
 
+translateResource : String -> String
+translateResource name =
+  case name of
+    "workers" -> Const.workers
+    "power" -> Const.power
+    "iron_ore" -> Const.ironOre
+    "gold" -> Const.gold
+    "h2o" -> Const.h2o
+    "oil" -> Const.oil
+    "h2" -> Const.h2
+    "uranium" -> Const.uranium
+    "pvc" -> Const.pvc
+    "titan" -> Const.titan
+    "kyanite" -> Const.kyanite
+    unknown -> unknown
+
+
 planetImg : Types.PlanetInfo -> Html Types.Msg
 planetImg planet =
   let typ = planet.planetType
@@ -153,6 +171,12 @@ loggedIn model =
   case model.user of
     Just _ -> True
     Nothing -> False
+
+
+onChange : (String -> a) -> Attribute a
+onChange msg =
+  let parser = Html.Events.targetValue |> Json.Decode.map msg
+  in  Html.Events.on "change" parser
 
 
 coordStr : (Int, Int, Int) -> String

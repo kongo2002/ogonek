@@ -69,8 +69,10 @@ type Request
   | BuildBuildingRequest String String Int
   | StartResearchRequest
   | PlanetInfoRequest
-  -- get-utilization (planet-id)
+  -- get_utilization (planet-id)
   | UtilizationRequest String
+  -- set_utilization (planet-id, resource, value)
+  | SetUtilizationRequest String String String
   | LogoutRequest
 
 
