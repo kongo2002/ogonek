@@ -60,6 +60,7 @@ type ApiContent
   | Resources ResourceInfo
   | Research ResearchInfo
   | Production ResourceInfo
+  | Utilization ResourceInfo
   | Error ApiError
 
 
@@ -68,6 +69,8 @@ type Request
   | BuildBuildingRequest String String Int
   | StartResearchRequest
   | PlanetInfoRequest
+  -- get-utilization (planet-id)
+  | UtilizationRequest String
   | LogoutRequest
 
 
@@ -207,6 +210,7 @@ type alias ActivePlanet =
   , resources : ResourceInfo
   , capacity : CapacityInfo
   , production : ResourceInfo
+  , utilization : ResourceInfo
   , buildingsFilter : BuildingsFilter
   }
 

@@ -60,6 +60,11 @@ requestEncoder req =
         , ("type", JE.string building)
         , ("level", JE.int level)
         ]
+    Types.UtilizationRequest planet ->
+      JE.object
+        [ requestType "get_utilization"
+        , ("planet", JE.string planet)
+        ]
     Types.PlanetInfoRequest ->
       JE.object [ requestType "planet_info" ]
     Types.StartResearchRequest ->
@@ -97,6 +102,7 @@ payloadDecoder =
       "planet" -> JD.map Types.Planet planetDecoder
       "capacity" -> JD.map Types.Capacity capacityInfoDecoder
       "production" -> JD.map Types.Production resourceInfoDecoder
+      "utilization" -> JD.map Types.Utilization resourceInfoDecoder
       "research" -> JD.map Types.Research researchInfoDecoder
       "authinfo" -> JD.map Types.Auth authInfoDecoder
       "user" -> JD.map Types.User userInfoDecoder

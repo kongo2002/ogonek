@@ -73,9 +73,13 @@ update msg model =
 
     NavigationChange location ->
       let newRoute = Routing.parse location
-          _ = Debug.log "got new route" newRoute
-          model0 = { model | route = newRoute }
-      in  model0 ! []
+          changed = newRoute /= model.route
+      in  if changed then
+            let newModel = { model | route = newRoute }
+                _ = Debug.log "got new route" newRoute
+            in  newModel ! navigationChangeActions newModel
+          else model ! []
+
 
     NewUrl LogoutRoute ->
       let model0 = { model | user = Nothing }
@@ -164,6 +168,11 @@ update msg model =
           model0 = updateResources model info
       in  model0 ! []
 
+    ApiResponse (Utilization info) ->
+      let _ = Debug.log "utilization information received" info
+          model0 = updateUtilization model info
+      in  model0 ! []
+
     ApiResponse (Planet info) ->
       let _ = Debug.log "planet information received" info
           model0 = updatePlanet model info
@@ -180,6 +189,14 @@ update msg model =
     ApiResponse cnt ->
       let _ = Debug.log "api content received" cnt
       in  model ! []
+
+
+navigationChangeActions : Model -> List (Cmd Msg)
+navigationChangeActions model =
+  case model.route of
+    ProductionRoute planet ->
+      [ Api.send model (UtilizationRequest planet)]
+    _ -> []
 
 
 updatePlanet : Model -> PlanetInfo -> Model
@@ -213,8 +230,9 @@ initialPlanet info =
       resources = emptyResources planetId
       capacity = emptyCapacity planetId
       production = resources
+      utilization = resources
       filter = AllBuildings
-  in  ActivePlanet info Dict.empty Dict.empty resources capacity production filter
+  in  ActivePlanet info Dict.empty Dict.empty resources capacity production utilization filter
 
 
 updateCapacity : Model -> CapacityInfo -> Model
@@ -346,6 +364,17 @@ updateResources model info =
   case Dict.get info.planetId model.planets of
     Just active ->
       let updated = { active | resources = info }
+          planets0 = Dict.insert info.planetId updated model.planets
+      in  { model | planets = planets0 }
+    Nothing ->
+      model
+
+
+updateUtilization : Model -> ResourceInfo -> Model
+updateUtilization model info =
+  case Dict.get info.planetId model.planets of
+    Just active ->
+      let updated = { active | utilization = info }
           planets0 = Dict.insert info.planetId updated model.planets
       in  { model | planets = planets0 }
     Nothing ->

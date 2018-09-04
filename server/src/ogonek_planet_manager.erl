@@ -209,11 +209,18 @@ random_planet(ForUser) ->
            end,
     Index = rand:uniform(8),
     Type = ogonek_util:choose_random([earth, water, fire, ice]),
+    Empty = ogonek_resources:empty(),
+
     #planet{type=Type,
             size=Size,
             position={X, Y, Z},
             index=Index,
-            resources=ogonek_resources:empty()}.
+            resources=Empty,
+            utilization=Empty#resources{
+                          h2=100,
+                          pvc=100,
+                          titan=100
+                         }}.
 
 
 -spec claim_random_planet(UserId :: binary()) -> ok.

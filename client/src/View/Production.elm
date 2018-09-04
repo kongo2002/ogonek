@@ -28,6 +28,7 @@ production active model =
   let planet = active.planet
       prod = active.production
       cap = active.capacity
+      util = active.utilization
       res = active.resources
       pname = "Planet at " ++ coordStr planet.position
       light = class "light"
@@ -44,30 +45,34 @@ production active model =
             , td [ dataLabel "Storage" ] [ text storage ]
             ]
 
-      selector active resource =
+      selector active utilization =
         let attrs =
             if active then [ class "form-inline" ]
             else [ attribute "disabled" "", class "form-inline form-disabled" ]
+            selected = toString utilization
+            opt value0 =
+              if value0 == selected then [ value value0, attribute "selected" "" ]
+              else [ value value0 ]
         in  select attrs
-            [ option [ value "100" ] [ text "100%" ]
-            , option [ value "90" ] [ text "90%" ]
-            , option [ value "80" ] [ text "80%" ]
-            , option [ value "70" ] [ text "70%" ]
-            , option [ value "60" ] [ text "60%" ]
-            , option [ value "50" ] [ text "50%" ]
-            , option [ value "40" ] [ text "40%" ]
-            , option [ value "30" ] [ text "30%" ]
-            , option [ value "20" ] [ text "20%" ]
-            , option [ value "10" ] [ text "10%" ]
-            , option [ value "0" ] [ text "0%" ]
+            [ option ( opt "100" ) [ text "100%" ]
+            , option ( opt "90" ) [ text "90%" ]
+            , option ( opt "80" ) [ text "80%" ]
+            , option ( opt "70" ) [ text "70%" ]
+            , option ( opt "60" ) [ text "60%" ]
+            , option ( opt "50" ) [ text "50%" ]
+            , option ( opt "40" ) [ text "40%" ]
+            , option ( opt "30" ) [ text "30%" ]
+            , option ( opt "20" ) [ text "20%" ]
+            , option ( opt "10" ) [ text "10%" ]
+            , option ( opt "0" ) [ text "0%" ]
             ]
 
-      prodRow name production resources capacity =
+      prodRow name production resources capacity utilization =
         let storage = Utils.capacityPercent resources capacity
             hasProduction = production > 0
         in  tr []
             [ td [ hdr ] [ text name ]
-            , td [ dataLabel "Utilization" ] [ selector hasProduction name ]
+            , td [ dataLabel "Utilization" ] [ selector hasProduction utilization ]
             , td [ dataLabel "Production" ] [ text (toString production), span [ light ] [ text " /h" ] ]
             , td [ dataLabel "Storage" ] [ text storage ]
             ]
@@ -77,10 +82,10 @@ production active model =
         , gatherRow Const.h2o prod.h2o res.h2o cap.h2o
         , gatherRow Const.gold prod.gold res.gold cap.gold
         , gatherRow Const.oil prod.oil res.oil cap.oil
-        , prodRow Const.h2 prod.h2 res.h2 cap.h2
+        , prodRow Const.h2 prod.h2 res.h2 cap.h2 util.h2
         , gatherRow Const.uranium prod.uranium res.uranium cap.uranium
-        , prodRow Const.pvc prod.pvc res.pvc cap.pvc
-        , prodRow Const.titan prod.titan res.titan cap.titan
+        , prodRow Const.pvc prod.pvc res.pvc cap.pvc util.pvc
+        , prodRow Const.titan prod.titan res.titan cap.titan util.titan
         , gatherRow Const.kyanite prod.kyanite res.kyanite cap.kyanite
         ]
   in

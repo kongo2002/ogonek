@@ -173,6 +173,20 @@ handle_request(<<"planet_info">>, _Request, _Json, State) ->
     ogonek_session_manager:publish_to_user(UserId, SessionId, planet_info),
     {ok, State};
 
+handle_request(<<"get_utilization">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
+    {reply, error_json(<<"not logged in at all">>), State};
+
+handle_request(<<"get_utilization">>, _Request, Json, State) ->
+    case ogonek_util:keys([<<"planet">>], Json) of
+        [PlanetId] ->
+            UserId = State#ws_state.user_id,
+            SessionId = State#ws_state.session_id,
+            ogonek_session_manager:publish_to_user(UserId, SessionId, {get_utilization, PlanetId}),
+            {ok, State};
+        _Otherwise ->
+            {reply, error_json(<<"get_utilization: expecting planet">>), State}
+    end;
+
 handle_request(<<"start_research">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
     {reply, error_json(<<"not logged in at all">>), State};
 

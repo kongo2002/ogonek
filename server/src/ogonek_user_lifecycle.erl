@@ -445,6 +445,17 @@ handle_info({build_building, Planet, Type, Level}=Req, State) ->
             end
     end;
 
+handle_info({get_utilization, PlanetId}, State) ->
+    case maps:get(PlanetId, State#state.planets, undefined) of
+        % unknown, invalid or foreign planet
+        undefined -> ok;
+        % buildings not fetched yet
+        #planet_state{planet=Planet} ->
+            Utilization = Planet#planet.utilization,
+            json_to_sockets(ogonek_utilization, Utilization, State)
+    end,
+    {noreply, State};
+
 handle_info(get_research, State) ->
     Now = ogonek_util:now8601(),
     Research = fetch_research(State),

@@ -131,7 +131,8 @@
           position :: coordinate(),
           index :: integer(),
           owner :: maybe_unset_id(),
-          resources :: resources()
+          resources :: resources(),
+          utilization :: resources()
          }).
 
 -type planet() :: #planet{}.

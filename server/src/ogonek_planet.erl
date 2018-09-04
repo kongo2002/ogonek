@@ -28,24 +28,25 @@
 from_json(Planet) ->
     Keys = [<<"_id">>, <<"type">>, <<"size">>, <<"pos">>, <<"idx">>,
             {<<"owner">>, undefined},
-            {<<"resources">>, undefined}
+            {<<"resources">>, undefined},
+            {<<"utilization">>, undefined}
            ],
 
     case ogonek_util:keys(Keys, Planet) of
-        [Id, Type, Size, [X, Y, Z], Idx, Owner, Res] ->
-            case {parse_type(Type), resources_or_empty(Res)} of
-                {error, _} -> {error, invalid};
-                {_, {error, _}} -> {error, invalid};
-                {Type0, {ok, Resources}} ->
-                    % set resources' planet-id for consistency's sake
-                    Res0 = Resources#resources{planet=Id},
+        [Id, Type, Size, [X, Y, Z], Idx, Owner, Res, Util] when is_binary(Id) ->
+            case {parse_type(Type), resources_or_empty(Id, Res), resources_or_empty(Id, Util)} of
+                {error, _, _} -> {error, invalid};
+                {_, {error, _}, _} -> {error, invalid};
+                {_, _, {error, _}} -> {error, invalid};
+                {Type0, {ok, Resources}, {ok, Utilization}} ->
                     {ok, #planet{id=Id,
                                  type=Type0,
                                  size=Size,
                                  position={X, Y, Z},
                                  index=Idx,
                                  owner=Owner,
-                                 resources=Res0}}
+                                 resources=Resources,
+                                 utilization=Utilization}}
             end;
         _Otherwise ->
             {error, invalid}
@@ -57,6 +58,14 @@ resources_or_empty(undefined) ->
     {ok, ogonek_resources:empty()};
 resources_or_empty(ResJson) ->
     ogonek_resources:from_json(ResJson).
+
+
+-spec resources_or_empty(PlanetId :: binary(), json_doc() | undefined) -> {ok, resources()} | {error, invalid}.
+resources_or_empty(PlanetId, ResJson) ->
+    case resources_or_empty(ResJson) of
+        {ok, Res} -> {ok, Res#resources{planet=PlanetId}};
+        Error -> Error
+    end.
 
 
 -spec to_json(planet()) -> tuple().
@@ -72,7 +81,8 @@ to_json(Planet, Db) ->
               {<<"size">>, Planet#planet.size},
               {<<"pos">>, [X, Y, Z]},
               {<<"idx">>, Planet#planet.index},
-              {<<"resources">>, Res}
+              {<<"resources">>, Res},
+              {<<"utilization">>, ogonek_resources:to_json(Planet#planet.utilization, Db)}
              ]
     ++ ogonek_util:if_defined(<<"_id">>, Planet#planet.id)
     ++ ogonek_util:if_defined(<<"owner">>, Planet#planet.owner),
