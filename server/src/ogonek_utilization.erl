@@ -16,7 +16,8 @@
 
 -include("ogonek.hrl").
 
--export([from_json/1,
+-export([validate/3,
+         from_json/1,
          to_json/1,
          to_json/2]).
 
@@ -39,3 +40,19 @@ to_json(Resources, _Db) ->
     WithId = Res ++ ogonek_util:if_defined(<<"planet">>, Resources#resources.planet),
 
     ogonek_util:doc(<<"utilization">>, WithId).
+
+
+-spec validate(Utilization :: resources(), Resource :: binary(), integer()) -> {ok, resources()} | error.
+validate(Utilization, Resource, Value) when Value >= 0 andalso Value =< 100 ->
+    case Resource of
+        <<"pvc">> ->
+            {ok, Utilization#resources{pvc=Value}};
+        <<"titan">> ->
+            {ok, Utilization#resources{titan=Value}};
+        <<"h2">> ->
+            {ok, Utilization#resources{h2=Value}};
+        _Otherwise ->
+            error
+    end;
+
+validate(_Utilization, _Resource, _Value) -> error.

@@ -456,6 +456,29 @@ handle_info({get_utilization, PlanetId}, State) ->
     end,
     {noreply, State};
 
+handle_info({set_utilization, PlanetId, Resource, Value}, State) ->
+    case maps:get(PlanetId, State#state.planets, undefined) of
+        % unknown, invalid or foreign planet
+        undefined ->
+            {noreply, State};
+        % buildings not fetched yet
+        #planet_state{planet=Planet}=PState ->
+            Utilization = Planet#planet.utilization,
+
+            case ogonek_utilization:validate(Utilization, Resource, Value) of
+                {ok, Updated} ->
+                    lager:info("user ~s - updating utilization to ~p", [State#state.id, Updated]),
+
+                    Planet0 = Planet#planet{utilization=Updated},
+                    PState0 = PState#planet_state{planet=Planet0},
+                    Planets = maps:put(PlanetId, PState0, State#state.planets),
+
+                    {noreply, State#state{planets=Planets}};
+                error ->
+                    {noreply, State}
+            end
+    end;
+
 handle_info(get_research, State) ->
     Now = ogonek_util:now8601(),
     Research = fetch_research(State),

@@ -165,7 +165,7 @@ handle_request(<<"authorize">>, _Request, Json, State) ->
     end;
 
 handle_request(<<"planet_info">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
-    {reply, error_json(<<"not logged in at all">>), State};
+    not_logged_in(State);
 
 handle_request(<<"planet_info">>, _Request, _Json, State) ->
     UserId = State#ws_state.user_id,
@@ -174,7 +174,7 @@ handle_request(<<"planet_info">>, _Request, _Json, State) ->
     {ok, State};
 
 handle_request(<<"get_utilization">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
-    {reply, error_json(<<"not logged in at all">>), State};
+    not_logged_in(State);
 
 handle_request(<<"get_utilization">>, _Request, Json, State) ->
     case ogonek_util:keys([<<"planet">>], Json) of
@@ -187,8 +187,23 @@ handle_request(<<"get_utilization">>, _Request, Json, State) ->
             {reply, error_json(<<"get_utilization: expecting planet">>), State}
     end;
 
+handle_request(<<"set_utilization">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
+    not_logged_in(State);
+
+handle_request(<<"set_utilization">>, _Request, Json, State) ->
+    case ogonek_util:keys([<<"planet">>, <<"resource">>, <<"value">>], Json) of
+        [PlanetId, Resource, Value] when is_integer(Value) ->
+            UserId = State#ws_state.user_id,
+            SessionId = State#ws_state.session_id,
+            Msg = {set_utilization, PlanetId, Resource, Value},
+            ogonek_session_manager:publish_to_user(UserId, SessionId, Msg),
+            {ok, State};
+        _Otherwise ->
+            {reply, error_json(<<"set_utilization: expecting planet, resource and value">>), State}
+    end;
+
 handle_request(<<"start_research">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
-    {reply, error_json(<<"not logged in at all">>), State};
+    not_logged_in(State);
 
 handle_request(<<"start_research">>, _Request, _Json, State) ->
     UserId = State#ws_state.user_id,
@@ -197,7 +212,7 @@ handle_request(<<"start_research">>, _Request, _Json, State) ->
     {ok, State};
 
 handle_request(<<"production_info">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
-    {reply, error_json(<<"not logged in at all">>), State};
+    not_logged_in(State);
 
 handle_request(<<"production_info">>, _Request, Json, State) ->
     case ogonek_util:keys([<<"planet">>], Json) of
@@ -211,7 +226,7 @@ handle_request(<<"production_info">>, _Request, Json, State) ->
     end;
 
 handle_request(<<"build_building">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
-    {reply, error_json(<<"not logged in at all">>), State};
+    not_logged_in(State);
 
 handle_request(<<"build_building">>, _Request, Json, State) ->
     UserId = State#ws_state.user_id,
@@ -232,7 +247,7 @@ handle_request(<<"build_building">>, _Request, Json, State) ->
     end;
 
 handle_request(<<"logout">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
-    {reply, error_json(<<"not logged in at all">>), State};
+    not_logged_in(State);
 
 handle_request(<<"logout">>, _Request, _Json, State) ->
     UserId = State#ws_state.user_id,
@@ -310,6 +325,11 @@ error_json(Error) ->
                 {?MSG_TYPE, <<"error">>},
                 {<<"message">>, Error}]},
     json(Payload).
+
+
+-spec not_logged_in(ws_state()) -> {reply, {text, binary()}, ws_state()}.
+not_logged_in(State) ->
+    {reply, error_json(<<"not logged in at all">>), State}.
 
 
 -spec json(any()) -> {text, binary()}.
