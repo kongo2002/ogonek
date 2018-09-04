@@ -72,7 +72,7 @@ type Request
   -- get_utilization (planet-id)
   | UtilizationRequest String
   -- set_utilization (planet-id, resource, value)
-  | SetUtilizationRequest String String String
+  | SetUtilizationRequest String String Int
   | LogoutRequest
 
 

@@ -47,7 +47,7 @@ production active model =
 
       selector resource active utilization =
         let selected = toString utilization
-            action = onChange (SetUtilizationRequest planet.id resource >> ApiRequest)
+            action = onChangeInt (SetUtilizationRequest planet.id resource >> ApiRequest)
             attrs =
               if active then [ action, class "form-inline" ]
               else [ action, attribute "disabled" "", class "form-inline form-disabled" ]

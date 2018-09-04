@@ -179,6 +179,19 @@ onChange msg =
   in  Html.Events.on "change" parser
 
 
+onChangeInt : (Int -> a) -> Attribute a
+onChangeInt msg =
+  let int value =
+        case String.toInt value of
+          Ok int0 -> Json.Decode.succeed int0
+          Err _ -> Json.Decode.fail "invalid integer value given"
+      parser =
+        Html.Events.targetValue
+        |> Json.Decode.andThen int
+        |> Json.Decode.map msg
+  in  Html.Events.on "change" parser
+
+
 coordStr : (Int, Int, Int) -> String
 coordStr coord =
   let (x, y, z) = coord

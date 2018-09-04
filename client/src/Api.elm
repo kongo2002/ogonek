@@ -70,7 +70,7 @@ requestEncoder req =
         [ requestType "set_utilization"
         , ("planet", JE.string planet)
         , ("resource", JE.string resource)
-        , ("value", JE.string value)
+        , ("value", JE.int value)
         ]
     Types.PlanetInfoRequest ->
       JE.object [ requestType "planet_info" ]
