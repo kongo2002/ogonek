@@ -28,7 +28,7 @@
          unlocked_buildings/2,
          calculate_power/1,
          calculate_workers/1,
-         calculate_power_workers/1,
+         calculate_power_workers/2,
          apply_building_consumption/2,
          calculate_building_consumption/3,
          calculate_building_production/1,
@@ -113,15 +113,28 @@ calculate_workers(Buildings) ->
                 end, 0, Buildings).
 
 
--spec calculate_power_workers([building()]) -> {integer(), integer()}.
-calculate_power_workers(Buildings) ->
+-spec calculate_power_workers([building()], [construction()]) -> {integer(), integer()}.
+calculate_power_workers(Buildings, Constructions) ->
     Defs = definitions_map(),
-    lists:foldl(fun(#building{type=T, level=Lvl}, {Power, Workers}) ->
-                        Def = maps:get(T, Defs),
-                        Power0 = Power - Def#bdef.power * Lvl,
-                        Workers0 = Workers - Def#bdef.workers * Lvl,
+
+    % at first we are going to calculate all power/worker consumption
+    % based on finished buildings
+    FromBuildings = lists:foldl(fun(#building{type=T, level=Lvl}, {Power, Workers}) ->
+                                        Def = maps:get(T, Defs),
+                                        Power0 = Power - Def#bdef.power * Lvl,
+                                        Workers0 = Workers - Def#bdef.workers * Lvl,
+                                        {Power0, Workers0}
+                                end, {0, 0}, Buildings),
+
+    % after that we will put those of ongoing constructions on top as well
+    lists:foldl(fun(#construction{building=B}, {Power, Workers}) ->
+                        Def = maps:get(B, Defs),
+                        % we will take 'positive' costs into account only
+                        Power0 = Power - max(Def#bdef.power, 0),
+                        Workers0 = Workers - max(Def#bdef.workers, 0),
                         {Power0, Workers0}
-                end, {0, 0}, Buildings).
+                end, FromBuildings, Constructions).
+
 
 
 -define(OGONEK_CHEMICAL_FACTORY_PROD, 10).

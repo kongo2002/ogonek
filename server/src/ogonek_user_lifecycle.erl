@@ -203,7 +203,7 @@ handle_info({building_finish, Building}, #state{id=Id}=State) ->
             % building was just finished
             Planet = PState#planet_state.planet,
             Res = Planet#planet.resources,
-            {Power, Workers} = ogonek_buildings:calculate_power_workers(Buildings0),
+            {Power, Workers} = ogonek_buildings:calculate_power_workers(Buildings0, Cs0),
             Res1 = Res#resources{power=Power, workers=Workers},
             Planet0 = Planet#planet{resources=Res1},
 
