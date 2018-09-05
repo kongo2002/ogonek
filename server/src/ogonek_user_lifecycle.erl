@@ -473,6 +473,8 @@ handle_info({set_utilization, PlanetId, Resource, Value}, State) ->
                     PState0 = PState#planet_state{planet=Planet0},
                     Planets = maps:put(PlanetId, PState0, State#state.planets),
 
+                    ogonek_db:planet_update_utilization(PlanetId, Updated),
+
                     {noreply, State#state{planets=Planets}};
                 error ->
                     {noreply, State}

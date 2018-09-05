@@ -54,6 +54,7 @@
          planet_create/1,
          planet_claim/2,
          planets_of_user/1,
+         planet_update_utilization/2,
          planet_update_resources/2]).
 
 %% gen_server callbacks
@@ -293,9 +294,14 @@ planets_of_user(UserId) ->
                   end, Results).
 
 
--spec planet_update_resources(binary(), resources()) -> ok.
+-spec planet_update_resources(PlanetId :: binary(), resources()) -> ok.
 planet_update_resources(PlanetId, Resources) ->
     gen_server:cast(?MODULE, {planet_update_resources, PlanetId, Resources}).
+
+
+-spec planet_update_utilization(PlanetId :: binary(), Utilization :: resources()) -> ok.
+planet_update_utilization(PlanetId, Utilization) ->
+    gen_server:cast(?MODULE, {planet_update_utilization, PlanetId, Utilization}).
 
 
 %%%===================================================================
@@ -515,6 +521,28 @@ handle_cast({planet_update_resources, PlanetId, Resources}, #state{info=Info}=St
             error;
         Error ->
             lager:error("planet_update_resources failed: ~p", [Error]),
+            error
+    end,
+
+    {noreply, State};
+
+handle_cast({planet_update_utilization, PlanetId, Utilization}, #state{info=Info}=State) ->
+    Now = ogonek_util:now8601(),
+    Util = Utilization#resources{updated=Now},
+    Json = ogonek_resources:to_json(Util),
+
+    Update = fun(_Code, {U}) ->
+                     Updated = ogonek_util:replace_with(U, [{<<"utilization">>, Json}]),
+                     {Updated}
+             end,
+
+    case update(PlanetId, Update, Info) of
+        {ok, Code, _Hs, _Body} when Code == 200 orelse Code == 201 -> ok;
+        {ok, Code, _Hs, Body} ->
+            lager:error("planet_update_utilization failed [~p]: ~p", [Code, Body]),
+            error;
+        Error ->
+            lager:error("planet_update_utilization failed: ~p", [Error]),
             error
     end,
 
