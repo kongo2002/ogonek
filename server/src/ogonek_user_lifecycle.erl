@@ -262,10 +262,14 @@ handle_info({calc_resources, PlanetId, Silent}, State) ->
             {noreply, State};
         PState ->
             PState0 = calc_resources(PState),
-            Planets0 = maps:put(PlanetId, PState0, State#state.planets),
+
+            % update power/workers as well
+            PState1 = update_power_workers(PState0),
+
+            Planets0 = maps:put(PlanetId, PState1, State#state.planets),
             State0 = State#state{planets=Planets0},
 
-            Planet = PState#planet_state.planet,
+            Planet = PState1#planet_state.planet,
             Res = Planet#planet.resources,
 
             json_to_sockets(ogonek_resources, Res, State0, Silent),
@@ -662,6 +666,20 @@ fetch_research(State) ->
         [] -> ogonek_db:research_of_user(State#state.id);
         Research -> Research
     end.
+
+
+-spec update_power_workers(planet_state()) -> planet_state().
+update_power_workers(PState) ->
+    Planet = PState#planet_state.planet,
+    Buildings = PState#planet_state.buildings,
+    Constructions = PState#planet_state.constructions,
+
+    {Power, Workers} = ogonek_buildings:calculate_power_workers(Buildings, Constructions),
+
+    Res = Planet#planet.resources,
+    Res1 = Res#resources{power=Power, workers=Workers},
+    Planet0 = Planet#planet{resources=Res1},
+    PState#planet_state{planet=Planet0}.
 
 
 -spec bootstrap_free_planet(planet()) -> planet().
