@@ -17,6 +17,7 @@ module View.Overview exposing ( overview )
 import Dict
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Time.DateTime
 
 import Assets
 import Routing
@@ -76,6 +77,12 @@ planetView model info =
             , td [ class "no-mobile" ] [ text finished ]
             ]
 
+      sortedConstructions =
+        Dict.values info.constructions
+        |> List.sortBy (.finish >> Time.DateTime.toTimestamp)
+        |> List.map construction
+
+
       constructions =
         if Dict.isEmpty info.constructions then
           div [] [ p [] [ text "no constructions" ] ]
@@ -88,7 +95,7 @@ planetView model info =
               , th [ class "no-mobile" ] [ text "Completion" ]
               ]
             ]
-          , tbody [] (Dict.values info.constructions |> List.map construction)
+          , tbody [] sortedConstructions
           ]
 
   in  [ div [ class "row" ]
