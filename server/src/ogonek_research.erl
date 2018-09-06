@@ -109,9 +109,16 @@ research_info_json(Running, Finished) ->
     Status = case Running of
                  undefined -> [];
                  _IsRunning ->
-                     Status0 = {[{<<"finish">>, Running#research.finish},
-                                 {<<"created">>, Running#research.created}
-                                ]},
+                     Finish = Running#research.finish,
+                     Created = Running#research.created,
+                     Progress = progress(Created, Finish),
+                     InProgress = if Progress >= 50 -> [{<<"name">>, Running#research.research}];
+                                     true -> []
+                                  end,
+
+                     Status0 = {[{<<"finish">>, Finish},
+                                 {<<"created">>, Created}
+                                ] ++ InProgress},
                      [{<<"status">>, Status0}]
              end,
     Sorted = lists:keysort(4, Finished),
@@ -129,3 +136,10 @@ to_research(TypeName) when is_binary(TypeName) ->
     % this looks scary but the valid list of building types
     % should be already existing via configuration initialization
     erlang:binary_to_existing_atom(TypeName, utf8).
+
+
+-spec progress(timestamp(), timestamp()) -> integer().
+progress(Started, Finished) ->
+    Total = ogonek_util:seconds_since(Started, Finished),
+    Progress = ogonek_util:seconds_since(Started),
+    (Progress * 100) div Total.

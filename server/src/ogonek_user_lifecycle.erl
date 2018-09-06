@@ -738,18 +738,6 @@ schedule_recalculate_resources() ->
     ok.
 
 
--spec seconds_since(Timestamp :: binary()) -> integer().
-seconds_since(Timestamp) ->
-    seconds_since(Timestamp, ogonek_util:now8601()).
-
-
--spec seconds_since(Timestamp :: timestamp(), RelativeTo :: timestamp()) -> integer().
-seconds_since(Timestamp, RelativeTo) ->
-    RelativeTime = iso8601:parse(RelativeTo),
-    Since = iso8601:parse(Timestamp),
-    abs(calendar:datetime_to_gregorian_seconds(RelativeTime) - calendar:datetime_to_gregorian_seconds(Since)).
-
-
 -spec seconds_to_simulated_hours(integer()) -> float().
 seconds_to_simulated_hours(Seconds) ->
     % 1 hour simulated time == 30 minutes real-time
@@ -797,7 +785,7 @@ calculate_resources(PlanetState, Buildings, RelativeTo, Force) ->
     Resources = Planet#planet.resources,
     Capacity = PlanetState#planet_state.capacity,
 
-    SecondsSince = seconds_since(Resources#resources.updated, RelativeTo),
+    SecondsSince = ogonek_util:seconds_since(Resources#resources.updated, RelativeTo),
 
     if SecondsSince >= 60 orelse Force == true ->
            Production = ogonek_production:of_planet(Planet, Buildings),
@@ -942,7 +930,7 @@ json_to_sockets(Module, Obj, State, _) ->
 
 -spec trigger_research_check(research()) -> reference().
 trigger_research_check(Research) ->
-    DueIn = seconds_since(Research#research.finish) + 1,
+    DueIn = ogonek_util:seconds_since(Research#research.finish) + 1,
     erlang:send_after(DueIn * 1000, self(), get_research).
 
 
@@ -950,7 +938,7 @@ trigger_research_check(Research) ->
 trigger_construction_checks(Constructions) ->
     lists:foreach(fun(C) ->
                           Planet = C#construction.planet,
-                          DueIn = seconds_since(C#construction.finish),
+                          DueIn = ogonek_util:seconds_since(C#construction.finish),
                           trigger_construction_check(Planet, DueIn + 1)
                   end, Constructions).
 

@@ -12,7 +12,7 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-module View.Research exposing ( research, status, progress )
+module View.Research exposing ( research, status, progress, target )
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -38,7 +38,8 @@ research model =
         case res.status of
           Just status ->
             div []
-            [ p [] [ text statusText ]
+            [ p [] [ text "research target: ", text (target status) ]
+            , p [] [ text statusText ]
             ]
           Nothing ->
             div []
@@ -63,6 +64,13 @@ research model =
           ]
         ]
       ]
+
+
+target : ResearchStatusInfo -> String
+target status =
+  status.name
+  |> Maybe.map translateResearch
+  |> Maybe.withDefault "still unknown"
 
 
 status : Model -> ResearchInfo -> String

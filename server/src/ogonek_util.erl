@@ -38,6 +38,8 @@
          remove_key/2,
          choose_random/1,
          if_defined/2,
+         seconds_since/1,
+         seconds_since/2,
          now8601/0
         ]).
 
@@ -183,6 +185,18 @@ doc(DocType, {Vs}) ->
 
 doc(DocType, Values) when is_list(Values) ->
     {[{?MSG_TYPE, DocType} | Values]}.
+
+
+-spec seconds_since(Timestamp :: binary()) -> integer().
+seconds_since(Timestamp) ->
+    seconds_since(Timestamp, ogonek_util:now8601()).
+
+
+-spec seconds_since(Timestamp :: timestamp(), RelativeTo :: timestamp()) -> integer().
+seconds_since(Timestamp, RelativeTo) ->
+    RelativeTime = iso8601:parse(RelativeTo),
+    Since = iso8601:parse(Timestamp),
+    abs(calendar:datetime_to_gregorian_seconds(RelativeTime) - calendar:datetime_to_gregorian_seconds(Since)).
 
 
 -spec choose_random(nonempty_list()) -> term().

@@ -190,6 +190,7 @@ type alias CapacityInfo =
 type alias ResearchStatusInfo =
   { created : Time.DateTime.DateTime
   , finish : Time.DateTime.DateTime
+  , name : Maybe String
   }
 
 

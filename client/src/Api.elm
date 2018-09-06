@@ -180,9 +180,10 @@ researchInfoDecoder =
           (JD.field "name" JD.string)
           (JD.field "level" JD.int)
       status =
-        JD.map2 Types.ResearchStatusInfo
+        JD.map3 Types.ResearchStatusInfo
           (JD.field "created" dateTimeDecoder)
           (JD.field "finish" dateTimeDecoder)
+          (JD.maybe (JD.field "name" JD.string))
   in JD.map2 Types.ResearchInfo
        (JD.field "research" (JD.list research))
        (JD.maybe (JD.field "status" status))
