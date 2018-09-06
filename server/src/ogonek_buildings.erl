@@ -289,6 +289,7 @@ base_construction_duration(wind_turbine) -> 1200;
 base_construction_duration(hydro_plant) -> 3500;
 base_construction_duration(apartment) -> 600;
 base_construction_duration(apartment_block) -> 1100;
+base_construction_duration(apartment_complex) -> 4000;
 base_construction_duration(ext_oil_rig) -> 3000;
 base_construction_duration(ext_water_rig) -> 3000;
 base_construction_duration(ext_ore_mine) -> 3000;
