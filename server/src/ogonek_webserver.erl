@@ -70,6 +70,10 @@ handle('GET', [<<".ws">>], _Req, _Args) ->
 handle('GET', [<<"static">> | _]=Path, _Req, _Args) ->
     serve_file(Path);
 
+% favicon
+handle('GET', [<<"favicon.ico">>], _Req, _Args) ->
+    {404, <<"not found">>};
+
 % all remaining GET request will be mapped to '/index.html'
 handle('GET', _Path, _Req, _Args) ->
     serve_file([<<"index.html">>]);
