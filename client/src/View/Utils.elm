@@ -34,6 +34,7 @@ translateBuildingName name =
   case name of
     "apartment" -> "apartment"
     "apartment_block" -> "apartment block"
+    "apartment_complex" -> "apartment complex"
     "chemical_factory" -> "chemical factory"
     "construction_center" -> "construction center"
     "ext_gold_mine" -> "extended gold mine"
