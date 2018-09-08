@@ -28,7 +28,7 @@ import Routing
 import Types exposing (..)
 import Utils exposing ( orEmpty )
 import View
-import View.Utils exposing ( translateBuilding )
+import View.Utils exposing ( translateBuilding, translateResearch )
 
 
 init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
@@ -139,7 +139,11 @@ update msg model =
           actions =
             if finished then
               let title = "ogonek: research finished"
-              in [ Notification.notify Ports.notification title Nothing Nothing ]
+                  body =
+                    model.research.status
+                    |> Maybe.andThen .name
+                    |> Maybe.map translateResearch
+              in [ Notification.notify Ports.notification title body Nothing ]
             else []
           updated = { model | research = info }
       in  updated ! actions
