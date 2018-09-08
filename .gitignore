@@ -1,3 +1,6 @@
 *.beam
 /venv
+dist
+elm-stuff
+node_modules
 tags
