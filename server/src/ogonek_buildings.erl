@@ -30,6 +30,7 @@
          calculate_workers/1,
          calculate_power_workers/2,
          apply_building_consumption/2,
+         has_requirements/2,
          calculate_building_consumption/3,
          calculate_building_production/1,
          calculate_construction_duration/1,
@@ -65,6 +66,22 @@ get_definition(Name, [_ | Ds]) ->
     get_definition(Name, Ds).
 
 
+-spec has_requirement([building()], requirement()) -> boolean().
+has_requirement(_Buildings, {research, _, _}) -> true;
+has_requirement([], _Requirement) -> false;
+has_requirement([#building{type=Type, level=Lvl} | Bs], {building, Name, MinLevel}=Req) ->
+    if Type == Name andalso Lvl >= MinLevel ->
+           true;
+       true ->
+           has_requirement(Bs, Req)
+    end.
+
+
+-spec has_requirements([building()], [requirement()]) -> boolean().
+has_requirements(Buildings, Requirements) ->
+    lists:all(fun(Req) -> has_requirement(Buildings, Req) end, Requirements).
+
+
 -spec unlocked_buildings([building()], [research()]) -> [bdef()].
 unlocked_buildings(Buildings, Research) ->
     StillLocked = lists:filter(fun(#bdef{name=Name}) ->
@@ -72,7 +89,10 @@ unlocked_buildings(Buildings, Research) ->
                                end, definitions()),
 
     lists:filter(fun(#bdef{requirements=Rs}) ->
-                         ogonek_research:has_requirements(Research, Rs)
+                         % meet research requirements
+                         ogonek_research:has_requirements(Research, Rs) andalso
+                         % and meet building requirements as well
+                         has_requirements(Buildings, Rs)
                  end, StillLocked).
 
 
@@ -357,6 +377,18 @@ calculate_building_consumption_test_() ->
      % no consumption at all
      ?_assertEqual(Empty#resources{h2o=1000},
                    calculate_building_consumption(Empty#resources{h2o=1000}, [], Hour))
+    ].
+
+has_requirements_test_() ->
+    PId = <<"planet">>,
+    Now = ogonek_util:now8601(),
+    Smelting1 = #building{planet=PId, type=smelting_plant, level=1, created=Now},
+    Plastic1 = #building{planet=PId, type=plastic_factory, level=1, created=Now},
+    Chemic1 = #building{planet=PId, type=chemical_factory, level=1, created=Now},
+
+    [?_assertEqual(true, has_requirements([Smelting1], [])),
+     ?_assertEqual(false, has_requirements([Smelting1, Plastic1, Chemic1], [{building, oil_rig, 1}])),
+     ?_assertEqual(true, has_requirements([Smelting1, Plastic1, Chemic1], [{building, smelting_plant, 1}]))
     ].
 
 -endif.

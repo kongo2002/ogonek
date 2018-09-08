@@ -53,9 +53,10 @@ research_available(Research, #rdef{requirements=Reqs}) ->
     lists:all(fun(Req) -> has_requirement(Research, Req) end, Reqs).
 
 
--spec has_requirement([research()], research_requirement()) -> boolean().
+-spec has_requirement([research()], requirement()) -> boolean().
+has_requirement(_, {building, _, _}) -> true;
 has_requirement([], _Requirement) -> false;
-has_requirement([Research | Rs], {Name, MinLevel}=Req) ->
+has_requirement([Research | Rs], {research, Name, MinLevel}=Req) ->
     if Research#research.research == Name andalso Research#research.level >= MinLevel ->
            true;
        true ->
@@ -63,7 +64,7 @@ has_requirement([Research | Rs], {Name, MinLevel}=Req) ->
     end.
 
 
--spec has_requirements([research()], [research_requirement()]) -> boolean().
+-spec has_requirements([research()], [requirement()]) -> boolean().
 has_requirements(Research, Requirements) ->
     lists:all(fun(Req) -> has_requirement(Research, Req) end, Requirements).
 
