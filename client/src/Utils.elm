@@ -33,6 +33,8 @@ deltaToString delta =
         fmt delta.hours "hour" "hours"
       else if delta.minutes > 0 then
         fmt delta.minutes "minute" "minutes"
+      else if delta.seconds <= 0 then
+        "finished"
       else
         fmt delta.seconds "second" "seconds"
 
