@@ -28,6 +28,7 @@ import Routing
 import Types exposing (..)
 import Utils exposing ( orEmpty )
 import View
+import View.Utils exposing ( translateBuilding )
 
 
 init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
@@ -274,7 +275,7 @@ updateBuilding model info =
           actions =
             if finished then
               let title = "ogonek: building finished"
-                  body = info.name ++ " (level " ++ toString info.level ++ ") finished" |> Just
+                  body = translateBuilding info ++ " (level " ++ toString info.level ++ ") finished" |> Just
               in [ Notification.notify Ports.notification title body Nothing ]
             else []
           planets0 = Dict.insert info.planetId updated model.planets
