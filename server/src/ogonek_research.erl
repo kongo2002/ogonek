@@ -23,6 +23,7 @@
 -export([all_researches/0,
          has_requirement/2,
          has_requirements/2,
+         progress/1,
          possible_research/1,
          possible_research/2,
          research_info_json/2]).
@@ -136,6 +137,11 @@ to_research(TypeName) when is_binary(TypeName) ->
     % this looks scary but the valid list of building types
     % should be already existing via configuration initialization
     erlang:binary_to_existing_atom(TypeName, utf8).
+
+
+-spec progress(research()) -> integer().
+progress(#research{created=Started, finish=Finished}) ->
+    progress(Started, Finished).
 
 
 -spec progress(timestamp(), timestamp()) -> integer().

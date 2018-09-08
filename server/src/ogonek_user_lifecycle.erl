@@ -319,9 +319,9 @@ handle_info(start_research, State) ->
             ogonek_db:research_create(Res),
             Rss = update_research(State#state.research, Res),
 
-            trigger_research_check(Res),
+            Timer = trigger_research_check(Res),
 
-            {noreply, State#state{research=Rss}};
+            {noreply, State#state{research=Rss, research_timer=Timer}};
         _Otherwise ->
             % research already ongoing
             {noreply, State}
@@ -508,10 +508,13 @@ handle_info(get_research, State) ->
             {P, F, Research}
     end,
 
-    % create new research completion timer if not set yet
+    % refresh research timer if necessary
     State0 =
     case {Pending, State#state.research_timer} of
         {#research{}, undefined} ->
+            State#state{research_timer=trigger_research_check(Pending)};
+        {#research{}, TimerRef} ->
+            erlang:cancel_timer(TimerRef, [{async, true}, {info, false}]),
             State#state{research_timer=trigger_research_check(Pending)};
         _Otherwise ->
             State
@@ -930,8 +933,19 @@ json_to_sockets(Module, Obj, State, _) ->
 
 -spec trigger_research_check(research()) -> reference().
 trigger_research_check(Research) ->
+    Progress = ogonek_research:progress(Research),
     DueIn = ogonek_util:seconds_since(Research#research.finish) + 1,
-    erlang:send_after(DueIn * 1000, self(), get_research).
+
+    ScheduleIn = if Progress < 50 ->
+                        round((DueIn * (50 - Progress) / 100) + 10);
+                    true ->
+                        DueIn + 1
+                 end,
+
+    lager:debug("user ~s - scheduling research timer in ~p sec",
+                [Research#research.user, ScheduleIn]),
+
+    erlang:send_after(ScheduleIn * 1000, self(), get_research).
 
 
 -spec trigger_construction_checks([construction()]) -> ok.
