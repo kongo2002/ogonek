@@ -1035,6 +1035,12 @@ construction_possible(PlanetState, Costs) ->
     NumConstructions = length(Constructions),
     MaxConcurrentConstructions = max_concurrent_constructions(Buildings),
 
+    Requirements = Costs#bdef.requirements,
+
+    % check if research and building requirements are met
+    ogonek_research:has_requirements(Buildings, Requirements) andalso
+    ogonek_buildings:has_requirements(Buildings, Requirements) andalso
+
     MaxConcurrentConstructions > NumConstructions andalso
 
     Resources#resources.workers >= Costs#bdef.workers andalso
