@@ -78,7 +78,7 @@ production active model =
       prodRow resource production resources capacity utilization =
         let storage0 = storage resources capacity
             name = translateResource resource
-            hasProduction = production > 0
+            hasProduction = production >= 0
         in  tr []
             [ td [ hdr ] [ text name ]
             , td [ dataLabel "Utilization" ] [ selector resource hasProduction utilization ]
