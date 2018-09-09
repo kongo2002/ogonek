@@ -222,6 +222,9 @@ handle_info({building_finish, Building}, #state{id=Id}=State) ->
             json_to_sockets(ogonek_capacity, Capacity, State0),
             json_to_sockets(ogonek_resources, Res1, State0),
 
+            % push production info
+            self() ! {production_info, PlanetId},
+
             {noreply, State0}
     end;
 
