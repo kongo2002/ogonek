@@ -384,7 +384,8 @@ handle_info({production_info, PlanetId}, State) ->
         undefined -> ok;
         #planet_state{planet=Planet, buildings=Buildings} ->
             Production = ogonek_production:of_planet(Planet, Buildings),
-            WithConsumption = ogonek_buildings:apply_building_consumption(Production, Buildings),
+            Utilization = Planet#planet.utilization,
+            WithConsumption = ogonek_buildings:apply_building_consumption(Production, Utilization, Buildings),
             json_to_sockets(ogonek_production, WithConsumption, State)
     end,
 
@@ -480,9 +481,13 @@ handle_info({set_utilization, PlanetId, Resource, Value}, State) ->
                     PState0 = PState#planet_state{planet=Planet0},
                     Planets = maps:put(PlanetId, PState0, State#state.planets),
 
+                    self() ! {production_info, PlanetId},
+
                     ogonek_db:planet_update_utilization(PlanetId, Updated),
 
                     {noreply, State#state{planets=Planets}};
+                skipped ->
+                    {noreply, State};
                 error ->
                     {noreply, State}
             end
@@ -794,6 +799,7 @@ calculate_resources(PlanetState, Buildings, RelativeTo, Force) ->
     SecondsSince = ogonek_util:seconds_since(Resources#resources.updated, RelativeTo),
 
     if SecondsSince >= 60 orelse Force == true ->
+           Utilization = Planet#planet.utilization,
            Production = ogonek_production:of_planet(Planet, Buildings),
            lager:debug("user ~s - production: ~p", [UserId, Production]),
 
@@ -803,7 +809,7 @@ calculate_resources(PlanetState, Buildings, RelativeTo, Force) ->
            lager:debug("user ~s - produced since ~s: ~p", [UserId, Resources#resources.updated, Produced]),
 
            Summed = ogonek_resources:sum(Resources, Produced),
-           AfterConsumption = ogonek_buildings:calculate_building_consumption(Summed, Buildings, SimulatedHours),
+           AfterConsumption = ogonek_buildings:calculate_building_consumption(Summed, Utilization, Buildings, SimulatedHours),
 
            lager:debug("user ~s - after consumption: ~p", [UserId, AfterConsumption]),
 

@@ -42,13 +42,19 @@ to_json(Resources, _Db) ->
     ogonek_util:doc(<<"utilization">>, WithId).
 
 
--spec validate(Utilization :: resources(), Resource :: binary(), integer()) -> {ok, resources()} | error.
+-spec validate(Utilization :: resources(), Resource :: binary(), integer()) -> {ok, resources()} | error | skipped.
 validate(Utilization, Resource, Value) when Value >= 0 andalso Value =< 100 ->
     case Resource of
+        <<"pvc">> when Value == Utilization#resources.pvc ->
+            skipped;
         <<"pvc">> ->
             {ok, Utilization#resources{pvc=Value}};
+        <<"titan">> when Value == Utilization#resources.titan ->
+            skipped;
         <<"titan">> ->
             {ok, Utilization#resources{titan=Value}};
+        <<"h2">> when Value == Utilization#resources.h2 ->
+            skipped;
         <<"h2">> ->
             {ok, Utilization#resources{h2=Value}};
         _Otherwise ->
