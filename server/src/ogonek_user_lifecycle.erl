@@ -410,8 +410,9 @@ handle_info({build_building, Planet, Type, Level}=Req, State) ->
                 % building available and no construction ongoing
                 {{ok, Building}, undefined} ->
                     if Building#building.level + 1 == Level ->
+                           Research = State#state.research,
                            Costs = ogonek_buildings:calculate_building_costs(Building),
-                           Possible = construction_possible(PState, Costs),
+                           Possible = construction_possible(PState, Research, Costs),
 
                            if Possible == true ->
                                   Duration = ogonek_buildings:calculate_construction_duration(Building),
@@ -1031,8 +1032,8 @@ update_research(Researches, #research{research=Name}=Research) ->
     end.
 
 
--spec construction_possible(PlanetState :: planet_state(), Costs :: bdef()) -> boolean().
-construction_possible(PlanetState, Costs) ->
+-spec construction_possible(PlanetState :: planet_state(), [research()], Costs :: bdef()) -> boolean().
+construction_possible(PlanetState, Research, Costs) ->
     Planet = PlanetState#planet_state.planet,
     Constructions = PlanetState#planet_state.constructions,
     Buildings = PlanetState#planet_state.buildings,
@@ -1044,7 +1045,7 @@ construction_possible(PlanetState, Costs) ->
     Requirements = Costs#bdef.requirements,
 
     % check if research and building requirements are met
-    ogonek_research:has_requirements(Buildings, Requirements) andalso
+    ogonek_research:has_requirements(Research, Requirements) andalso
     ogonek_buildings:has_requirements(Buildings, Requirements) andalso
 
     MaxConcurrentConstructions > NumConstructions andalso
