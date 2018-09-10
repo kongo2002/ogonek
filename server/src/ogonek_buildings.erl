@@ -23,6 +23,9 @@
 -export([definitions/0,
          definitions_map/0,
          get_definition/1,
+         get_building/2,
+         get_building_level/2,
+         get_building_max_level/2,
          to_building_type/1,
          try_building_type/1,
          unlocked_buildings/2,
@@ -64,6 +67,39 @@ get_definition(_Name, []) -> error;
 get_definition(Name, [#bdef{name=Name}=Def | _Ds]) -> Def;
 get_definition(Name, [_ | Ds]) ->
     get_definition(Name, Ds).
+
+
+-spec get_building([building()], Type :: atom()) -> {ok, building()} | undefined.
+get_building(Buildings, Type) ->
+    case lists:keyfind(Type, 4, Buildings) of
+        false -> undefined;
+        Building -> {ok, Building}
+    end.
+
+
+-spec get_buildings_of_type([building()], Type :: atom()) -> [building()].
+get_buildings_of_type(Buildings, Type) ->
+    lists:filter(fun(#building{type=T}) when T == Type -> true;
+                    (_Otherwise) -> false
+                 end, Buildings).
+
+
+-spec get_building_level([building()], Type :: atom()) -> integer().
+get_building_level(Buildings, Type) ->
+    case get_building(Buildings, Type) of
+        {ok, #building{level=Level}} -> Level;
+        _Otherwise -> 0
+    end.
+
+
+-spec get_building_max_level([building()], Type :: atom()) -> integer().
+get_building_max_level(Buildings, Type) ->
+    case get_buildings_of_type(Buildings, Type) of
+        [] -> 0;
+        Bs ->
+            Levels = lists:map(fun(#building{level=Lvl}) -> Lvl end, Bs),
+            lists:max(Levels)
+    end.
 
 
 -spec has_requirement([building()], requirement()) -> boolean().

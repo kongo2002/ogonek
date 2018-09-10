@@ -291,8 +291,9 @@ handle_info(planet_info, State) ->
 handle_info(start_research, State) ->
     case current_research(State#state.research) of
         {undefined, Research} ->
-            % TODO: proper calculation for research duration
-            FinishedAt = finished_at(20 * 60),
+            Buildings = all_buildings(State),
+            ResearchDuration = ogonek_research:research_duration(Buildings),
+            FinishedAt = finished_at(ResearchDuration),
             Possible = ogonek_research:possible_research(Research),
             Pick = ogonek_util:choose_random(Possible),
 
@@ -396,7 +397,7 @@ handle_info({build_building, Planet, Type, Level}=Req, State) ->
         undefined ->
             {noreply, State};
         #planet_state{buildings=Bs, constructions=Cs}=PState ->
-            case {get_building(Bs, Type), get_construction(Cs, Type)} of
+            case {ogonek_buildings:get_building(Bs, Type), get_construction(Cs, Type)} of
                 % no building of this available
                 {undefined, _} ->
                     lager:info("user ~s - build-building rejected, building not available [request ~p]",
@@ -851,7 +852,7 @@ process_construction({Construction, UpTo}, PState) ->
     PlanetId = Planet#planet.id,
     Type = Construction#construction.building,
 
-    case get_building(Buildings, Type) of
+    case ogonek_buildings:get_building(Buildings, Type) of
         {ok, B} ->
             CLevel = Construction#construction.level,
             BLevel = B#building.level,
@@ -973,17 +974,9 @@ trigger_construction_check(PlanetId, Seconds) ->
     ok.
 
 
--spec get_building([building()], atom()) -> {ok, building()} | undefined.
-get_building(Buildings, Type) ->
-    case lists:keyfind(Type, 4, Buildings) of
-        false -> undefined;
-        Building -> {ok, Building}
-    end.
-
-
 -spec update_building([building()], building()) -> [building()].
 update_building(Buildings, #building{type=Type}=Building) ->
-    case get_building(Buildings, Type) of
+    case ogonek_buildings:get_building(Buildings, Type) of
         undefined -> [Building | Buildings];
         _Otherwise ->
             lists:keyreplace(Type, 4, Buildings, Building)
@@ -1072,10 +1065,7 @@ max_concurrent_constructions(Buildings) ->
 
 -spec construction_center_level([building()]) -> integer().
 construction_center_level(Buildings) ->
-    case get_building(Buildings, construction_center) of
-        {ok, #building{level=Level}} -> Level;
-        _Otherwise -> 0
-    end.
+    ogonek_buildings:get_building_level(Buildings, construction_center).
 
 
 -spec claim_resources(PlanetState :: planet_state(), Costs :: bdef()) -> planet_state().
@@ -1090,6 +1080,12 @@ claim_resources(PlanetState, Costs) ->
 
     Planet0 = Planet#planet{resources=Res0},
     PlanetState#planet_state{planet=Planet0}.
+
+
+-spec all_buildings(state()) -> [building()].
+all_buildings(State) ->
+    PStates = maps:values(State#state.planets),
+    lists:flatmap(fun(#planet_state{buildings=Bs}) -> Bs end, PStates).
 
 
 %%

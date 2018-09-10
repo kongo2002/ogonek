@@ -24,6 +24,7 @@
          has_requirement/2,
          has_requirements/2,
          progress/1,
+         research_duration/1,
          possible_research/1,
          possible_research/2,
          research_info_json/2]).
@@ -62,6 +63,18 @@ has_requirement([Research | Rs], {research, Name, MinLevel}=Req) ->
        true ->
            has_requirement(Rs, Req)
     end.
+
+
+-spec research_duration([building()]) -> integer().
+research_duration(Buildings) ->
+    % TODO: proper research duration distribution
+    ResearchLab = ogonek_buildings:get_building_max_level(Buildings, research_lab),
+    ResearchFacility = ogonek_buildings:get_building_max_level(Buildings, research_facility),
+    CombinedLevel = ResearchLab + ResearchFacility * 2,
+
+    % for now we simply limit the duration to 2h at minimum
+    % usually the formula should take care of that
+    round(max(2, 8 - math:pow(CombinedLevel, 0.3)) * 3600).
 
 
 -spec has_requirements([research()], [requirement()]) -> boolean().
