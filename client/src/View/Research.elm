@@ -20,7 +20,7 @@ import Html.Events exposing ( onClick )
 import Time.DateTime
 
 import Types exposing (..)
-import Utils exposing ( zonedIso8601 )
+import Utils exposing ( deltaToString, zonedIso8601 )
 import View.Utils exposing (..)
 
 
@@ -86,7 +86,7 @@ status model research =
         Nothing ->
           "research finished at: " ++ zonedIso8601 model status.finish
     Nothing ->
-      "no research in progress"
+      "no research in progress - duration (" ++ deltaToString research.duration ++ ")"
 
 
 progress : ResearchStatusInfo -> Time.DateTime.DateTime -> Int

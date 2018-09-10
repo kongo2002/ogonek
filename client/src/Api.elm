@@ -184,8 +184,9 @@ researchInfoDecoder =
           (JD.field "created" dateTimeDecoder)
           (JD.field "finish" dateTimeDecoder)
           (JD.maybe (JD.field "name" JD.string))
-  in JD.map2 Types.ResearchInfo
+  in JD.map3 Types.ResearchInfo
        (JD.field "research" (JD.list research))
+       (JD.field "duration" dateTimeDeltaDecoder)
        (JD.maybe (JD.field "status" status))
 
 

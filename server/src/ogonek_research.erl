@@ -27,7 +27,7 @@
          research_duration/1,
          possible_research/1,
          possible_research/2,
-         research_info_json/2]).
+         research_info_json/3]).
 
 
 -spec all_researches() -> [rdef()].
@@ -119,8 +119,8 @@ to_json(Research, _Db) ->
     ogonek_util:doc(<<"research">>, Values).
 
 
--spec research_info_json(research() | undefined, [research()]) -> json_doc().
-research_info_json(Running, Finished) ->
+-spec research_info_json(research() | undefined, [research()], integer()) -> json_doc().
+research_info_json(Running, Finished, Duration) ->
     Status = case Running of
                  undefined -> [];
                  _IsRunning ->
@@ -143,7 +143,9 @@ research_info_json(Running, Finished) ->
                          end, Sorted),
 
     ogonek_util:doc(<<"research">>,
-                    [{<<"research">>, Research}] ++ Status).
+                    [{<<"research">>, Research},
+                     {<<"duration">>, Duration}
+                    ] ++ Status).
 
 
 -spec to_research(binary()) -> atom().

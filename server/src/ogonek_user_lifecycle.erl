@@ -291,8 +291,7 @@ handle_info(planet_info, State) ->
 handle_info(start_research, State) ->
     case current_research(State#state.research) of
         {undefined, Research} ->
-            Buildings = all_buildings(State),
-            ResearchDuration = ogonek_research:research_duration(Buildings),
+            ResearchDuration = research_duration(State),
             FinishedAt = finished_at(ResearchDuration),
             Possible = ogonek_research:possible_research(Research),
             Pick = ogonek_util:choose_random(Possible),
@@ -530,7 +529,8 @@ handle_info(get_research, State) ->
             State
     end,
 
-    Json = ogonek_research:research_info_json(Pending, Finished),
+    ResearchDuration = research_duration(State),
+    Json = ogonek_research:research_info_json(Pending, Finished, ResearchDuration),
     gen_server:cast(State0#state.session, {json_to_sockets, Json}),
 
     State1 = State0#state{research=Research0},
@@ -1023,6 +1023,12 @@ update_research(Researches, #research{research=Name}=Research) ->
         _Otherwise ->
             lists:keyreplace(Name, 4, Researches, Research)
     end.
+
+
+-spec research_duration(state()) -> integer().
+research_duration(State) ->
+    Buildings = all_buildings(State),
+    ogonek_research:research_duration(Buildings).
 
 
 -spec construction_possible(PlanetState :: planet_state(), [research()], Costs :: bdef()) -> boolean().

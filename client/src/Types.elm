@@ -196,6 +196,7 @@ type alias ResearchStatusInfo =
 
 type alias ResearchInfo =
   { research : List (String, Int)
+  , duration : Time.DateTime.DateTimeDelta
   , status : Maybe ResearchStatusInfo
   }
 
