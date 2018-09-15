@@ -351,7 +351,9 @@ base_construction_duration(apartment_complex) -> 4000;
 base_construction_duration(ext_oil_rig) -> 3000;
 base_construction_duration(ext_water_rig) -> 3000;
 base_construction_duration(ext_ore_mine) -> 3000;
-base_construction_duration(ext_gold_mine) -> 3000.
+base_construction_duration(ext_gold_mine) -> 3000;
+base_construction_duration(space_shipyard) -> 9000;
+base_construction_duration(weapon_manufacture) -> 8000.
 
 
 -spec calculate_building_costs(Building :: building()) -> bdef() | error.

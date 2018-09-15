@@ -56,6 +56,7 @@ translateBuildingName name =
     "pvc_depot" -> "PVC depot"
     "research_lab" -> "research lab"
     "smelting_plant" -> "smelting plant"
+    "space_shipyard" -> "space shipyard"
     "titan_depot" -> "titan depot"
     "uranium_depot" -> "uranium depot"
     "uranium_mine" -> "uranium mine"

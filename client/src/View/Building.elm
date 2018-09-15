@@ -58,6 +58,7 @@ content name =
     "pvc_depot" -> []
     "research_lab" -> []
     "smelting_plant" -> []
+    "space_shipyard" -> []
     "titan_depot" -> []
     "uranium_depot" -> []
     "uranium_mine" -> []
