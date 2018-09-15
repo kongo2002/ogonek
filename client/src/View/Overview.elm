@@ -72,7 +72,8 @@ planetView model info =
             finished = zonedIso8601 model constr.finish
             duration = constr.timeLeft |> orEmpty
         in  tr []
-            [ td [] [ text name ]
+            [ td [] [ icon "home" ]
+            , td [] [ text name ]
             , td [] [ text duration ]
             , td [ class "no-mobile" ] [ text finished ]
             ]
@@ -90,7 +91,8 @@ planetView model info =
           table [ class "twelve columns" ]
           [ thead []
             [ tr []
-              [ th [] [ text "Name" ]
+              [ th [] []
+              , th [] [ text "Name" ]
               , th [] [ text "Duration" ]
               , th [ class "no-mobile" ] [ text "Completion" ]
               ]
