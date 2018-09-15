@@ -19,6 +19,7 @@ import Html exposing ( Html, div, p, text )
 import Html.Attributes exposing ( class )
 
 import Types
+import View.Building
 import View.Login
 import View.Navigation
 import View.Overview
@@ -57,6 +58,9 @@ view model =
           -- production
           Types.ProductionRoute planet ->
             withPlanet View.Production.production planet
+          -- building
+          Types.BuildingRoute building ->
+            View.Building.building building
           -- research
           Types.ResearchRoute ->
             View.Research.research

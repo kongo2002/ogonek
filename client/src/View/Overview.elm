@@ -46,7 +46,7 @@ research model =
       title =
         div [ class "row" ]
         [ div [ class "nine columns" ]
-          [ h3 [] [ a [ href link, class "no-deco", click ] [ text "Research" ] ]
+          [ h3 [] [ a [ href link, click ] [ text "Research" ] ]
           ]
         , div [ class "three columns" ] [ icon ]
         ]
@@ -65,7 +65,7 @@ planetView model info =
       link = Routing.routeToPath route
       name = "Planet at " ++ coordStr planet.position
       title =
-        h3 [] [ a [ href link, class "no-deco", numbClick (NewUrl route) ] [ text name ] ]
+        h3 [] [ a [ href link, numbClick (NewUrl route) ] [ text name ] ]
 
       construction constr =
         let name = translateBuildingName constr.building

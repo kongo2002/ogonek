@@ -58,7 +58,7 @@ navigation model =
 
   in div [ class "row" ]
      [ div [ class "four columns" ]
-       [ a [ href "/", class "no-deco", numbClick (NewUrl HomeRoute) ] [
+       [ a [ href "/", numbClick (NewUrl HomeRoute) ] [
          h1 [] [ text "ogonek" ]
          ]
        ]

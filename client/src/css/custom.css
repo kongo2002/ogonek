@@ -14,6 +14,10 @@ body {
   background: #fff;
 }
 
+a {
+  text-decoration: none;
+}
+
 #nav {
   margin: 13px 0 0 0;
 }
@@ -37,10 +41,6 @@ body {
 
 #buildings {
   font-size: 90%;
-}
-
-.no-deco {
-  text-decoration: none;
 }
 
 .subheader {

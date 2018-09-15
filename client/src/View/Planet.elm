@@ -138,7 +138,7 @@ planet active model =
             click = numbClick (NewUrl route)
             title0 = title "Production"
         in  span [ class "spaced", toRight, title0 ]
-            [ a [ class "no-deco", href link, click ] [ icon "sliders-h" ] ]
+            [ a [ href link, click ] [ icon "sliders-h" ] ]
   in
     [ h2 [] [ text name ]
     , div [ class "row" ]
@@ -250,9 +250,16 @@ buildingRow model planet constrPossible binfo =
           Nothing ->
             buildColumns ++
             [ td [ class "operations" ] [ buildOperation constrPossible res binfo ] ]
+
+      name =
+        let route = BuildingRoute binfo.name
+            translated = translateBuilding binfo
+            link = Routing.routeToPath route
+            click = numbClick (NewUrl route)
+        in  a [ href link, click ] [ text translated ]
   in
     tr []
-    ([ td [ class "header" ] [ text (translateBuilding binfo) ]
+    ([ td [ class "header" ] [ name ]
     , col Const.level binfo.level -1
     ] ++ columns)
 
