@@ -34,9 +34,59 @@ building name model =
 content : String -> List (Html Msg)
 content name =
   case name of
+    "apartment" -> apartment
+    "apartment_block" -> apartmentBlock
+    "apartment_complex" -> apartmentComplex
+    "chemical_factory" -> []
     "construction_center" -> constructionCenter
+    "ext_gold_mine" -> []
+    "ext_oil_rig" -> []
+    "ext_ore_mine" -> []
+    "ext_water_rig" -> []
+    "gold_depot" -> []
+    "gold_mine" -> []
+    "h2_depot" -> []
+    "hydro_plant" -> []
+    "kyanite_depot" -> []
+    "kyanite_mine" -> []
+    "oil_rig" -> []
+    "oil_tank" -> []
+    "ore_depot" -> []
+    "ore_mine" -> []
+    "plastic_factory" -> []
+    "power_plant" -> []
+    "pvc_depot" -> []
+    "research_lab" -> []
+    "smelting_plant" -> []
+    "titan_depot" -> []
+    "uranium_depot" -> []
+    "uranium_mine" -> []
+    "water_rig" -> []
+    "water_tank" -> []
+    "wind_turbine" -> []
     unknown ->
       [ p [] [ text "unknown building" ] ]
+
+
+apartment : List (Html Msg)
+apartment =
+  [ p [] [ text "The apartment is a small civilian building that provides living space for up to 10 persons." ]
+  , p [] [ text "You always have to provide enough civilian buildings for your workers to live in." ]
+  ]
+
+
+apartmentBlock : List (Html Msg)
+apartmentBlock =
+  [ p [] [ text "The apartment is a medium sized civilian building that provides living space for up to 50 persons." ]
+  , p [] [ text "You always have to provide enough civilian buildings for your workers to live in." ]
+  ]
+
+
+apartmentComplex : List (Html Msg)
+apartmentComplex =
+  [ p [] [ text "The apartment is a large civilian building that provides living space for up to 250 persons." ]
+  , p [] [ text "You always have to provide enough civilian buildings for your workers to live in." ]
+  ]
 
 
 constructionCenter : List (Html Msg)
