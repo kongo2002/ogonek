@@ -160,6 +160,8 @@ handle_cast(prepare, #state{id=UserId}=State) ->
 
     schedule_recalculate_resources(),
 
+    self() ! unlock_buildings,
+
     {noreply, State#state{planets=PlanetMap}};
 
 handle_cast({terminate, Reason}, #state{id=UserId}=State) ->

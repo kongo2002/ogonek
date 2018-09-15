@@ -61,6 +61,7 @@ translateBuildingName name =
     "uranium_mine" -> "uranium mine"
     "water_rig" -> "water rig"
     "water_tank" -> "water tank"
+    "weapon_manufacture" -> "weapon manufacture"
     "wind_turbine" -> "wind turbine"
     unknown -> unknown
 
@@ -77,6 +78,7 @@ translateResearch name =
     "nuclear_fusion" -> "nuclear fusion"
     "particle_physics" -> "particle physics"
     "radioactivity" -> "radioactivity"
+    "military" -> "military"
     unknown -> unknown
 
 
@@ -87,6 +89,7 @@ translateBuildingGroup name =
     "resource" -> "resource gathering and production"
     "storage" -> "depots and tanks"
     "power_living" -> "power and living buildings"
+    "military" -> "military buildings"
     unknown -> unknown
 
 
