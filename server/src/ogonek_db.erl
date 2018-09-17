@@ -778,10 +778,15 @@ get_by_id(Db, Id, Info) ->
 
 head_(Path, #db_info{host=Host, options=Options}) ->
     Target = <<Host/binary, Path/binary>>,
-    Result = hackney:head(Target, [], [], Options),
 
-    lager:debug("HEAD [~s] ~p", [Target, Result]),
-    Result.
+    case hackney:head(Target, [], [], Options) of
+        {ok, Code, _Hs} = Res ->
+            lager:debug([{status_code, Code}, {method, <<"HEAD">>}], "HEAD ~s", [Target]),
+            Res;
+        Otherwise ->
+            lager:warning([{method, <<"HEAD">>}], "HEAD [~s] ~p", [Target, Otherwise]),
+            Otherwise
+    end.
 
 
 put_(Path, Info) ->
@@ -789,15 +794,7 @@ put_(Path, Info) ->
 
 put_(Path, Payload, #db_info{host=Host, headers=Headers, options=Options}) ->
     Target = <<Host/binary, Path/binary>>,
-    Encoded = case Payload of
-                  [] -> [];
-                  P when is_binary(P) -> P;
-                  Obj -> jiffy:encode(Obj)
-              end,
-    Result = hackney:put(Target, Headers, Encoded, Options),
-
-    lager:debug("PUT [~s] ~p", [Target, Result]),
-    Result.
+    ogonek_util:json_put(Target, Headers, Payload, Options).
 
 
 post_(Path, Payload, #db_info{host=Host, headers=Headers, options=Options}) ->
@@ -811,11 +808,7 @@ delete_(Id, Revision, Info) ->
 
 delete_(Db, Id, Revision, #db_info{host=Host, headers=Headers, options=Options}) ->
     Target = <<Host/binary, "/", Db/binary, "/", Id/binary>>,
-    Headers0 = [{<<"If-Match">>, Revision} | Headers],
-    Result = hackney:delete(Target, Headers0, [], Options),
-
-    lager:debug("DELETE [~s] ~p", [Target, Result]),
-    Result.
+    ogonek_util:json_delete(Target, Revision, Headers, Options).
 
 
 check_status(Info) ->

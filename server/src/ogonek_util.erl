@@ -27,10 +27,17 @@
          json_get/1,
          json_get/2,
          json_get/3,
+         json_delete/2,
+         json_delete/3,
+         json_delete/4,
          json_post/1,
          json_post/2,
          json_post/3,
          json_post/4,
+         json_put/1,
+         json_put/2,
+         json_put/3,
+         json_put/4,
          keys/2,
          path/2,
          replace_with/2,
@@ -124,6 +131,33 @@ remove_key(PList, Key) ->
     lists:keydelete(Key, 1, PList).
 
 
+json_delete(Target, Revision) ->
+    json_delete(Target, Revision, []).
+
+
+json_delete(Target, Revision, Headers) ->
+    DefaultOpts = [{pool, default}, with_body],
+    json_delete(Target, Revision, Headers, DefaultOpts).
+
+
+json_delete(Target, Revision, Headers, Options) ->
+    Headers0 = [{<<"If-Match">>, Revision} | Headers],
+    case hackney:delete(Target, Headers0, [], Options) of
+        {ok, Code, Hs, Body} = Res ->
+            case parse_json(Body) of
+                {ok, Json} ->
+                    lager:debug([{json, Json}, {status_code, Code}, {method, <<"DELETE">>}], "DELETE ~s", [Target]),
+                    {ok, Code, Hs, Json};
+                {error, malformed_json} ->
+                    lager:warning([{status_code, Code}, {method, <<"DELETE">>}], "DELETE ~s - malformed_json", [Target]),
+                    Res
+            end;
+        Otherwise ->
+            lager:warning([{method, <<"DELETE">>}], "DELETE [~s] ~p", [Target, Otherwise]),
+            Otherwise
+    end.
+
+
 json_get(Target) ->
     json_get(Target, []).
 
@@ -134,17 +168,20 @@ json_get(Target, Headers) ->
 
 
 json_get(Target, Headers, Options) ->
-    Result = case hackney:get(Target, Headers, [], Options) of
-                 {ok, Code, Hs, Body} = Res ->
-                     case parse_json(Body) of
-                         {ok, Json} -> {ok, Code, Hs, Json};
-                         _Otherwise -> Res
-                     end;
-                 Otherwise -> Otherwise
-             end,
-
-    lager:debug("GET [~s] ~p", [Target, Result]),
-    Result.
+    case hackney:get(Target, Headers, [], Options) of
+        {ok, Code, Hs, Body} = Res ->
+            case parse_json(Body) of
+                {ok, Json} ->
+                    lager:debug([{json, Json}, {status_code, Code}, {method, <<"GET">>}], "GET ~s", [Target]),
+                    {ok, Code, Hs, Json};
+                {error, malformed_json} ->
+                    lager:warning([{status_code, Code}, {method, <<"GET">>}], "GET ~s - malformed_json", [Target]),
+                    Res
+            end;
+        Otherwise ->
+            lager:warning([{method, <<"GET">>}], "GET [~s] ~p", [Target, Otherwise]),
+            Otherwise
+    end.
 
 
 json_post(Target) ->
@@ -166,17 +203,55 @@ json_post(Target, Headers, Payload, Options) ->
                       Bin when is_binary(Bin) -> Bin;
                       Obj -> jiffy:encode(Obj)
                   end,
-    Result = case hackney:post(Target, Headers, JsonPayload, Options) of
-                 {ok, Code, Hs, Body} = Res ->
-                     case parse_json(Body) of
-                         {ok, Json} -> {ok, Code, Hs, Json};
-                         _Otherwise -> Res
-                     end;
-                 Otherwise -> Otherwise
-             end,
+    case hackney:post(Target, Headers, JsonPayload, Options) of
+        {ok, Code, Hs, Body} = Res ->
+            case parse_json(Body) of
+                {ok, Json} ->
+                    lager:debug([{json, Json}, {status_code, Code}, {method, <<"POST">>}], "POST ~s", [Target]),
+                    {ok, Code, Hs, Json};
+                {error, malformed_json} ->
+                    lager:warning([{status_code, Code}, {method, <<"POST">>}], "POST ~s - malformed_json", [Target]),
+                    Res
+            end;
+        Otherwise ->
+            lager:warning([{method, <<"POST">>}], "POST [~s] ~p", [Target, Otherwise]),
+            Otherwise
+    end.
 
-    lager:debug("POST [~s] ~p", [Target, Result]),
-    Result.
+
+json_put(Target) ->
+    json_put(Target, []).
+
+
+json_put(Target, Headers) ->
+    json_put(Target, Headers, []).
+
+
+json_put(Target, Headers, Payload) ->
+    DefaultOpts = [{pool, default}, with_body],
+    json_put(Target, Headers, Payload, DefaultOpts).
+
+
+json_put(Target, Headers, Payload, Options) ->
+    JsonPayload = case Payload of
+                      [] -> [];
+                      Bin when is_binary(Bin) -> Bin;
+                      Obj -> jiffy:encode(Obj)
+                  end,
+    case hackney:put(Target, Headers, JsonPayload, Options) of
+        {ok, Code, Hs, Body} = Res ->
+            case parse_json(Body) of
+                {ok, Json} ->
+                    lager:debug([{json, Json}, {status_code, Code}, {method, <<"PUT">>}], "PUT ~s", [Target]),
+                    {ok, Code, Hs, Json};
+                {error, malformed_json} ->
+                    lager:warning([{status_code, Code}, {method, <<"PUT">>}], "PUT ~s - malformed_json", [Target]),
+                    Res
+            end;
+        Otherwise ->
+            lager:warning([{method, <<"PUT">>}], "PUT [~s] ~p", [Target, Otherwise]),
+            Otherwise
+    end.
 
 
 -spec doc(binary(), json_doc()) -> {json_props()}.

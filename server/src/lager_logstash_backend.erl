@@ -58,7 +58,11 @@ init(Params) ->
      {function, [{encoding, atom}]},
      {line, [{encoding, integer}]},
      {file, [{encoding, string}]},
-     {module, [{encoding, atom}]}
+     {module, [{encoding, atom}]},
+     % custom metadata
+     {json, [{encoding, json}]},
+     {method, [{encoding, binary}]},
+     {status_code, [{encoding, integer}]}
     ],
 
     {Socket, Address} =
@@ -124,14 +128,10 @@ handle_event({log, Message}, #state{level=Level}=State) ->
     case lager_util:is_loggable(Message, Level, ?MODULE) of
         true ->
             Meta = metadata(lager_msg:metadata(Message), State#state.metadata),
-            {Date, Time} = lager_msg:datetime(Message),
             Encoded = encode_json_event(node(),
                                         State#state.node_role,
                                         State#state.node_version,
-                                        lager_msg:severity_as_int(Message),
-                                        Date,
-                                        Time,
-                                        lager_msg:message(Message),
+                                        Message,
                                         Meta),
 
             gen_udp:send(State#state.socket,
@@ -196,14 +196,19 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
-encode_json_event(Node, NodeRole, NodeVersion, Severity, Date, Time, Message, Metadata) ->
+encode_json_event(Node, NodeRole, NodeVersion, Msg, Metadata) ->
+    {Date, Time} = lager_msg:datetime(Msg),
     WithoutUTC = re:replace(Time, "(\\s+)UTC", "", [{return, list}]),
     DateTime = io_lib:format("~sT~sZ", [Date, WithoutUTC]),
+    Severity = lager_msg:severity(Msg),
+    SeverityValue = lager_msg:severity_as_int(Msg),
+    Message = lager_msg:message(Msg),
 
     jiffy:encode({[
                    {<<"fields">>,
                     {[
                       {<<"level">>, Severity},
+                      {<<"level_value">>, SeverityValue},
                       {<<"role">>, list_to_binary(NodeRole)},
                       {<<"role_version">>, list_to_binary(NodeVersion)},
                       {<<"node">>, Node}
@@ -218,17 +223,18 @@ encode_json_event(Node, NodeRole, NodeVersion, Severity, Date, Time, Message, Me
 
 metadata(Metadata, ConfigMeta) ->
     Expanded = [{Name, Properties, proplists:get_value(Name, Metadata)} || {Name, Properties} <- ConfigMeta],
-    [{list_to_binary(atom_to_list(Name)), encode_value(Value, proplists:get_value(encoding, Properties))} || {Name, Properties, Value} <- Expanded, Value =/= undefined].
+    [{Name, encode_value(Value, proplists:get_value(encoding, Properties))} || {Name, Properties, Value} <- Expanded, Value =/= undefined].
 
 
 encode_value(Val, string) when is_list(Val) -> list_to_binary(Val);
 encode_value(Val, string) when is_binary(Val) -> Val;
-encode_value(Val, string) when is_atom(Val) -> list_to_binary(atom_to_list(Val));
+encode_value(Val, string) when is_atom(Val) -> Val;
 encode_value(Val, binary) when is_list(Val) -> list_to_binary(Val);
 encode_value(Val, binary) -> Val;
 encode_value(Val, process) when is_pid(Val) -> list_to_binary(pid_to_list(Val));
 encode_value(Val, process) when is_list(Val) -> list_to_binary(Val);
-encode_value(Val, process) when is_atom(Val) -> list_to_binary(atom_to_list(Val));
-encode_value(Val, integer) -> list_to_binary(integer_to_list(Val));
-encode_value(Val, atom) -> list_to_binary(atom_to_list(Val));
+encode_value(Val, process) when is_atom(Val) -> Val;
+encode_value(Val, integer) -> Val;
+encode_value(Val, atom) -> Val;
+encode_value(Val, json) -> jiffy:encode(Val);
 encode_value(_Val, undefined) -> throw(encoding_error).
