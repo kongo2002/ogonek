@@ -20,8 +20,9 @@
   {applications,
    [kernel,
     crypto,
-    lager,
+    sasl,
     jiffy,
+    lager,
     elli,
     hackney,
     stdlib
