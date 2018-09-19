@@ -55,8 +55,9 @@ init(Params) ->
      {line, [{encoding, integer}]},
      {file, [{encoding, string}]},
      {module, [{encoding, atom}]},
-     % custom metadata
-     {json, [{encoding, json}]},
+     % http metadata
+     {request, [{encoding, json}]},
+     {response, [{encoding, json}]},
      {method, [{encoding, binary}]},
      {status_code, [{encoding, integer}]}
     ],

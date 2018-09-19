@@ -146,7 +146,7 @@ json_delete(Target, Revision, Headers, Options) ->
         {ok, Code, Hs, Body} = Res ->
             case parse_json(Body) of
                 {ok, Json} ->
-                    lager:debug([{json, Json}, {status_code, Code}, {method, <<"DELETE">>}], "DELETE ~s", [Target]),
+                    lager:debug([{response, Json}, {status_code, Code}, {method, <<"DELETE">>}], "DELETE ~s", [Target]),
                     {ok, Code, Hs, Json};
                 {error, malformed_json} ->
                     lager:warning([{status_code, Code}, {method, <<"DELETE">>}], "DELETE ~s - malformed_json", [Target]),
@@ -172,7 +172,7 @@ json_get(Target, Headers, Options) ->
         {ok, Code, Hs, Body} = Res ->
             case parse_json(Body) of
                 {ok, Json} ->
-                    lager:debug([{json, Json}, {status_code, Code}, {method, <<"GET">>}], "GET ~s", [Target]),
+                    lager:debug([{response, Json}, {status_code, Code}, {method, <<"GET">>}], "GET ~s", [Target]),
                     {ok, Code, Hs, Json};
                 {error, malformed_json} ->
                     lager:warning([{status_code, Code}, {method, <<"GET">>}], "GET ~s - malformed_json", [Target]),
@@ -198,23 +198,27 @@ json_post(Target, Headers, Payload) ->
 
 
 json_post(Target, Headers, Payload, Options) ->
-    JsonPayload = case Payload of
-                      [] -> [];
-                      Bin when is_binary(Bin) -> Bin;
-                      Obj -> jiffy:encode(Obj)
-                  end,
+    {Meta, JsonPayload} = case Payload of
+                              [] -> {[], []};
+                              Bin when is_binary(Bin) -> {[], Bin};
+                              Obj -> {[{request, Obj}], jiffy:encode(Obj)}
+                          end,
+    Meta0 = [{method, <<"POST">>} | Meta],
+
     case hackney:post(Target, Headers, JsonPayload, Options) of
         {ok, Code, Hs, Body} = Res ->
             case parse_json(Body) of
                 {ok, Json} ->
-                    lager:debug([{json, Json}, {status_code, Code}, {method, <<"POST">>}], "POST ~s", [Target]),
+                    LogMeta = [{response, Json}, {status_code, Code}] ++ Meta0,
+                    lager:debug(LogMeta, "POST ~s", [Target]),
                     {ok, Code, Hs, Json};
                 {error, malformed_json} ->
-                    lager:warning([{status_code, Code}, {method, <<"POST">>}], "POST ~s - malformed_json", [Target]),
+                    LogMeta = [{status_code, Code}] ++ Meta0,
+                    lager:warning(LogMeta, "POST ~s - malformed_json", [Target]),
                     Res
             end;
         Otherwise ->
-            lager:warning([{method, <<"POST">>}], "POST [~s] ~p", [Target, Otherwise]),
+            lager:warning(Meta0, "POST [~s] ~p", [Target, Otherwise]),
             Otherwise
     end.
 
@@ -233,23 +237,27 @@ json_put(Target, Headers, Payload) ->
 
 
 json_put(Target, Headers, Payload, Options) ->
-    JsonPayload = case Payload of
-                      [] -> [];
-                      Bin when is_binary(Bin) -> Bin;
-                      Obj -> jiffy:encode(Obj)
-                  end,
+    {Meta, JsonPayload} = case Payload of
+                              [] -> {[], []};
+                              Bin when is_binary(Bin) -> {[], Bin};
+                              Obj -> {[{request, Obj}], jiffy:encode(Obj)}
+                          end,
+    Meta0 = [{method, <<"PUT">>} | Meta],
+
     case hackney:put(Target, Headers, JsonPayload, Options) of
         {ok, Code, Hs, Body} = Res ->
             case parse_json(Body) of
                 {ok, Json} ->
-                    lager:debug([{json, Json}, {status_code, Code}, {method, <<"PUT">>}], "PUT ~s", [Target]),
+                    LogMeta = [{response, Json}, {status_code, Code}] ++ Meta0,
+                    lager:debug(LogMeta, "PUT ~s", [Target]),
                     {ok, Code, Hs, Json};
                 {error, malformed_json} ->
-                    lager:warning([{status_code, Code}, {method, <<"PUT">>}], "PUT ~s - malformed_json", [Target]),
+                    LogMeta = [{status_code, Code}] ++ Meta0,
+                    lager:warning(LogMeta, "PUT ~s - malformed_json", [Target]),
                     Res
             end;
         Otherwise ->
-            lager:warning([{method, <<"PUT">>}], "PUT [~s] ~p", [Target, Otherwise]),
+            lager:warning(Meta0, "PUT [~s] ~p", [Target, Otherwise]),
             Otherwise
     end.
 
