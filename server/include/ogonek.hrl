@@ -205,3 +205,23 @@
          }).
 
 -type research() :: #research{}.
+
+
+-record(wdef, {
+          name :: atom(),
+          space :: non_neg_integer(),
+          power :: non_neg_integer(),
+          damage :: float(),
+          load :: non_neg_integer(),
+          iron_ore :: integer(),
+          gold :: integer(),
+          h2o :: integer(),
+          oil :: integer() ,
+          h2 :: integer(),
+          uranium :: integer(),
+          pvc :: integer(),
+          titan :: integer(),
+          kyanite :: integer()
+         }).
+
+-type wdef() :: #wdef{}.
