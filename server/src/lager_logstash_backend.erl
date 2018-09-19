@@ -31,8 +31,6 @@
           logstash_host :: string(),
           logstash_port :: inet:port_number(),
           logstash_address :: inet:ip_address() | undefined,
-          node_role :: string(),
-          node_version :: string(),
           metadata :: list()
          }).
 
@@ -50,8 +48,6 @@ init(Params) ->
     Level = lager_util:level_to_num(proplists:get_value(level, Params, debug)),
     Host = proplists:get_value(logstash_host, Params, "localhost"),
     Port = proplists:get_value(logstash_port, Params, 9125),
-    NodeRole = proplists:get_value(node_role, Params, "no_role"),
-    NodeVersion = proplists:get_value(node_version, Params, "no_version"),
 
     Metadata = proplists:get_value(metadata, Params, []) ++
     [{pid, [{encoding, process}]},
@@ -79,8 +75,6 @@ init(Params) ->
                 logstash_host=Host,
                 logstash_port=Port,
                 logstash_address=Address,
-                node_role=NodeRole,
-                node_version=NodeVersion,
                 metadata=Metadata}}.
 
 
@@ -128,11 +122,7 @@ handle_event({log, Message}, #state{level=Level}=State) ->
     case lager_util:is_loggable(Message, Level, ?MODULE) of
         true ->
             Meta = metadata(lager_msg:metadata(Message), State#state.metadata),
-            Encoded = encode_json_event(node(),
-                                        State#state.node_role,
-                                        State#state.node_version,
-                                        Message,
-                                        Meta),
+            Encoded = encode_json_event(node(), Message, Meta),
 
             gen_udp:send(State#state.socket,
                          State#state.logstash_address,
@@ -196,7 +186,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
-encode_json_event(Node, NodeRole, NodeVersion, Msg, Metadata) ->
+encode_json_event(Node, Msg, Metadata) ->
     {Date, Time} = lager_msg:datetime(Msg),
     WithoutUTC = re:replace(Time, "(\\s+)UTC", "", [{return, list}]),
     DateTime = io_lib:format("~sT~sZ", [Date, WithoutUTC]),
@@ -204,20 +194,13 @@ encode_json_event(Node, NodeRole, NodeVersion, Msg, Metadata) ->
     SeverityValue = lager_msg:severity_as_int(Msg),
     Message = lager_msg:message(Msg),
 
-    jiffy:encode({[
-                   {<<"fields">>,
-                    {[
-                      {<<"level">>, Severity},
-                      {<<"level_value">>, SeverityValue},
-                      {<<"role">>, list_to_binary(NodeRole)},
-                      {<<"role_version">>, list_to_binary(NodeVersion)},
-                      {<<"node">>, Node}
-                     ] ++ Metadata}
-                   },
+    jiffy:encode({[{<<"level">>, Severity},
+                   {<<"level_value">>, SeverityValue},
+                   {<<"node">>, Node},
                    {<<"@timestamp">>, list_to_binary(DateTime)},
                    {<<"message">>, unicode:characters_to_binary(Message)},
                    {<<"type">>, <<"erlang">>}
-                  ]
+                  ] ++ Metadata
                  }).
 
 
@@ -236,5 +219,5 @@ encode_value(Val, process) when is_list(Val) -> list_to_binary(Val);
 encode_value(Val, process) when is_atom(Val) -> Val;
 encode_value(Val, integer) -> Val;
 encode_value(Val, atom) -> Val;
-encode_value(Val, json) -> jiffy:encode(Val);
+encode_value(Val, json) -> Val;
 encode_value(_Val, undefined) -> throw(encoding_error).
