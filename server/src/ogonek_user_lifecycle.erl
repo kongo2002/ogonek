@@ -306,11 +306,29 @@ handle_info({calc_resources, PlanetId, Silent}, State) ->
     end;
 
 handle_info(planet_info, State) ->
-    lists:foreach(fun(P) -> self() ! {planet_info, P} end,
-                  maps:keys(State#state.planets)),
+    for_all_planets(planet_info, State),
 
     self() ! get_research,
 
+    {noreply, State};
+
+handle_info(weapons_info, State) ->
+    for_all_planets(weapons_info, State),
+    {noreply, State};
+
+handle_info({weapons_info, PlanetId}, State) ->
+    case maps:get(PlanetId, State#state.planets, undefined) of
+        undefined -> ok;
+        PState ->
+            Buildings = PState#planet_state.buildings,
+            case has_weapon_manufacture(Buildings) of
+                true ->
+                    % TODO: maybe this response could include the current amount
+                    % of each weapon in stock
+                    json_to_sockets(ogonek_weapons, ogonek_weapons:definitions(), State);
+                false -> ok
+            end
+    end,
     {noreply, State};
 
 handle_info(start_research, State) ->
@@ -1203,6 +1221,11 @@ claim_resources(PlanetState, Costs) ->
 all_buildings(State) ->
     PStates = maps:values(State#state.planets),
     lists:flatmap(fun(#planet_state{buildings=Bs}) -> Bs end, PStates).
+
+
+-spec for_all_planets(Msg :: atom(), state()) -> ok.
+for_all_planets(Msg, #state{planets=Planets}) ->
+    lists:foreach(fun(P) -> self() ! {Msg, P} end, maps:keys(Planets)).
 
 
 %%

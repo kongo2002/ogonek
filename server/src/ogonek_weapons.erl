@@ -21,7 +21,9 @@
          get_definition/1,
          to_weapon_type/1,
          try_weapon_type/1,
-         calculate_order_duration/2]).
+         calculate_order_duration/2,
+         to_json/1,
+         to_json/2]).
 
 
 -spec definitions() -> [wdef()].
@@ -75,3 +77,32 @@ calculate_order_duration(_Buildings, #wdef{duration=Duration}) ->
     % TODO: proper distribution
     % take level of weapon_manufacture into account
     Duration.
+
+
+-spec to_json(wdef()) -> json_doc().
+to_json(WDef) ->
+    to_json(WDef, true).
+
+
+-spec to_json(wdef(), boolean()) -> json_doc().
+to_json(WDef, _Db) ->
+    Vs = [{<<"name">>, WDef#wdef.name},
+          % stats
+          {<<"duration">>, WDef#wdef.duration},
+          {<<"space">>, WDef#wdef.space},
+          {<<"power">>, WDef#wdef.power},
+          {<<"dmg">>, WDef#wdef.damage},
+          {<<"load">>, WDef#wdef.load},
+          % resources
+          {<<"iron_ore">>, WDef#wdef.iron_ore},
+          {<<"gold">>, WDef#wdef.gold},
+          {<<"h2o">>, WDef#wdef.h2o},
+          {<<"oil">>, WDef#wdef.oil},
+          {<<"h2">>, WDef#wdef.h2},
+          {<<"uranium">>, WDef#wdef.uranium},
+          {<<"pvc">>, WDef#wdef.pvc},
+          {<<"titan">>, WDef#wdef.titan},
+          {<<"kyanite">>, WDef#wdef.kyanite}
+         ],
+
+    ogonek_util:doc(<<"wdef">>, Vs).

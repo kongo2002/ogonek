@@ -173,6 +173,15 @@ handle_request(<<"planet_info">>, _Request, _Json, State) ->
     ogonek_session_manager:publish_to_user(UserId, SessionId, planet_info),
     {ok, State};
 
+handle_request(<<"weapons_info">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
+    not_logged_in(State);
+
+handle_request(<<"weapons_info">>, _Request, _Json, State) ->
+    UserId = State#ws_state.user_id,
+    SessionId = State#ws_state.session_id,
+    ogonek_session_manager:publish_to_user(UserId, SessionId, weapons_info),
+    {ok, State};
+
 handle_request(<<"get_utilization">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
     not_logged_in(State);
 
