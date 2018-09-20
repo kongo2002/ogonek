@@ -59,6 +59,7 @@ type ApiContent
   | Construction ConstructionInfo
   | Capacity CapacityInfo
   | Resources ResourceInfo
+  | WeaponOrder WeaponOrderInfo
   | Research ResearchInfo
   | Production ResourceInfo
   | Utilization ResourceInfo
@@ -153,6 +154,14 @@ type alias ConstructionInfo =
   , planetId : String
   , building : String
   , level : Int
+  , created : Time.DateTime.DateTime
+  , finish : Time.DateTime.DateTime
+  }
+
+
+type alias WeaponOrderInfo =
+  { planetId : String
+  , weapon : String
   , created : Time.DateTime.DateTime
   , finish : Time.DateTime.DateTime
   }

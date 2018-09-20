@@ -111,6 +111,7 @@ payloadDecoder =
       "production" -> JD.map Types.Production resourceInfoDecoder
       "utilization" -> JD.map Types.Utilization resourceInfoDecoder
       "research" -> JD.map Types.Research researchInfoDecoder
+      "w_order" -> JD.map Types.WeaponOrder weaponOrderInfoDecoder
       "authinfo" -> JD.map Types.Auth authInfoDecoder
       "user" -> JD.map Types.User userInfoDecoder
       "error" -> JD.map Types.Error errorDecoder
@@ -143,6 +144,15 @@ constructionDecoder =
     (JD.field "planet" JD.string)
     (JD.field "building" JD.string)
     (JD.field "level" JD.int)
+    (JD.field "created" dateTimeDecoder)
+    (JD.field "finish" dateTimeDecoder)
+
+
+weaponOrderInfoDecoder : JD.Decoder Types.WeaponOrderInfo
+weaponOrderInfoDecoder =
+  JD.map4 Types.WeaponOrderInfo
+    (JD.field "planet" JD.string)
+    (JD.field "weapon" JD.string)
     (JD.field "created" dateTimeDecoder)
     (JD.field "finish" dateTimeDecoder)
 

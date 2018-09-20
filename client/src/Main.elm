@@ -169,6 +169,10 @@ update msg model =
           model0 = updateProduction model info
       in  model0 ! []
 
+    ApiResponse (WeaponOrder info) ->
+      let _ = Debug.log "weapon order information received" info
+      in  model ! []
+
     ApiResponse (Resources info) ->
       let _ = Debug.log "resource information received" info
           model0 = updateResources model info
