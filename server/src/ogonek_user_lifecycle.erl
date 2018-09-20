@@ -151,6 +151,9 @@ handle_cast(prepare, #state{id=UserId}=State) ->
                           % get open construction orders of planet
                           Self ! {get_constructions, P, true},
 
+                          % fetch open weapon orders
+                          Self ! {get_weapon_orders, P, true},
+
                           % calculate resources after that
                           Self ! {calc_resources, P, false},
 
