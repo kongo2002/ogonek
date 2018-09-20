@@ -246,6 +246,29 @@ handle_request(<<"build_building">>, _Request, Json, State) ->
             {reply, error_json(<<"build_building: expecting planet, type and level">>), State}
     end;
 
+handle_request(<<"build_weapon">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
+    not_logged_in(State);
+
+handle_request(<<"build_weapon">>, _Request, Json, State) ->
+    UserId = State#ws_state.user_id,
+    SessionId = State#ws_state.session_id,
+
+    case ogonek_util:keys([<<"planet">>, <<"weapon">>], Json) of
+        [Planet, Weapon] ->
+            case ogonek_weapons:try_weapon_type(Weapon) of
+                error ->
+                    {reply, error_json(<<"build_weapon: invalid weapon">>), State};
+                {error, invalid} ->
+                    {reply, error_json(<<"build_weapon: invalid weapon">>), State};
+                WDef ->
+                    Msg = {build_weapon, Planet, WDef},
+                    ogonek_session_manager:publish_to_user(UserId, SessionId, Msg),
+                    {ok, State}
+            end;
+        _Otherwise ->
+            {reply, error_json(<<"build_weapon: expecting planet and weapon">>), State}
+    end;
+
 handle_request(<<"logout">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
     not_logged_in(State);
 

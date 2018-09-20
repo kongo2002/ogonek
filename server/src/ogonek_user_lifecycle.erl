@@ -456,6 +456,32 @@ handle_info({build_building, Planet, Type, Level}=Req, State) ->
             end
     end;
 
+handle_info({build_weapon, Planet, WDef}, State) ->
+    UserId = State#state.id,
+
+    case maps:get(Planet, State#state.planets, undefined) of
+        undefined ->
+            {noreply, State};
+        #planet_state{buildings=Bs}=PState ->
+            case weapon_order_possible(PState, WDef) of
+                true ->
+                    Duration = ogonek_weapons:calculate_order_duration(Bs, WDef),
+                    FinishedAt = finished_at(Duration),
+                    Order = #weapon_order{
+                               weapon=WDef#wdef.name,
+                               planet=Planet,
+                               created=ogonek_util:now8601(),
+                               finish=FinishedAt
+                              },
+
+                    lager:info("user ~s - start weapon order ~p", [UserId, Order]),
+                    {noreply, State};
+                false ->
+                    lager:warning("user ~s - build weapon not possible ~p", [UserId, WDef]),
+                    {noreply, State}
+            end
+    end;
+
 handle_info({get_utilization, PlanetId}, State) ->
     case maps:get(PlanetId, State#state.planets, undefined) of
         % unknown, invalid or foreign planet
@@ -1065,6 +1091,25 @@ construction_possible(PlanetState, Research, Costs) ->
     Resources#resources.kyanite >= Costs#bdef.kyanite.
 
 
+-spec weapon_order_possible(planet_state(), wdef()) -> boolean().
+weapon_order_possible(PState, WDef) ->
+    Planet = PState#planet_state.planet,
+    Buildings = PState#planet_state.buildings,
+    Resources = Planet#planet.resources,
+
+    Resources#resources.iron_ore >= WDef#wdef.iron_ore andalso
+    Resources#resources.gold >= WDef#wdef.gold andalso
+    Resources#resources.h2o >= WDef#wdef.h2o andalso
+    Resources#resources.oil >= WDef#wdef.oil andalso
+    Resources#resources.h2 >= WDef#wdef.h2 andalso
+    Resources#resources.uranium >= WDef#wdef.uranium andalso
+    Resources#resources.pvc >= WDef#wdef.pvc andalso
+    Resources#resources.titan >= WDef#wdef.titan andalso
+    Resources#resources.kyanite >= WDef#wdef.kyanite andalso
+
+    has_weapon_manufacture(Buildings) == true.
+
+
 -spec max_concurrent_constructions([building()]) -> integer().
 max_concurrent_constructions(Buildings) ->
     CCLevel = construction_center_level(Buildings),
@@ -1074,6 +1119,11 @@ max_concurrent_constructions(Buildings) ->
 -spec construction_center_level([building()]) -> integer().
 construction_center_level(Buildings) ->
     ogonek_buildings:get_building_level(Buildings, construction_center).
+
+
+-spec has_weapon_manufacture([building()]) -> boolean().
+has_weapon_manufacture(Buildings) ->
+    ogonek_buildings:get_building_level(Buildings, weapon_manufacture) > 0.
 
 
 -spec claim_resources(PlanetState :: planet_state(), Costs :: bdef()) -> planet_state().

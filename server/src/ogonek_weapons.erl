@@ -19,7 +19,9 @@
 -export([definitions/0,
          definitions_map/0,
          get_definition/1,
-         to_weapon_type/1]).
+         to_weapon_type/1,
+         try_weapon_type/1,
+         calculate_order_duration/2]).
 
 
 -spec definitions() -> [wdef()].
@@ -54,3 +56,22 @@ to_weapon_type(TypeName) when is_binary(TypeName) ->
     % this looks scary but the valid list of building types
     % should be already existing via configuration initialization
     erlang:binary_to_existing_atom(TypeName, utf8).
+
+
+-spec try_weapon_type(binary()) -> wdef() | error | {error, invalid}.
+try_weapon_type(Type) when is_binary(Type) ->
+    try
+        get_definition(to_weapon_type(Type))
+    catch
+        _Error -> {error, invalid}
+    end;
+
+try_weapon_type(_Type) ->
+    {error, invalid}.
+
+
+-spec calculate_order_duration([building()], wdef()) -> non_neg_integer().
+calculate_order_duration(_Buildings, #wdef{duration=Duration}) ->
+    % TODO: proper distribution
+    % take level of weapon_manufacture into account
+    Duration.

@@ -209,6 +209,7 @@
 
 -record(wdef, {
           name :: atom(),
+          duration :: non_neg_integer(),
           space :: non_neg_integer(),
           power :: non_neg_integer(),
           damage :: float(),
