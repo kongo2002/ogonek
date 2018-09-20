@@ -48,15 +48,21 @@ to_json(User) ->
 
 
 -spec to_json(user(), boolean()) -> tuple().
-to_json(User, _Db) ->
+to_json(User, Db) ->
     Values = [{<<"_id">>, User#user.id},
               {<<"provider">>, User#user.provider},
               {<<"pid">>, User#user.provider_id},
               {<<"email">>, User#user.email},
               {<<"name">>, User#user.name},
               {<<"img">>, User#user.img}
-             ] ++ to_oauth(User),
-    ogonek_util:doc(<<"user">>, Values).
+             ],
+
+    Values0 = case Db of
+                  true -> Values ++ to_oauth(User);
+                  false -> Values
+              end,
+
+    ogonek_util:doc(<<"user">>, Values0).
 
 
 -spec has_oauth(user()) -> boolean().

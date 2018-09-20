@@ -53,7 +53,7 @@ info(_Request, {session_login, SessionId, User}, #ws_state{session_id=SessionId}
 
     ogonek_session_manager:register_socket(UserId, SessionId),
 
-    {reply, json(ogonek_user:to_json(User)), State#ws_state{user_id=UserId}};
+    {reply, json(ogonek_user:to_json(User, false)), State#ws_state{user_id=UserId}};
 
 info(_Request, {session_login, SessionId, UserId}, State) ->
     lager:warning("received session_login for session '~s' and user '~s' at websocket of session '~s'",
@@ -151,7 +151,7 @@ handle_request(<<"authorize">>, _Request, Json, State) ->
                             ogonek_session_manager:register_socket(User#user.id, State#ws_state.session_id),
 
                             State0 = State#ws_state{user_id=User#user.id},
-                            {reply, json(ogonek_user:to_json(User)), State0};
+                            {reply, json(ogonek_user:to_json(User, false)), State0};
                         Error ->
                             lager:info("authorization failed: ~p", [Error]),
 
