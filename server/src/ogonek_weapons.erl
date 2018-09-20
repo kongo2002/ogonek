@@ -85,7 +85,7 @@ to_json(WDef) ->
 
 
 -spec to_json(wdef(), boolean()) -> json_doc().
-to_json(WDef, _Db) ->
+to_json(WDef, Db) ->
     Vs = [{<<"name">>, WDef#wdef.name},
           % stats
           {<<"duration">>, WDef#wdef.duration},
@@ -105,4 +105,10 @@ to_json(WDef, _Db) ->
           {<<"kyanite">>, WDef#wdef.kyanite}
          ],
 
-    ogonek_util:doc(<<"wdef">>, Vs).
+    % as 'wdef' objects won't ever be stored in the database
+    % at all we can use the 'db-mode' flag to toggle the
+    % type tag 't' in the generated json properties
+    case Db of
+        true -> {Vs};
+        false -> ogonek_util:doc(<<"wdef">>, Vs)
+    end.

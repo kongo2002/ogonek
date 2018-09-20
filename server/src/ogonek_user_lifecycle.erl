@@ -325,7 +325,8 @@ handle_info({weapons_info, PlanetId}, State) ->
                 true ->
                     % TODO: maybe this response could include the current amount
                     % of each weapon in stock
-                    json_to_sockets(ogonek_weapons, ogonek_weapons:definitions(), State);
+                    Weapons = weapons_info(PlanetId, maps:new()),
+                    json_to_sockets(ogonek_weapon, Weapons, State);
                 false -> ok
             end
     end,
@@ -1077,6 +1078,18 @@ trigger_construction_checks(Constructions) ->
 trigger_construction_check(PlanetId, Seconds) ->
     erlang:send_after(Seconds * 1000, self(), {process_constructions, PlanetId}),
     ok.
+
+
+-spec weapons_info(PlanetId ::  binary(), Weapons :: #{atom() => weapon()}) -> [weapon()].
+weapons_info(PlanetId, Weapons) ->
+    lists:foldl(fun(#wdef{name=Name}, Ws) ->
+                        case maps:get(Name, Weapons, undefined) of
+                            undefined ->
+                                [#weapon{type=Name, count=0, planet=PlanetId} | Ws];
+                            Weapon ->
+                                [Weapon | Ws]
+                        end
+                end, [], ogonek_weapons:definitions()).
 
 
 -spec update_building([building()], building()) -> [building()].

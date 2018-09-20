@@ -237,3 +237,12 @@
          }).
 
 -type weapon_order() :: #weapon_order{}.
+
+
+-record(weapon, {
+          type :: atom(),
+          count :: non_neg_integer(),
+          planet :: binary()
+         }).
+
+-type weapon() :: #weapon{}.
