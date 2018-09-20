@@ -225,3 +225,14 @@
          }).
 
 -type wdef() :: #wdef{}.
+
+
+-record(weapon_order, {
+          id :: maybe_unset_id(),
+          weapon :: atom(),
+          planet :: binary(),
+          created :: timestamp(),
+          finish :: timestamp()
+         }).
+
+-type weapon_order() :: #weapon_order{}.

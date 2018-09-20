@@ -18,7 +18,8 @@
 
 -export([definitions/0,
          definitions_map/0,
-         get_definition/1]).
+         get_definition/1,
+         to_weapon_type/1]).
 
 
 -spec definitions() -> [wdef()].
@@ -46,3 +47,10 @@ get_definition(_Name, []) -> error;
 get_definition(Name, [#wdef{name=Name}=Def | _Ds]) -> Def;
 get_definition(Name, [_ | Ds]) ->
     get_definition(Name, Ds).
+
+
+-spec to_weapon_type(binary()) -> atom().
+to_weapon_type(TypeName) when is_binary(TypeName) ->
+    % this looks scary but the valid list of building types
+    % should be already existing via configuration initialization
+    erlang:binary_to_existing_atom(TypeName, utf8).
