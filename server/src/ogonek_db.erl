@@ -48,6 +48,10 @@
          constructions_of_planet/1,
          construction_remove/3]).
 
+%% Weapon Order API
+-export([weapon_order_create/1,
+         weapon_orders_of_planet/1]).
+
 %% Planet API
 -export([planet_exists/1,
          planet_exists/3,
@@ -258,6 +262,22 @@ constructions_of_planet(PlanetId) ->
                   end, Results).
 
 
+-spec weapon_order_create(weapon_order()) -> ok.
+weapon_order_create(WOrder) ->
+    gen_server:cast(?MODULE, {weapon_order_create, WOrder, self()}).
+
+
+-spec weapon_orders_of_planet(PlanetId :: binary()) -> [weapon_order()].
+weapon_orders_of_planet(PlanetId) ->
+    Results = from_view(<<"weapon_order">>, <<"by_planet">>, PlanetId, get_info()),
+    lists:flatmap(fun(WOrder) ->
+                          case ogonek_weapon_order:from_json(WOrder) of
+                              {ok, W} -> [W];
+                              _Otherwise -> []
+                          end
+                  end, Results).
+
+
 -spec planet_exists(planet()) -> boolean().
 planet_exists(#planet{position=Pos}) ->
     {X, Y, Z} = Pos,
@@ -436,6 +456,15 @@ handle_cast(prepare, #state{info=Info}=State) ->
   \"views\": {
     \"by_user\": {
       \"map\": \"function(doc) { if (doc.t == 'research' && doc.user) { emit(doc.user, doc) } }\"
+    }
+  }
+}">>, Info),
+
+    ok = design_create_if_not_exists(<<"weapon_order">>,
+<<"{
+  \"views\": {
+    \"by_planet\": {
+      \"map\": \"function(doc) { if (doc.t == 'w_order' && doc.planet) { emit(doc.planet, doc) } }\"
     }
   }
 }">>, Info),
@@ -663,6 +692,18 @@ handle_cast({construction_create, Construction, Sender}, #state{info=Info}=State
         {ok, Id, _Rev} ->
             WithId = Construction#construction{id=Id},
             Sender ! {construction_create, WithId};
+        _Otherwise ->
+            ok
+    end,
+    {noreply, State};
+
+handle_cast({weapon_order_create, WOrder, Sender}, #state{info=Info}=State) ->
+    Json = ogonek_weapon_order:to_json(WOrder),
+
+    case insert(Json, Info) of
+        {ok, Id, _Rev} ->
+            WithId = WOrder#weapon_order{id=Id},
+            Sender ! {weapon_order_create, WithId};
         _Otherwise ->
             ok
     end,
