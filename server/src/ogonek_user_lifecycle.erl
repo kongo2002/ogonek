@@ -275,6 +275,8 @@ handle_info({weapon_order_create, WOrder}, #state{id=Id}=State) ->
             Resources = Planet#planet.resources,
             json_to_sockets(ogonek_resources, Resources, State),
 
+            trigger_weapon_order_checks([WOrder]),
+
             % update weapon orders
             Orders = [WOrder | PState#planet_state.weapon_orders],
             PState0 = PState#planet_state{weapon_orders=Orders},
