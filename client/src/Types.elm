@@ -159,7 +159,8 @@ type alias ConstructionInfo =
 
 
 type alias WeaponOrderInfo =
-  { planetId : String
+  { id : String
+  , planetId : String
   , weapon : String
   , created : Time.DateTime.DateTime
   , finish : Time.DateTime.DateTime
@@ -220,6 +221,7 @@ type alias ActivePlanet =
   { planet : PlanetInfo
   , buildings : Dict String BuildingInfo
   , constructions : Dict String ConstructionInfo
+  , weaponOrders : Dict String WeaponOrderInfo
   , resources : ResourceInfo
   , capacity : CapacityInfo
   , production : ResourceInfo

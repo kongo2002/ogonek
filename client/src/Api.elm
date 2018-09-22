@@ -150,7 +150,8 @@ constructionDecoder =
 
 weaponOrderInfoDecoder : JD.Decoder Types.WeaponOrderInfo
 weaponOrderInfoDecoder =
-  JD.map4 Types.WeaponOrderInfo
+  JD.map5 Types.WeaponOrderInfo
+    (JD.field "_id" JD.string)
     (JD.field "planet" JD.string)
     (JD.field "weapon" JD.string)
     (JD.field "created" dateTimeDecoder)

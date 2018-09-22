@@ -170,7 +170,8 @@ update msg model =
 
     ApiResponse (WeaponOrder info) ->
       let _ = Debug.log "weapon order information received" info
-      in  model ! []
+          model0 = updateWeaponOrder model info
+      in  model0 ! []
 
     ApiResponse (Resources info) ->
       let _ = Debug.log "resource information received" info
@@ -241,7 +242,7 @@ initialPlanet info =
       production = resources
       utilization = resources
       filter = AllBuildings
-  in  ActivePlanet info Dict.empty Dict.empty resources capacity production utilization filter
+  in  ActivePlanet info Dict.empty Dict.empty Dict.empty resources capacity production utilization filter
 
 
 updateCapacity : Model -> CapacityInfo -> Model
@@ -325,6 +326,19 @@ updateConstruction model info =
         in  { model | planets = planets0 }
       else
         model
+    Nothing ->
+      model
+
+
+updateWeaponOrder : Model -> WeaponOrderInfo -> Model
+updateWeaponOrder model info =
+  case Dict.get info.planetId model.planets of
+    Just active ->
+      let orders = active.weaponOrders
+          orders0 = Dict.insert info.id info orders
+          updated = { active | weaponOrders = orders0 }
+          planets0 = Dict.insert info.planetId updated model.planets
+      in  { model | planets = planets0 }
     Nothing ->
       model
 
