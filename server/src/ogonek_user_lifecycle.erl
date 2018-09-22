@@ -289,7 +289,12 @@ handle_info({weapon_update, Weapon, OrderId}, #state{id=Id}=State) ->
     % delete associated weapon order
     ogonek_db:weapon_order_remove(OrderId),
 
-    State0 = remove_weapon_order(State, Weapon#weapon.planet, OrderId),
+    PlanetId = Weapon#weapon.planet,
+    State0 = remove_weapon_order(State, PlanetId, OrderId),
+
+    OrderFinished = ogonek_util:doc(<<"w_order_finished">>,
+                                    [{<<"_id">>, OrderId}, {<<"planet">>, PlanetId}]),
+    json_to_sockets(OrderFinished, State),
 
     self() ! {weapons_info, Weapon#weapon.planet},
 
@@ -703,8 +708,6 @@ handle_info({get_weapon_orders, Planet, Silent}, State) ->
             lager:debug("user ~s - fetched weapon orders of planet ~s: ~p",
                         [State#state.id, Planet, Fetched]),
 
-            % TODO: process (finished) weapon orders
-
             PState0 = PState#planet_state{weapon_orders=Fetched},
             PState1 = process_weapon_orders(PState0, Fetched),
 
@@ -1113,16 +1116,22 @@ current_research(Research) ->
     end.
 
 
--spec json_to_sockets(atom(), term(), state()) -> ok.
-json_to_sockets(Module, Obj, State) ->
+-spec json_to_sockets(Json :: term(), state()) -> ok.
+json_to_sockets(Json, State) ->
     Session = State#state.session,
-    gen_server:cast(Session, {json_to_sockets, Module, Obj}).
+    gen_server:cast(Session, {json_to_sockets, Json}).
 
 
--spec json_to_sockets(atom(), term(), state(), boolean()) -> ok.
-json_to_sockets(_Module, _Obj, _State, true) -> ok;
-json_to_sockets(Module, Obj, State, _) ->
-    json_to_sockets(Module, Obj, State).
+-spec json_to_sockets(Module :: atom(), Json :: term(), state()) -> ok.
+json_to_sockets(Module, Json, State) ->
+    Session = State#state.session,
+    gen_server:cast(Session, {json_to_sockets, Module, Json}).
+
+
+-spec json_to_sockets(Module :: atom(), Json :: term(), state(), Silent :: boolean()) -> ok.
+json_to_sockets(_Module, _Json, _State, true) -> ok;
+json_to_sockets(Module, Json, State, _) ->
+    json_to_sockets(Module, Json, State).
 
 
 -spec trigger_research_check(research()) -> reference().
