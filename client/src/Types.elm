@@ -60,6 +60,8 @@ type ApiContent
   | Capacity CapacityInfo
   | Resources ResourceInfo
   | WeaponOrder WeaponOrderInfo
+  -- w_order_finished (planet, orderId)
+  | WeaponOrderFinished String String
   | Research ResearchInfo
   | Production ResourceInfo
   | Utilization ResourceInfo

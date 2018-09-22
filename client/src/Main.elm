@@ -173,6 +173,11 @@ update msg model =
           model0 = updateWeaponOrder model info
       in  model0 ! []
 
+    ApiResponse (WeaponOrderFinished planet orderId) ->
+      let _ = Debug.log "weapon order finished" orderId
+          model0 = removeWeaponOrder model planet orderId
+      in  model0 ! []
+
     ApiResponse (Resources info) ->
       let _ = Debug.log "resource information received" info
           model0 = updateResources model info
@@ -338,6 +343,19 @@ updateWeaponOrder model info =
           orders0 = Dict.insert info.id info orders
           updated = { active | weaponOrders = orders0 }
           planets0 = Dict.insert info.planetId updated model.planets
+      in  { model | planets = planets0 }
+    Nothing ->
+      model
+
+
+removeWeaponOrder : Model -> String -> String -> Model
+removeWeaponOrder model planetId orderId =
+  case Dict.get planetId model.planets of
+    Just active ->
+      let orders = active.weaponOrders
+          orders0 = Dict.remove orderId orders
+          updated = { active | weaponOrders = orders0 }
+          planets0 = Dict.insert planetId updated model.planets
       in  { model | planets = planets0 }
     Nothing ->
       model
