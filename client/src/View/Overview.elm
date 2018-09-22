@@ -84,7 +84,7 @@ planetView model info =
 
       sortedWeaponOrders =
         Dict.values info.weaponOrders
-        |> List.map (\w -> ("bolt", w.weapon, w.finish))
+        |> List.map (\w -> ("bolt", translateWeaponOrder w, w.finish))
 
       orderEntries =
         -- constructions

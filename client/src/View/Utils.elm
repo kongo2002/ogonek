@@ -94,6 +94,17 @@ translateBuildingGroup name =
     unknown -> unknown
 
 
+translateWeaponOrder : Types.WeaponOrderInfo -> String
+translateWeaponOrder order =
+  translateWeaponName order.weapon
+
+
+translateWeaponName : String -> String
+translateWeaponName name =
+  let upper = String.toUpper name
+  in  "weapon " ++ upper
+
+
 translateResource : String -> String
 translateResource name =
   case name of
