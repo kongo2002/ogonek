@@ -67,25 +67,12 @@ planetView model info =
       title =
         h3 [] [ a [ href link, numbClick (NewUrl route) ] [ text name ] ]
 
-      construction constr =
-        let name = translateBuildingName constr.building
-            finished = zonedIso8601 model constr.finish
-            delta = Time.DateTime.delta constr.finish >> Utils.deltaToString
+      toEntry (iconType, name, finish) =
+        let finished = zonedIso8601 model finish
+            delta = Time.DateTime.delta finish >> Utils.deltaToString
             duration = Maybe.map delta model.lastTimeStamp |> Maybe.withDefault ""
         in  tr []
-            [ td [] [ icon "home" ]
-            , td [] [ text name ]
-            , td [] [ text duration ]
-            , td [ class "no-mobile" ] [ text finished ]
-            ]
-
-      weaponOrder order =
-        let name = order.weapon
-            finished = zonedIso8601 model order.finish
-            delta = Time.DateTime.delta order.finish >> Utils.deltaToString
-            duration = Maybe.map delta model.lastTimeStamp |> Maybe.withDefault ""
-        in  tr []
-            [ td [] [ icon "bolt" ]
+            [ td [] [ icon iconType ]
             , td [] [ text name ]
             , td [] [ text duration ]
             , td [ class "no-mobile" ] [ text finished ]
@@ -93,13 +80,11 @@ planetView model info =
 
       sortedConstructions =
         Dict.values info.constructions
-        |> List.sortBy (.finish >> Time.DateTime.toTimestamp)
-        |> List.map construction
+        |> List.map (\c -> ("home", translateBuildingName c.building, c.finish))
 
       sortedWeaponOrders =
         Dict.values info.weaponOrders
-        |> List.sortBy (.finish >> Time.DateTime.toTimestamp)
-        |> List.map weaponOrder
+        |> List.map (\w -> ("bolt", w.weapon, w.finish))
 
       orderEntries =
         -- constructions
@@ -109,8 +94,13 @@ planetView model info =
         -- ships
         -- etc
 
+      sortedEntries =
+        orderEntries
+        |> List.sortBy (\(_, _, finish) -> Time.DateTime.toTimestamp finish)
+        |> List.map toEntry
+
       orders =
-        if Dict.isEmpty info.constructions then
+        if List.isEmpty orderEntries then
           div [] [ p [] [ text "no orders" ] ]
         else
           table [ class "twelve columns" ]
@@ -122,7 +112,7 @@ planetView model info =
               , th [ class "no-mobile" ] [ text "Completion" ]
               ]
             ]
-          , tbody [] orderEntries
+          , tbody [] sortedEntries
           ]
 
   in  [ div [ class "row" ]
