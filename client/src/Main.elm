@@ -94,8 +94,7 @@ update msg model =
 
     Tick now ->
       let model0 = { model | lastTimeStamp = Just now }
-          model1 = updateConstructionTimes model0 now
-      in  model1 ! []
+      in  model0 ! []
 
     FormContent key value ->
       let forms = Dict.insert key value model.formContents
@@ -304,22 +303,6 @@ removeConstruction planet info =
         else
           planet.constructions
       Nothing -> planet.constructions
-
-
-updateConstructionTimes : Model -> DateTime -> Model
-updateConstructionTimes model now =
-  let toDelta name info =
-      let delta = Time.DateTime.delta info.finish now
-          diffStr = Utils.deltaToString delta
-      in { info | timeLeft = Just diffStr }
-
-      updatePlanet id planet =
-        let cs = Dict.map toDelta planet.constructions
-        in { planet | constructions = cs }
-
-      planets0 = Dict.map updatePlanet model.planets
-
-  in { model | planets = planets0 }
 
 
 currentPlanet : Model -> Maybe ActivePlanet

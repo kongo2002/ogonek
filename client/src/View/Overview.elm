@@ -70,7 +70,8 @@ planetView model info =
       construction constr =
         let name = translateBuildingName constr.building
             finished = zonedIso8601 model constr.finish
-            duration = constr.timeLeft |> orEmpty
+            delta = Time.DateTime.delta constr.finish >> Utils.deltaToString
+            duration = Maybe.map delta model.lastTimeStamp |> Maybe.withDefault ""
         in  tr []
             [ td [] [ icon "home" ]
             , td [] [ text name ]

@@ -18,6 +18,7 @@ import Dict
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing ( onClick )
+import Time.DateTime
 
 import Const
 import Routing
@@ -269,8 +270,8 @@ constructionOperation model constr =
   let finishStr = zonedIso8601 model constr.finish
       finish = title ("finished: " ++ finishStr)
       durationDesc =
-        case constr.timeLeft of
-          Just time -> "finished in " ++ time
+        case model.lastTimeStamp of
+          Just now -> "finished in " ++ (Utils.deltaToString (Time.DateTime.delta constr.finish now))
           Nothing -> "in construction "
   in  a [ class "icon inactive construction", finish ]
       [ span [] [ text durationDesc ]

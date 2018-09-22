@@ -150,8 +150,7 @@ type alias BuildingInfo =
 
 
 type alias ConstructionInfo =
-  { timeLeft : Maybe String
-  , planetId : String
+  { planetId : String
   , building : String
   , level : Int
   , created : Time.DateTime.DateTime
