@@ -418,6 +418,7 @@ handle_info({planet_info, PlanetId}, State) ->
             Self = self(),
             Self ! {get_buildings, PlanetId, false},
             Self ! {get_constructions, PlanetId, false},
+            Self ! {get_weapon_orders, PlanetId, false},
             Self ! {calc_resources, PlanetId, false},
             Self ! {production_info, PlanetId}
     end,
