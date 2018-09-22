@@ -79,15 +79,39 @@ planetView model info =
             , td [ class "no-mobile" ] [ text finished ]
             ]
 
+      weaponOrder order =
+        let name = order.weapon
+            finished = zonedIso8601 model order.finish
+            delta = Time.DateTime.delta order.finish >> Utils.deltaToString
+            duration = Maybe.map delta model.lastTimeStamp |> Maybe.withDefault ""
+        in  tr []
+            [ td [] [ icon "bolt" ]
+            , td [] [ text name ]
+            , td [] [ text duration ]
+            , td [ class "no-mobile" ] [ text finished ]
+            ]
+
       sortedConstructions =
         Dict.values info.constructions
         |> List.sortBy (.finish >> Time.DateTime.toTimestamp)
         |> List.map construction
 
+      sortedWeaponOrders =
+        Dict.values info.weaponOrders
+        |> List.sortBy (.finish >> Time.DateTime.toTimestamp)
+        |> List.map weaponOrder
 
-      constructions =
+      orderEntries =
+        -- constructions
+        sortedConstructions ++
+        -- weapons
+        sortedWeaponOrders
+        -- ships
+        -- etc
+
+      orders =
         if Dict.isEmpty info.constructions then
-          div [] [ p [] [ text "no constructions" ] ]
+          div [] [ p [] [ text "no orders" ] ]
         else
           table [ class "twelve columns" ]
           [ thead []
@@ -98,7 +122,7 @@ planetView model info =
               , th [ class "no-mobile" ] [ text "Completion" ]
               ]
             ]
-          , tbody [] sortedConstructions
+          , tbody [] orderEntries
           ]
 
   in  [ div [ class "row" ]
@@ -107,11 +131,7 @@ planetView model info =
           [ planetImg planet ]
         ]
       , div [ class "row" ]
-        [ -- constructions
-          constructions
-          -- weapons
-          -- ships
-          -- etc
+        [ orders
         ]
       ]
 
