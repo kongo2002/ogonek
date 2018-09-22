@@ -289,9 +289,11 @@ handle_info({weapon_update, Weapon, OrderId}, #state{id=Id}=State) ->
     % delete associated weapon order
     ogonek_db:weapon_order_remove(OrderId),
 
+    State0 = remove_weapon_order(State, Weapon#weapon.planet, OrderId),
+
     self() ! {weapons_info, Weapon#weapon.planet},
 
-    {noreply, State};
+    {noreply, State0};
 
 handle_info({get_planets, Sender}, State) ->
     Planets = maps:keys(State#state.planets),
@@ -706,6 +708,8 @@ handle_info({get_weapon_orders, Planet, Silent}, State) ->
             PState0 = PState#planet_state{weapon_orders=Fetched},
             PState1 = process_weapon_orders(PState0, Fetched),
 
+            trigger_weapon_order_checks(PState1#planet_state.weapon_orders),
+
             Planets0 = maps:put(Planet, PState1, State#state.planets),
 
             json_to_sockets(ogonek_weapon_order, PState1#planet_state.weapon_orders, State, Silent),
@@ -715,6 +719,20 @@ handle_info({get_weapon_orders, Planet, Silent}, State) ->
         PState ->
             json_to_sockets(ogonek_weapon_order, PState#planet_state.weapon_orders, State, Silent),
             {noreply, State}
+    end;
+
+handle_info({process_weapon_orders, PlanetId}, #state{id=Id}=State) ->
+    case maps:get(PlanetId, State#state.planets, undefined) of
+        % unknown, invalid or foreign planet
+        undefined ->
+            {noreply, State};
+        #planet_state{weapon_orders=Ws}=PState ->
+            lager:debug("user ~s - processing weapon orders", [Id]),
+
+            PState0 = process_weapon_orders(PState, Ws),
+            Planets0 = maps:put(PlanetId, PState0, State#state.planets),
+
+            {noreply, State#state{planets=Planets0}}
     end;
 
 handle_info({process_constructions, PlanetId}, #state{id=Id}=State) ->
@@ -1139,6 +1157,21 @@ trigger_construction_check(PlanetId, Seconds) ->
     ok.
 
 
+-spec trigger_weapon_order_checks([weapon_order()]) -> ok.
+trigger_weapon_order_checks(WOrders) ->
+    lists:foreach(fun(WO) ->
+                          Planet = WO#weapon_order.planet,
+                          DueIn = ogonek_util:seconds_since(WO#weapon_order.finish),
+                          trigger_weapon_order_check(Planet, DueIn + 1)
+                  end, WOrders).
+
+
+-spec trigger_weapon_order_check(PlanetId :: binary(), Seconds :: integer()) -> ok.
+trigger_weapon_order_check(PlanetId, Seconds) ->
+    erlang:send_after(Seconds * 1000, self(), {process_weapon_orders, PlanetId}),
+    ok.
+
+
 -spec weapons_info(PlanetId ::  binary(), Weapons :: weapon_map()) -> [weapon()].
 weapons_info(PlanetId, Weapons) ->
     lists:foldl(fun(#wdef{name=Name}, Ws) ->
@@ -1183,6 +1216,19 @@ remove_construction(Constructions, Type, Level) ->
                       when T == Type andalso Lvl =< Level -> Cs;
                    (C, Cs) -> [C | Cs]
                 end, [], Constructions).
+
+
+-spec remove_weapon_order(state(), PlanetId :: binary(), OrderId :: binary()) -> state().
+remove_weapon_order(State, PlanetId, OrderId) ->
+    case maps:get(PlanetId, State#state.planets, undefined) of
+        undefined -> State;
+        PState ->
+            WeaponOrders = PState#planet_state.weapon_orders,
+            Orders = lists:filter(fun(#weapon_order{id=Id}) -> Id /= OrderId end, WeaponOrders),
+            PState0 = PState#planet_state{weapon_orders=Orders},
+            Planets0 = maps:put(PlanetId, PState0, State#state.planets),
+            State#state{planets=Planets0}
+    end.
 
 
 -spec get_research([research()], atom()) -> {ok, research()} | undefined.
