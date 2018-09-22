@@ -50,7 +50,11 @@
 
 %% Weapon Order API
 -export([weapon_order_create/1,
+         weapon_order_remove/1,
          weapon_orders_of_planet/1]).
+
+%% Weapon API
+-export([weapon_update/2]).
 
 %% Planet API
 -export([planet_exists/1,
@@ -278,6 +282,16 @@ weapon_orders_of_planet(PlanetId) ->
                   end, Results).
 
 
+-spec weapon_order_remove(OrderId :: binary()) -> ok.
+weapon_order_remove(OrderId) ->
+    gen_server:cast(?MODULE, {weapon_order_remove, OrderId}).
+
+
+-spec weapon_update(weapon(), OrderId :: maybe_unset_id()) -> ok.
+weapon_update(Weapon, OrderId) ->
+    gen_server:cast(?MODULE, {weapon_update, Weapon, OrderId, self()}).
+
+
 -spec planet_exists(planet()) -> boolean().
 planet_exists(#planet{position=Pos}) ->
     {X, Y, Z} = Pos,
@@ -465,6 +479,15 @@ handle_cast(prepare, #state{info=Info}=State) ->
   \"views\": {
     \"by_planet\": {
       \"map\": \"function(doc) { if (doc.t == 'w_order' && doc.planet) { emit(doc.planet, doc) } }\"
+    }
+  }
+}">>, Info),
+
+    ok = design_create_if_not_exists(<<"weapon">>,
+<<"{
+  \"views\": {
+    \"by_planet\": {
+      \"map\": \"function(doc) { if (doc.t == 'weapon' && doc.planet) { emit(doc.planet, doc) } }\"
     }
   }
 }">>, Info),
@@ -709,6 +732,46 @@ handle_cast({weapon_order_create, WOrder, Sender}, #state{info=Info}=State) ->
     end,
     {noreply, State};
 
+handle_cast({weapon_order_remove, OrderId}, #state{info=Info}=State) ->
+    delete_by_id(OrderId, Info),
+    {noreply, State};
+
+% this is the creation of a *new* weapon since no 'id' set yet
+handle_cast({weapon_update, #weapon{id=undefined}=W, OrderId, Sender}, #state{info=Info}=State) ->
+    Json = ogonek_weapon:to_json(W),
+
+    % TODO: make sure we don't finish two weapons of the same type
+    % there must not be multiple weapons of the same definition
+    case insert(Json, Info) of
+        {ok, Id, _Rev} ->
+            WithId = W#weapon{id=Id},
+            Sender ! {weapon_update, WithId, OrderId};
+        _Otherwise ->
+            ok
+    end,
+    {noreply, State};
+
+% this is the update of an existing building
+handle_cast({weapon_update, Weapon, OrderId, Sender}, #state{info=Info}=State) ->
+    Count = Weapon#weapon.count,
+    Update = fun(_Code, {W}) ->
+                     Cnt = <<"count">>,
+                     Updated = lists:keyreplace(Cnt, 1, W, {Cnt, Count}),
+                     {Updated}
+             end,
+
+    case update(Weapon#weapon.id, Update, Info) of
+        {ok, Code, _Hs, _Body} when Code == 200 orelse Code == 201 ->
+            Sender ! {weapon_update, Weapon, OrderId};
+        {ok, Code, _Hs, Body} ->
+            lager:error("weapon_update failed [~p]: ~p", [Code, Body]),
+            error;
+        Error ->
+            lager:error("weapon_update failed: ~p", [Error]),
+            error
+    end,
+    {noreply, State};
+
 handle_cast({planet_create, Planet}, #state{info=Info}=State) ->
     Json = ogonek_planet:to_json(Planet),
     insert(Json, Info),
@@ -815,6 +878,20 @@ get_by_id(Id, Info) ->
 get_by_id(Db, Id, Info) ->
     Path = <<"/", Db/binary, "/", Id/binary>>,
     get_(Path, Info).
+
+
+delete_by_id(Id, Info) ->
+    case get_by_id(Id, Info) of
+        {ok, _Code, _Hs, Json} ->
+            case ogonek_util:keys([<<"_rev">>], Json) of
+                [Revision] ->
+                    delete_(Id, Revision, Info);
+                _Otherwise ->
+                    error
+            end;
+        _Otherwise ->
+            error
+    end.
 
 
 head_(Path, #db_info{host=Host, options=Options}) ->

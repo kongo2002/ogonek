@@ -240,6 +240,7 @@
 
 
 -record(weapon, {
+          id :: maybe_unset_id(),
           type :: atom(),
           count :: non_neg_integer(),
           planet :: binary()

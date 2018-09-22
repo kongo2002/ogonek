@@ -33,15 +33,20 @@
          terminate/2,
          code_change/3]).
 
+
+-define(OGONEK_REFRESH_RESOURCE_INTERVAL_SECS, 300).
+
+-type weapon_map() :: #{atom() => weapon()}.
+
 -record(planet_state, {
           planet :: planet(),
           buildings :: [building()],
           constructions :: [construction()],
           capacity :: capacity(),
-          weapon_orders :: [weapon_order()]
+          weapon_orders :: [weapon_order()],
+          weapons :: weapon_map()
          }).
 
--define(OGONEK_REFRESH_RESOURCE_INTERVAL_SECS, 300).
 
 -type planet_state() :: #planet_state{}.
 
@@ -135,7 +140,8 @@ handle_cast(prepare, #state{id=UserId}=State) ->
                                                 buildings=[],
                                                 constructions=[],
                                                 capacity=ogonek_capacity:empty(Id),
-                                                weapon_orders=[]
+                                                weapon_orders=[],
+                                                weapons=maps:new()
                                                },
                                     maps:put(Id, PState, Ps)
                             end, maps:new(), Planets),
@@ -259,14 +265,31 @@ handle_info({weapon_order_create, WOrder}, #state{id=Id}=State) ->
     % push construction to client
     json_to_sockets(ogonek_weapon_order, WOrder, State),
 
-    % update resources as well
     PlanetId = WOrder#weapon_order.planet,
     case maps:get(PlanetId, State#state.planets, undefined) of
-        undefined -> ok;
-        #planet_state{planet=Planet} ->
+        undefined ->
+            {noreply, State};
+        #planet_state{planet=Planet}=PState ->
+
+            % publish resource update
             Resources = Planet#planet.resources,
-            json_to_sockets(ogonek_resources, Resources, State)
-    end,
+            json_to_sockets(ogonek_resources, Resources, State),
+
+            % update weapon orders
+            Orders = [WOrder | PState#planet_state.weapon_orders],
+            PState0 = PState#planet_state{weapon_orders=Orders},
+            Planets0 = maps:put(PlanetId, PState0, State#state.planets),
+
+            {noreply, State#state{planets=Planets0}}
+    end;
+
+handle_info({weapon_update, Weapon, OrderId}, #state{id=Id}=State) ->
+    lager:info("user ~s - weapon updated: ~p [order ~s]", [Id, Weapon, OrderId]),
+
+    % delete associated weapon order
+    ogonek_db:weapon_order_remove(OrderId),
+
+    self() ! {weapons_info, Weapon#weapon.planet},
 
     {noreply, State};
 
@@ -323,9 +346,7 @@ handle_info({weapons_info, PlanetId}, State) ->
             Buildings = PState#planet_state.buildings,
             case has_weapon_manufacture(Buildings) of
                 true ->
-                    % TODO: maybe this response could include the current amount
-                    % of each weapon in stock
-                    Weapons = weapons_info(PlanetId, maps:new()),
+                    Weapons = weapons_info(PlanetId, PState#planet_state.weapons),
                     json_to_sockets(ogonek_weapon, Weapons, State);
                 false -> ok
             end
@@ -521,11 +542,8 @@ handle_info({build_weapon, PlanetId, WDef}, State) ->
 
                     ogonek_db:weapon_order_create(Order),
 
-                    Orders = [Order | PState#planet_state.weapon_orders],
                     PState0 = claim_resources(PState, WDef),
-                    PState1 = PState0#planet_state{weapon_orders=Orders},
-
-                    Planets = maps:put(PlanetId, PState1, State#state.planets),
+                    Planets = maps:put(PlanetId, PState0, State#state.planets),
                     {noreply, State#state{planets=Planets}};
                 false ->
                     lager:warning("user ~s - build weapon not possible ~p", [UserId, WDef]),
@@ -686,9 +704,11 @@ handle_info({get_weapon_orders, Planet, Silent}, State) ->
             % TODO: process (finished) weapon orders
 
             PState0 = PState#planet_state{weapon_orders=Fetched},
-            Planets0 = maps:put(Planet, PState0, State#state.planets),
+            PState1 = process_weapon_orders(PState0, Fetched),
 
-            json_to_sockets(ogonek_weapon_order, PState0#planet_state.weapon_orders, State, Silent),
+            Planets0 = maps:put(Planet, PState1, State#state.planets),
+
+            json_to_sockets(ogonek_weapon_order, PState1#planet_state.weapon_orders, State, Silent),
 
             {noreply, State#state{planets=Planets0}};
         % weapon orders already present
@@ -720,7 +740,8 @@ handle_info({planet_claim, Planet}, State) ->
                 buildings=[],
                 constructions=[],
                 capacity=ogonek_capacity:empty(PlanetId),
-                weapon_orders=[]
+                weapon_orders=[],
+                weapons=maps:new()
                },
     Planets0 = maps:put(PlanetId, PState, Planets),
 
@@ -943,6 +964,43 @@ finish_building(#bdef{name=Def}, PlanetId, Level) ->
     ogonek_db:building_finish(Building).
 
 
+-spec process_weapon_orders(planet_state(), [weapon_order()]) -> planet_state().
+process_weapon_orders(PState, []) -> PState;
+process_weapon_orders(PState, WOrders) ->
+    Now = ogonek_util:now8601(),
+    {Finished, Running} = lists:partition(fun(#weapon_order{finish=F}) ->
+                                                  F =< Now
+                                          end, WOrders),
+
+    Ws = lists:foldl(fun(WOrder, Weapons) ->
+                             lager:info("planet ~s - finishing weapon order ~p",
+                                        [WOrder#weapon_order.planet, WOrder]),
+                             finish_weapon_order(Weapons, WOrder)
+                     end, PState#planet_state.weapons, Finished),
+
+    PState#planet_state{weapon_orders=Running, weapons=Ws}.
+
+
+-spec finish_weapon_order(Weapons :: #{atom() => weapon()}, weapon_order()) -> #{atom() => weapon()}.
+finish_weapon_order(Weapons, WOrder) ->
+    Planet = WOrder#weapon_order.planet,
+    Weapon = WOrder#weapon_order.weapon,
+
+    Updated =
+    case maps:get(Weapon, Weapons, undefined) of
+        undefined ->
+            % new weapon
+            #weapon{planet=Planet, type=Weapon, count=1};
+        Existing ->
+            % increment existing weapon's count
+            Existing#weapon{count=Existing#weapon.count+1}
+    end,
+
+    ogonek_db:weapon_update(Updated, WOrder#weapon_order.id),
+
+    maps:put(Weapon, Updated, Weapons).
+
+
 -spec process_constructions(planet_state(), [construction()]) -> planet_state().
 process_constructions(PState, []) -> PState;
 process_constructions(PState, Constructions) ->
@@ -1081,7 +1139,7 @@ trigger_construction_check(PlanetId, Seconds) ->
     ok.
 
 
--spec weapons_info(PlanetId ::  binary(), Weapons :: #{atom() => weapon()}) -> [weapon()].
+-spec weapons_info(PlanetId ::  binary(), Weapons :: weapon_map()) -> [weapon()].
 weapons_info(PlanetId, Weapons) ->
     lists:foldl(fun(#wdef{name=Name}, Ws) ->
                         case maps:get(Name, Weapons, undefined) of
