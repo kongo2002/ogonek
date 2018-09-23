@@ -59,6 +59,7 @@ type ApiContent
   | Construction ConstructionInfo
   | Capacity CapacityInfo
   | Resources ResourceInfo
+  | Weapon WeaponInfo
   | WeaponOrder WeaponOrderInfo
   -- w_order_finished (planet, orderId)
   | WeaponOrderFinished String String
@@ -169,6 +170,27 @@ type alias WeaponOrderInfo =
   }
 
 
+type alias WeaponInfo =
+  { ironOre : Int
+  , gold : Int
+  , h2o : Int
+  , oil : Int
+  , h2 : Int
+  , uranium : Int
+  , pvc : Int
+  , titan : Int
+  , kyanite : Int
+  , name : String
+  , planetId : String
+  , count : Int
+  , duration : Time.DateTime.DateTimeDelta
+  , space : Int
+  , power : Int
+  , damage : Float
+  , load : Int
+  }
+
+
 type alias ResourceInfo =
   { ironOre : Int
   , gold : Int
@@ -223,6 +245,7 @@ type alias ActivePlanet =
   { planet : PlanetInfo
   , buildings : Dict String BuildingInfo
   , constructions : Dict String ConstructionInfo
+  , weapons : Dict String WeaponInfo
   , weaponOrders : Dict String WeaponOrderInfo
   , resources : ResourceInfo
   , capacity : CapacityInfo

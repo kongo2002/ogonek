@@ -111,6 +111,7 @@ payloadDecoder =
       "production" -> JD.map Types.Production resourceInfoDecoder
       "utilization" -> JD.map Types.Utilization resourceInfoDecoder
       "research" -> JD.map Types.Research researchInfoDecoder
+      "weapon" -> JD.map Types.Weapon weaponInfoDecoder
       "w_order" -> JD.map Types.WeaponOrder weaponOrderInfoDecoder
       "w_order_finished" -> weaponOrderFinishedDecoder
       "authinfo" -> JD.map Types.Auth authInfoDecoder
@@ -176,6 +177,19 @@ buildingInfoDecoder =
     |: (JD.field "level" JD.int)
     |: (JD.field "duration" dateTimeDeltaDecoder)
     |: (JD.field "group" JD.string)
+
+
+weaponInfoDecoder : JD.Decoder Types.WeaponInfo
+weaponInfoDecoder =
+  resources Types.WeaponInfo
+    |: (JD.field "name" JD.string)
+    |: (JD.field "planet" JD.string)
+    |: (JD.field "count" JD.int)
+    |: (JD.field "duration" dateTimeDeltaDecoder)
+    |: (JD.field "space" JD.int)
+    |: (JD.field "power" JD.int)
+    |: (JD.field "dmg" JD.float)
+    |: (JD.field "load" JD.int)
 
 
 resourceInfoDecoder : JD.Decoder Types.ResourceInfo

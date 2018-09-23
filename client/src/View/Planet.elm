@@ -140,6 +140,70 @@ planet active model =
             title0 = title "Production"
         in  span [ class "spaced", toRight, title0 ]
             [ a [ href link, click ] [ icon "sliders-h" ] ]
+
+      weapons =
+        if Dict.isEmpty active.weapons then []
+        else
+          let col0 label content =
+                let attr = attribute "data-label" label
+                in  td [ attr ] [ content ]
+
+              col label value relative =
+                let val = numberSpanTo relative value
+                in  col0 label val
+
+              row info =
+                tr []
+                [ td [ class "header" ] [ text info.name ]
+                , col "Count" info.count -1
+                , col "Space" info.space -1
+                , col "Power" info.power -1
+                , col0 "Damage" (text (toString info.damage))
+                , col "Load" info.load -1
+                , col Const.ironOre info.ironOre res.ironOre
+                , col Const.gold info.gold res.gold
+                , col Const.h2o info.h2o res.h2o
+                , col Const.oil info.oil res.oil
+                , col Const.h2 info.h2 res.h2
+                , col Const.uranium info.uranium res.uranium
+                , col Const.pvc info.pvc res.pvc
+                , col Const.titan info.titan res.titan
+                , col Const.kyanite info.kyanite res.kyanite
+                -- TODO: operation(s)
+                , td [] []
+                ]
+
+              rows =
+                active.weapons
+                |> Dict.values
+                |> List.sortBy .damage
+                |> List.map row
+          in
+            [ h3 [] [ text "Weapons" ]
+            , table [ id "weapons", class "table-responsive table-resources u-full-width" ]
+              [ thead []
+                [ tr []
+                  [ header "Name"
+                  , header "Count"
+                  , header "Space"
+                  , header "Power"
+                  , header "Damage"
+                  , header "Load"
+                  , header Const.ironOre
+                  , header Const.gold
+                  , header Const.h2o
+                  , header Const.oil
+                  , header Const.h2
+                  , header Const.uranium
+                  , header Const.pvc
+                  , header Const.titan
+                  , header Const.kyanite
+                  , header ""
+                  ]
+                ]
+              , tbody [] rows
+              ]
+            ]
   in
     [ h2 [] [ text name ]
     , div [ class "row" ]
@@ -174,7 +238,7 @@ planet active model =
       [ h3 [] [ text "Buildings" ]
       , constructionInfo
       , buildingFilters
-      , table [ id "buildings", class "table-responsive u-full-width" ]
+      , table [ id "buildings", class "table-responsive table-resources u-full-width" ]
         [ thead []
           [ tr []
             [ header Const.building
@@ -196,6 +260,7 @@ planet active model =
         , tbody [] (Dict.toList groupedBuildings |> List.concatMap groupedRows)
         ]
       ]
+    , div [ class "row" ] weapons
     ]
 
 
