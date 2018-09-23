@@ -54,7 +54,8 @@
          weapon_orders_of_planet/1]).
 
 %% Weapon API
--export([weapon_update/2]).
+-export([weapon_update/2,
+         weapons_of_planet/1]).
 
 %% Planet API
 -export([planet_exists/1,
@@ -290,6 +291,17 @@ weapon_order_remove(OrderId) ->
 -spec weapon_update(weapon(), OrderId :: maybe_unset_id()) -> ok.
 weapon_update(Weapon, OrderId) ->
     gen_server:cast(?MODULE, {weapon_update, Weapon, OrderId, self()}).
+
+
+-spec weapons_of_planet(PlanetId :: binary()) -> [weapon()].
+weapons_of_planet(PlanetId) ->
+    Results = from_view(<<"weapon">>, <<"by_planet">>, PlanetId, get_info()),
+    lists:flatmap(fun(Weapon) ->
+                          case ogonek_weapon:from_json(Weapon) of
+                              {ok, W} -> [W];
+                              _Otherwise -> []
+                          end
+                  end, Results).
 
 
 -spec planet_exists(planet()) -> boolean().

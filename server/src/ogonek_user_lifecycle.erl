@@ -350,17 +350,36 @@ handle_info(weapons_info, State) ->
 
 handle_info({weapons_info, PlanetId}, State) ->
     case maps:get(PlanetId, State#state.planets, undefined) of
-        undefined -> ok;
+        undefined ->
+            {noreply, State};
         PState ->
             Buildings = PState#planet_state.buildings,
+
             case has_weapon_manufacture(Buildings) of
                 true ->
-                    Weapons = weapons_info(PlanetId, PState#planet_state.weapons),
-                    json_to_sockets(ogonek_weapon, Weapons, State);
-                false -> ok
+                    Weapons = PState#planet_state.weapons,
+                    Weapons0 =
+                    case maps:size(Weapons) =< 0 of
+                        true ->
+                            % fetch weapons from database
+                            Fetched = fetch_weapons(PlanetId),
+                            lager:info("user ~s - fetched weapons: ~p",
+                                       [State#state.id, Fetched]),
+                            Fetched;
+                        false ->
+                            Weapons
+                    end,
+
+                    Info = weapons_info(PlanetId, Weapons0),
+                    json_to_sockets(ogonek_weapon, Info, State),
+
+                    PState0 = PState#planet_state{weapons=Weapons0},
+                    Planets0 = maps:put(PlanetId, PState0, State#state.planets),
+                    {noreply, State#state{planets=Planets0}};
+                false ->
+                    {noreply, State}
             end
-    end,
-    {noreply, State};
+    end;
 
 handle_info(start_research, State) ->
     case current_research(State#state.research) of
@@ -823,6 +842,15 @@ fetch_planets(State) ->
             [];
         Ps -> Ps
     end.
+
+
+-spec fetch_weapons(PlanetId :: binary()) -> weapon_map().
+fetch_weapons(PlanetId) ->
+    Weapons = ogonek_db:weapons_of_planet(PlanetId),
+
+    lists:foldl(fun(#weapon{type=Type}=Weapon, Ws) ->
+                        maps:put(Type, Weapon, Ws)
+                end, maps:new(), Weapons).
 
 
 -spec fetch_research(state()) -> [research()].
