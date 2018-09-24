@@ -48,8 +48,11 @@ routeToPath : Types.Route -> String
 routeToPath route =
   case route of
     Types.HomeRoute -> home
-    Types.PlanetRoute planet -> "/planets/planet/" ++ planet
-    Types.ProductionRoute planet -> "/production/planet/" ++ planet
+    Types.PlanetRoute planet -> "/planets/" ++ planet ++ "/planet"
+    Types.WeaponsRoute planet -> "/planets/" ++ planet ++ "/weapons"
+    Types.ShipsRoute planet -> "/planets/" ++ planet ++ "/ships"
+    Types.BuildingsRoute planet -> "/planets/" ++ planet ++ "/buildings"
+    Types.ProductionRoute planet -> "/planets/" ++ planet ++ "/production"
     Types.BuildingRoute building -> "/buildings/building/" ++ building
     Types.ResearchRoute -> research
     Types.LoginRoute -> login
@@ -64,6 +67,9 @@ routeToName route =
     Types.HomeRoute -> "Home"
     Types.PlanetRoute _ -> "Planet"
     Types.ProductionRoute _ -> "Production"
+    Types.BuildingsRoute _ -> "Buildings"
+    Types.WeaponsRoute _ -> "Weapons"
+    Types.ShipsRoute _ -> "Ships"
     Types.BuildingRoute _ -> "Building"
     Types.ResearchRoute -> "Research"
     Types.LoginRoute -> "Login"
@@ -83,13 +89,20 @@ matchers : Parser (Types.Route -> a) a
 matchers =
   oneOf
     [ map Types.HomeRoute top
-    , map Types.PlanetRoute (s "planets" </> s "planet" </> string)
-    , map Types.ProductionRoute (s "production" </> s "planet" </> string)
-    , map Types.BuildingRoute (s "buildings" </> s "building" </> string)
+    -- planet specific routes
+    , map Types.PlanetRoute (s "planets" </> string </> s "planet")
+    , map Types.ProductionRoute (s "planets" </> string </> s "production")
+    , map Types.BuildingsRoute (s "planets" </> string </> s "buildings")
+    , map Types.WeaponsRoute (s "planets" </> string </> s "weapons")
+    , map Types.ShipsRoute (s "planets" </> string </> s "ships")
+    -- general routes
     , map Types.ResearchRoute (s "research")
+    , map Types.BuildingRoute (s "buildings" </> s "building" </> string)
+    -- auth routes
     , map Types.AuthRoute (s "auth" <?> stringParam "code" <?> stringParam "state" <?> stringParam "scope" <?> stringParam "provider")
     , map Types.LoginRoute (s "login")
     , map Types.LogoutRoute (s "logout")
+    -- misc routes
     , map Types.HelpRoute (s "help")
     ]
 

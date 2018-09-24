@@ -44,7 +44,10 @@ type Route
   | LoginRoute
   | LogoutRoute
   | PlanetRoute String
+  | BuildingsRoute String
   | ProductionRoute String
+  | WeaponsRoute String
+  | ShipsRoute String
   | BuildingRoute String
   -- auth (code, state, scope, provider)
   | AuthRoute (Maybe String) (Maybe String) (Maybe String) (Maybe String)

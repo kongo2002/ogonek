@@ -109,6 +109,10 @@ a.icon {
   text-align: right;
 }
 
+.text-centered {
+  text-align: center;
+}
+
 .form-inline {
   margin-bottom: 0;
 }

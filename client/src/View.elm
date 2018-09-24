@@ -20,6 +20,7 @@ import Html.Attributes exposing ( class )
 
 import Types
 import View.Building
+import View.Buildings
 import View.Login
 import View.Navigation
 import View.Overview
@@ -27,6 +28,7 @@ import View.Planet
 import View.Production
 import View.Research
 import View.Utils exposing ( loggedIn )
+import View.Weapons
 
 
 view : Types.Model -> Html Types.Msg
@@ -55,6 +57,12 @@ view model =
           -- planet view
           Types.PlanetRoute planet ->
             withPlanet View.Planet.planet planet
+          -- buildings view
+          Types.BuildingsRoute planet ->
+            withPlanet View.Buildings.buildings planet
+          -- weapons
+          Types.WeaponsRoute planet ->
+            withPlanet View.Weapons.weapons planet
           -- production
           Types.ProductionRoute planet ->
             withPlanet View.Production.production planet

@@ -61,11 +61,7 @@ planetView : Model -> ActivePlanet -> List (Html Msg)
 planetView model info =
   let planet = info.planet
       id = planet.id
-      route = PlanetRoute id
-      link = Routing.routeToPath route
       name = "Planet at " ++ coordStr planet.position
-      title =
-        h3 [] [ a [ href link, numbClick (NewUrl route) ] [ text name ] ]
 
       toEntry (iconType, name, finish) =
         let finished = zonedIso8601 model finish
@@ -115,10 +111,25 @@ planetView model info =
           , tbody [] sortedEntries
           ]
 
+      menuIcon icon0 route name =
+        let route0 = route id
+            link = Routing.routeToPath route0
+            desc = span [ class "mobile" ] [ text (" " ++ name) ]
+        in  div [ class "three columns" ]
+            [ a [ href link, numbClick (NewUrl route0), title name ]
+              [ h3 [ class "text-centered" ] [ icon icon0, desc ] ]
+            ]
+
   in  [ div [ class "row" ]
-        [ div [ class "nine columns" ] [ title ]
+        [ div [ class "nine columns" ] [ h3 [] [ text name ] ]
         , div [ class "three columns" ]
           [ planetImg planet ]
+        ]
+      , div [ class "row" ]
+        [ menuIcon "globe-africa" PlanetRoute "planet"
+        , menuIcon "home" BuildingsRoute "buildings"
+        , menuIcon "rocket" ShipsRoute "ships"
+        , menuIcon "bolt" WeaponsRoute "weapons"
         ]
       , div [ class "row" ]
         [ orders
