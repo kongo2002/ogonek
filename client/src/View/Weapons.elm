@@ -20,6 +20,7 @@ import Html.Attributes exposing (..)
 
 import Const
 import Types exposing (..)
+import Utils exposing ( buildingLevel )
 import View.Utils exposing (..)
 
 
@@ -53,6 +54,11 @@ weaponsTable active model =
         let val = numberSpanTo relative value
         in  col0 label val
 
+      ordersPossible =
+        maxOrders active > Dict.size active.weaponOrders
+
+      operation = weaponOperation active ordersPossible
+
       row info =
         tr []
         [ td [ class "header" ] [ text info.name ]
@@ -70,8 +76,7 @@ weaponsTable active model =
         , col Const.pvc info.pvc res.pvc
         , col Const.titan info.titan res.titan
         , col Const.kyanite info.kyanite res.kyanite
-        -- TODO: operation(s)
-        , td [] []
+        , td [] [ operation info ]
         ]
 
       rows =
@@ -105,6 +110,41 @@ weaponsTable active model =
       , tbody [] rows
       ]
     ]
+
+
+weaponOperation : ActivePlanet -> Bool -> WeaponInfo -> Html Msg
+weaponOperation planet ordersAvailable info =
+  let id = planet.planet.id
+      weapon = info.name
+      res = planet.resources
+      possible =
+        ordersAvailable &&
+        info.ironOre < res.ironOre &&
+        info.gold < res.gold &&
+        info.h2o < res.h2o &&
+        info.oil < res.oil &&
+        info.h2 < res.h2 &&
+        info.uranium < res.uranium &&
+        info.pvc < res.pvc &&
+        info.titan < res.titan &&
+        info.kyanite < res.kyanite
+
+      cls =
+        if possible then [ href "#", numbClick (ApiRequest (BuildWeaponRequest id weapon)) ]
+        else [ class "inactive" ]
+
+      clss = class "icon" :: cls
+
+  in  a clss [ icon "cog" ]
+
+
+maxOrders : ActivePlanet -> Int
+maxOrders planet =
+  let manufactureLevel = buildingLevel planet "weapon_manufacture"
+  in  if manufactureLevel >= 50 then 3
+      else if manufactureLevel >= 15 then 2
+      else if manufactureLevel >= 1 then 1
+      else 0
 
 
 -- vim: et sw=2 sts=2

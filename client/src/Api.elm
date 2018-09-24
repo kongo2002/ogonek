@@ -60,6 +60,12 @@ requestEncoder req =
         , ("type", JE.string building)
         , ("level", JE.int level)
         ]
+    Types.BuildWeaponRequest planet weapon ->
+      JE.object
+        [ requestType "build_weapon"
+        , ("planet", JE.string planet)
+        , ("weapon", JE.string weapon)
+        ]
     Types.UtilizationRequest planet ->
       JE.object
         [ requestType "get_utilization"

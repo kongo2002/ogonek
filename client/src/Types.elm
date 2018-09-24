@@ -74,7 +74,10 @@ type ApiContent
 
 type Request
   = AuthorizeRequest Authorize
+  -- build_building (planet, type, level)
   | BuildBuildingRequest String String Int
+  -- build_weapon (planet, weapon)
+  | BuildWeaponRequest String String
   | StartResearchRequest
   | PlanetInfoRequest
   -- get_utilization (planet-id)

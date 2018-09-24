@@ -24,7 +24,7 @@ import Const
 import Routing
 import Types exposing (..)
 import View.Utils exposing (..)
-import Utils exposing ( capacityPercent, zonedIso8601 )
+import Utils exposing ( buildingLevel, capacityPercent, zonedIso8601 )
 
 
 buildings : ActivePlanet -> Model -> List (Html Msg)
@@ -189,11 +189,7 @@ buildingFilterName filter =
 
 maxConcurrentConstructions : ActivePlanet -> Int
 maxConcurrentConstructions planet =
-  let buildings = planet.buildings
-      ccLevel =
-        Dict.get "construction_center" buildings
-        |> Maybe.map .level
-        |> Maybe.withDefault 0
+  let ccLevel = buildingLevel planet "construction_center"
   in  ccLevel // 10 + 1
 
 

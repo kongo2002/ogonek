@@ -62,6 +62,14 @@ planetToString planet =
     IcePlanet -> "ice"
 
 
+buildingLevel : ActivePlanet -> String -> Int
+buildingLevel planet building =
+  let buildings = planet.buildings
+  in  Dict.get building buildings
+      |> Maybe.map .level
+      |> Maybe.withDefault 0
+
+
 nothing : Maybe a -> Bool
 nothing maybe =
   case maybe of
