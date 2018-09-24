@@ -180,8 +180,10 @@ update msg model =
 
     ApiResponse (WeaponOrderFinished planet orderId) ->
       let _ = Debug.log "weapon order finished" orderId
+          title = "weapon order finished"
+          notify = Notification.notify Ports.notification title Nothing Nothing
           model0 = removeWeaponOrder model planet orderId
-      in  model0 ! []
+      in  model0 ! [ notify ]
 
     ApiResponse (Resources info) ->
       let _ = Debug.log "resource information received" info
