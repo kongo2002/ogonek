@@ -342,7 +342,7 @@ removeConstruction planet info =
 currentPlanet : Model -> Maybe ActivePlanet
 currentPlanet model =
   case model.route of
-    PlanetRoute planet ->
+    BuildingsRoute planet ->
       Dict.get planet model.planets
     _ -> Nothing
 
