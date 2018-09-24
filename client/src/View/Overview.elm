@@ -61,7 +61,7 @@ planetView : Model -> ActivePlanet -> List (Html Msg)
 planetView model info =
   let planet = info.planet
       id = planet.id
-      name = "Planet at " ++ coordStr planet.position
+      name = planetName planet
 
       toEntry (iconType, name, finish) =
         let finished = zonedIso8601 model finish

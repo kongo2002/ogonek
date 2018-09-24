@@ -26,7 +26,7 @@ import View.Utils exposing (..)
 weapons : ActivePlanet -> Model -> List (Html Msg)
 weapons active model =
   let planet = active.planet
-      name = "Planet at " ++ coordStr planet.position
+      name = planetName planet
 
       content =
         if Dict.isEmpty active.weapons then

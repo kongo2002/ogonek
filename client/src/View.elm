@@ -27,6 +27,7 @@ import View.Overview
 import View.Planet
 import View.Production
 import View.Research
+import View.Ships
 import View.Utils exposing ( loggedIn )
 import View.Weapons
 
@@ -63,6 +64,9 @@ view model =
           -- weapons
           Types.WeaponsRoute planet ->
             withPlanet View.Weapons.weapons planet
+          -- ships
+          Types.ShipsRoute planet ->
+            withPlanet View.Ships.ships planet
           -- production
           Types.ProductionRoute planet ->
             withPlanet View.Production.production planet

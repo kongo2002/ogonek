@@ -208,6 +208,12 @@ onChangeInt msg =
   in  Html.Events.on "change" parser
 
 
+planetName : Types.PlanetInfo -> String
+planetName planet =
+  let coord = coordStr planet.position
+  in  "Planet at " ++ coord
+
+
 coordStr : (Int, Int, Int) -> String
 coordStr coord =
   let (x, y, z) = coord

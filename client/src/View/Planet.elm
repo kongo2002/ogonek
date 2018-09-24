@@ -25,7 +25,7 @@ import Utils exposing ( capacityPercent, zonedIso8601 )
 planet : ActivePlanet -> Model -> List (Html Msg)
 planet active model =
   let planet = active.planet
-      name = "Planet at " ++ coordStr planet.position
+      name = planetName planet
   in
     [ h2 [] [ text name ]
     , div [ class "row" ]
