@@ -119,15 +119,15 @@ weaponOperation planet ordersAvailable info =
       res = planet.resources
       possible =
         ordersAvailable &&
-        info.ironOre < res.ironOre &&
-        info.gold < res.gold &&
-        info.h2o < res.h2o &&
-        info.oil < res.oil &&
-        info.h2 < res.h2 &&
-        info.uranium < res.uranium &&
-        info.pvc < res.pvc &&
-        info.titan < res.titan &&
-        info.kyanite < res.kyanite
+        info.ironOre <= res.ironOre &&
+        info.gold <= res.gold &&
+        info.h2o <= res.h2o &&
+        info.oil <= res.oil &&
+        info.h2 <= res.h2 &&
+        info.uranium <= res.uranium &&
+        info.pvc <= res.pvc &&
+        info.titan <= res.titan &&
+        info.kyanite <= res.kyanite
 
       cls =
         if possible then [ href "#", numbClick (ApiRequest (BuildWeaponRequest id weapon)) ]
