@@ -158,6 +158,8 @@ handle_cast(prepare, #state{id=UserId}=State) ->
                           Self ! {get_constructions, P, true},
 
                           % fetch open weapon orders
+                          % and weapons just before that
+                          Self ! {weapons_info, P, true},
                           Self ! {get_weapon_orders, P, true},
 
                           % calculate resources after that
@@ -298,7 +300,7 @@ handle_info({weapon_update, Weapon, OrderId}, #state{id=Id}=State) ->
                                     [{<<"_id">>, OrderId}, {<<"planet">>, PlanetId}]),
     json_to_sockets(OrderFinished, State),
 
-    self() ! {weapons_info, Weapon#weapon.planet},
+    self() ! {weapons_info, Weapon#weapon.planet, false},
 
     {noreply, State0};
 
@@ -345,10 +347,10 @@ handle_info(planet_info, State) ->
     {noreply, State};
 
 handle_info(weapons_info, State) ->
-    for_all_planets(weapons_info, State),
+    for_all_planets(weapons_info, false, State),
     {noreply, State};
 
-handle_info({weapons_info, PlanetId}, State) ->
+handle_info({weapons_info, PlanetId, Silent}, State) ->
     case maps:get(PlanetId, State#state.planets, undefined) of
         undefined ->
             {noreply, State};
@@ -371,7 +373,7 @@ handle_info({weapons_info, PlanetId}, State) ->
                     end,
 
                     Info = weapons_info(PlanetId, Weapons0),
-                    json_to_sockets(ogonek_weapon, Info, State),
+                    json_to_sockets(ogonek_weapon, Info, State, Silent),
 
                     PState0 = PState#planet_state{weapons=Weapons0},
                     Planets0 = maps:put(PlanetId, PState0, State#state.planets),
@@ -468,7 +470,7 @@ handle_info({planet_info, PlanetId}, State) ->
             Self ! {get_buildings, PlanetId, false},
             Self ! {get_constructions, PlanetId, false},
             Self ! {get_weapon_orders, PlanetId, false},
-            Self ! {weapons_info, PlanetId},
+            Self ! {weapons_info, PlanetId, false},
             Self ! {calc_resources, PlanetId, false},
             Self ! {production_info, PlanetId}
     end,
@@ -1384,6 +1386,11 @@ all_buildings(State) ->
 -spec for_all_planets(Msg :: atom(), state()) -> ok.
 for_all_planets(Msg, #state{planets=Planets}) ->
     lists:foreach(fun(P) -> self() ! {Msg, P} end, maps:keys(Planets)).
+
+
+-spec for_all_planets(Msg :: atom(), Silent :: boolean(), state()) -> ok.
+for_all_planets(Msg, Silent, #state{planets=Planets}) ->
+    lists:foreach(fun(P) -> self() ! {Msg, P, Silent} end, maps:keys(Planets)).
 
 
 %%
