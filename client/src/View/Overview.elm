@@ -19,7 +19,6 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Time.DateTime
 
-import Assets
 import Routing
 import Types exposing (..)
 import View.Research
@@ -38,22 +37,68 @@ overview model =
 research : Model -> Html Msg
 research model =
   let res = model.research
+      now = model.lastTimeStamp
       link = Routing.routeToPath ResearchRoute
       click = numbClick (NewUrl ResearchRoute)
       status = View.Research.status model res
-      iconPath = Assets.path Assets.physics
-      icon = img [ class "planet", src iconPath ] []
+
       title =
         div [ class "row" ]
-        [ div [ class "nine columns" ]
-          [ h3 [] [ a [ href link, click ] [ text "Research" ] ]
+        [ div [ class "twelve columns" ]
+          [ h3 []
+            [ text "Research "
+            , a [ href link, click ]
+              [ span [ class "spaced" ] [ icon "flask" ]
+              ]
+            ]
           ]
-        , div [ class "three columns" ] [ icon ]
         ]
+
+      content =
+        case model.research.status of
+          Just rstate ->
+            let target = View.Research.target rstate
+                toProgress =
+                  View.Research.progress rstate
+                  >> toString
+                  >> flip String.append " %"
+                progress =
+                  now
+                  |> Maybe.map toProgress
+                  |> Maybe.withDefault ""
+                toDuration =
+                  Time.DateTime.delta rstate.finish
+                  >> Utils.deltaToString
+                duration =
+                  now
+                  |> Maybe.map toDuration
+                  |> Maybe.withDefault ""
+
+            in
+              table [ class "twelve columns" ]
+              [ thead []
+                [ tr []
+                  [ th [] []
+                  , th [] [ text "Name" ]
+                  , th [] [ text "Duration" ]
+                  , th [ class "no-mobile" ] [ text "Progress" ]
+                  ]
+                ]
+              , tbody []
+                [ tr []
+                  [ td [] [ span [ class "spaced" ] [ icon "flask" ] ]
+                  , td [] [ text target ]
+                  , td [] [ text duration ]
+                  , td [ class "no-mobile" ] [ text progress ]
+                  ]
+                ]
+              ]
+          Nothing ->
+            p [] [ text "no research in progress" ]
+
   in  div [ class "research" ]
       [ title
-      , div [ class "row" ]
-        [ p [] [ text status ] ]
+      , div [ class "row" ] [ content ]
       ]
 
 
