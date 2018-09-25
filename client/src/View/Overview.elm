@@ -97,7 +97,7 @@ planetView model info =
 
       orders =
         if List.isEmpty orderEntries then
-          div [] [ p [] [ text "no orders" ] ]
+          div [] [ p [] [ text "no production orders placed" ] ]
         else
           table [ class "twelve columns" ]
           [ thead []
