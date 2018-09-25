@@ -37,6 +37,7 @@ weapons active model =
         else
           weaponsTable active model
   in  [ h2 [] [ text name ]
+      , h3 [] [ text "Weapons" ]
       ] ++ content
 
 
@@ -85,8 +86,7 @@ weaponsTable active model =
         |> List.sortBy .damage
         |> List.map row
   in
-    [ h3 [] [ text "Weapons" ]
-    , table [ id "weapons", class "table-responsive table-resources u-full-width" ]
+    [ table [ id "weapons", class "table-responsive table-resources u-full-width" ]
       [ thead []
         [ tr []
           [ header "Name"

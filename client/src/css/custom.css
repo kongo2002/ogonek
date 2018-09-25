@@ -126,6 +126,7 @@ a.icon {
 img.planet {
   max-height: 96px;
   max-width: 96px;
+  padding-bottom: 3ex;
 }
 
 /* mobile-first table layout */

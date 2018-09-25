@@ -68,7 +68,7 @@ planetView model info =
             delta = Time.DateTime.delta finish >> Utils.deltaToString
             duration = Maybe.map delta model.lastTimeStamp |> Maybe.withDefault ""
         in  tr []
-            [ td [] [ icon iconType ]
+            [ td [] [ span [ class "spaced" ] [ icon iconType ] ]
             , td [] [ text name ]
             , td [] [ text duration ]
             , td [ class "no-mobile" ] [ text finished ]
