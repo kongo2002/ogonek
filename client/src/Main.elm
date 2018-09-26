@@ -439,8 +439,7 @@ updateUtilization model info =
 main : Program Flags Model Msg
 main =
   let toTick time = Tick (Time.DateTime.fromTimestamp time)
-      tenSeconds = Time.second * 10
-      timeTick = Time.every tenSeconds toTick
+      timeTick = Time.every Time.second toTick
       subs model =
         Sub.batch [ Api.websocket model, timeTick ]
   in Navigation.programWithFlags NavigationChange
