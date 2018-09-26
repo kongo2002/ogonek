@@ -12,7 +12,7 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-module View.Research exposing ( research, status, progress, target )
+module View.Research exposing ( duration, progress, research, status, target )
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -79,14 +79,20 @@ status model research =
     Just status ->
       case model.lastTimeStamp of
         Just now ->
-          let progress0 = progress status now
-              duration = Time.DateTime.delta status.finish now
-              durStr = Utils.deltaToString duration
-          in  "research finished in: " ++ durStr ++ " (" ++ toString progress0 ++ " %)"
+          let duration0 = duration status now
+          in  "research finished in: " ++ duration0
         Nothing ->
           "research finished at: " ++ zonedIso8601 model status.finish
     Nothing ->
       "no research in progress - duration (" ++ deltaToString research.duration ++ ")"
+
+
+duration : ResearchStatusInfo -> Time.DateTime.DateTime -> String
+duration status now =
+  let prog = progress status now
+      duration = Time.DateTime.delta status.finish now
+      duration0 = Utils.deltaToString duration
+  in  duration0 ++ " (" ++ toString prog ++ " %)"
 
 
 progress : ResearchStatusInfo -> Time.DateTime.DateTime -> Int

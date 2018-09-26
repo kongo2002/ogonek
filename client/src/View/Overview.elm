@@ -58,22 +58,11 @@ research model =
         case model.research.status of
           Just rstate ->
             let target = View.Research.target rstate
-                toProgress =
-                  View.Research.progress rstate
-                  >> toString
-                  >> flip String.append " %"
-                progress =
+                finished = zonedIso8601 model rstate.finish
+                duration0 =
                   now
-                  |> Maybe.map toProgress
+                  |> Maybe.map (View.Research.duration rstate)
                   |> Maybe.withDefault ""
-                toDuration =
-                  Time.DateTime.delta rstate.finish
-                  >> Utils.deltaToString
-                duration =
-                  now
-                  |> Maybe.map toDuration
-                  |> Maybe.withDefault ""
-
             in
               table [ class "twelve columns" ]
               [ thead []
@@ -81,15 +70,15 @@ research model =
                   [ th [] []
                   , th [] [ text "Name" ]
                   , th [] [ text "Duration" ]
-                  , th [ class "no-mobile" ] [ text "Progress" ]
+                  , th [ class "no-mobile" ] [ text "Completion" ]
                   ]
                 ]
               , tbody []
                 [ tr []
                   [ td [] [ span [ class "spaced" ] [ icon "flask" ] ]
                   , td [] [ text target ]
-                  , td [] [ text duration ]
-                  , td [ class "no-mobile" ] [ text progress ]
+                  , td [] [ text duration0 ]
+                  , td [ class "no-mobile" ] [ text finished ]
                   ]
                 ]
               ]
