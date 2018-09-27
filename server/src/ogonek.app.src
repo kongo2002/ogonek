@@ -25,6 +25,7 @@
     lager,
     elli,
     hackney,
+    mongodb,
     stdlib
    ]},
   {env,[]},

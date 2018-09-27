@@ -54,6 +54,7 @@ init([]) ->
                       {elli_websocket, []}]}],
 
     Children = [?WORKER(db, ogonek_db, []),
+                ?WORKER(mongodb, ogonek_mongo, []),
                 ?WORKER(planet_manager, ogonek_planet_manager, []),
                 ?WORKER(twitch, ogonek_twitch, []),
                 ?SUP(lifecycle_sup, ogonek_user_lifecycle_sup, []),
