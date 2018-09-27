@@ -193,9 +193,9 @@ calculate_power_workers(Buildings, Constructions) ->
 
 
 
--define(OGONEK_CHEMICAL_FACTORY_PROD, 10).
--define(OGONEK_SMELTING_PLANT_PROD, 13).
--define(OGONEK_PLASTIC_FACTORY_PROD, 15).
+-define(OGONEK_CHEMICAL_FACTORY_PROD, 40).
+-define(OGONEK_SMELTING_PLANT_PROD, 52).
+-define(OGONEK_PLASTIC_FACTORY_PROD, 60).
 -define(OGONEK_CONSUMPTION_FACTOR, 2).
 
 
@@ -403,28 +403,28 @@ calculate_building_consumption_test_() ->
      ?_assertEqual(Empty, calculate_building_consumption(Empty, Utilization, [Plastic1], Hour)),
      ?_assertEqual(Empty, calculate_building_consumption(Empty, Utilization, [Chemic1], Hour)),
      % enough base resources
-     ?_assertEqual(Empty#resources{iron_ore=974, titan=13},
+     ?_assertEqual(Empty#resources{iron_ore=1000 - 2 * ?OGONEK_SMELTING_PLANT_PROD, titan=?OGONEK_SMELTING_PLANT_PROD},
                    calculate_building_consumption(Empty#resources{iron_ore=1000}, Utilization, [Smelting1], Hour)),
-     ?_assertEqual(Empty#resources{oil=970, pvc=15},
+     ?_assertEqual(Empty#resources{oil=1000 - 2 * ?OGONEK_PLASTIC_FACTORY_PROD, pvc=?OGONEK_PLASTIC_FACTORY_PROD},
                    calculate_building_consumption(Empty#resources{oil=1000}, Utilization, [Plastic1], Hour)),
-     ?_assertEqual(Empty#resources{h2o=980, h2=10},
+     ?_assertEqual(Empty#resources{h2o=1000 - 2 * ?OGONEK_CHEMICAL_FACTORY_PROD, h2=?OGONEK_CHEMICAL_FACTORY_PROD},
                    calculate_building_consumption(Empty#resources{h2o=1000}, Utilization, [Chemic1], Hour)),
      % *not* enough base resources
-     ?_assertEqual(Empty#resources{iron_ore=0, titan=13},
-                   calculate_building_consumption(Empty#resources{iron_ore=26}, Utilization, [Smelting1], ThreeHours)),
-     ?_assertEqual(Empty#resources{oil=0, pvc=15},
-                   calculate_building_consumption(Empty#resources{oil=30}, Utilization, [Plastic1], ThreeHours)),
-     ?_assertEqual(Empty#resources{h2o=0, h2=10},
-                   calculate_building_consumption(Empty#resources{h2o=20}, Utilization, [Chemic1], ThreeHours)),
+     ?_assertEqual(Empty#resources{iron_ore=0, titan=?OGONEK_SMELTING_PLANT_PROD},
+                   calculate_building_consumption(Empty#resources{iron_ore=2 * ?OGONEK_SMELTING_PLANT_PROD}, Utilization, [Smelting1], ThreeHours)),
+     ?_assertEqual(Empty#resources{oil=0, pvc=?OGONEK_PLASTIC_FACTORY_PROD},
+                   calculate_building_consumption(Empty#resources{oil=2 * ?OGONEK_PLASTIC_FACTORY_PROD}, Utilization, [Plastic1], ThreeHours)),
+     ?_assertEqual(Empty#resources{h2o=0, h2=?OGONEK_CHEMICAL_FACTORY_PROD},
+                   calculate_building_consumption(Empty#resources{h2o=2 * ?OGONEK_CHEMICAL_FACTORY_PROD}, Utilization, [Chemic1], ThreeHours)),
      % no consumption at all
      ?_assertEqual(Empty#resources{h2o=1000},
                    calculate_building_consumption(Empty#resources{h2o=1000}, Utilization, [], Hour)),
      % half utilization
-     ?_assertEqual(Empty#resources{h2o=990, h2=5},
+     ?_assertEqual(Empty#resources{h2o=1000 - ?OGONEK_CHEMICAL_FACTORY_PROD, h2=?OGONEK_CHEMICAL_FACTORY_PROD div 2},
                    calculate_building_consumption(Empty#resources{h2o=1000}, HalfUtil, [Chemic1], Hour)),
-     ?_assertEqual(Empty#resources{iron_ore=986, titan=7},
+     ?_assertEqual(Empty#resources{iron_ore=1000 - ?OGONEK_SMELTING_PLANT_PROD, titan=?OGONEK_SMELTING_PLANT_PROD div 2},
                    calculate_building_consumption(Empty#resources{iron_ore=1000}, HalfUtil, [Smelting1], Hour)),
-     ?_assertEqual(Empty#resources{oil=984, pvc=8},
+     ?_assertEqual(Empty#resources{oil=1000 - ?OGONEK_PLASTIC_FACTORY_PROD, pvc=?OGONEK_PLASTIC_FACTORY_PROD div 2},
                    calculate_building_consumption(Empty#resources{oil=1000}, HalfUtil, [Plastic1], Hour))
     ].
 

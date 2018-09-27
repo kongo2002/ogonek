@@ -132,16 +132,16 @@ production(Type, Size) ->
 -spec base_production(planet_type()) -> [integer()].
 base_production(earth) ->
     % IRON ORE , GOLD , H2O , OIL , URANIUM , KYANITE
-    [200       , 80   , 100 , 150 , 15      , 5];
+    [400       , 160  , 200 , 300 , 30      , 10];
 base_production(water) ->
     % IRON ORE , GOLD , H2O , OIL , URANIUM , KYANITE
-    [80        , 150  , 200 , 100 , 10      , 4];
+    [160       , 300  , 400 , 200 , 20      , 8];
 base_production(fire) ->
     % IRON ORE , GOLD , H2O , OIL , URANIUM , KYANITE
-    [150       , 100  , 80  , 200 , 30      , 3];
+    [300       , 200  , 160 , 400 , 60      , 6];
 base_production(ice) ->
     % IRON ORE , GOLD , H2O , OIL , URANIUM , KYANITE
-    [100       , 200  , 150 , 80  , 15      , 7].
+    [200       , 400  , 300 , 160 , 30      , 14].
 
 
 -spec size_factor(integer()) -> float().

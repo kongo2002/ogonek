@@ -933,10 +933,9 @@ schedule_recalculate_resources() ->
     ok.
 
 
--spec seconds_to_simulated_hours(integer()) -> float().
-seconds_to_simulated_hours(Seconds) ->
-    % 1 hour simulated time == 30 minutes real-time
-    Seconds / 1800.
+-spec to_hours(Seconds :: integer()) -> float().
+to_hours(Seconds) ->
+    Seconds / 3600.
 
 
 -spec finished_at(Seconds :: integer()) -> timestamp().
@@ -987,7 +986,7 @@ calculate_resources(PlanetState, Buildings, RelativeTo, Force) ->
            Production = ogonek_production:of_planet(Planet, Buildings),
            lager:debug("user ~s - production: ~p", [UserId, Production]),
 
-           SimulatedHours = seconds_to_simulated_hours(SecondsSince),
+           SimulatedHours = to_hours(SecondsSince),
 
            Produced = ogonek_resources:with_factor(SimulatedHours, Production),
            lager:debug("user ~s - produced since ~s: ~p", [UserId, Resources#resources.updated, Produced]),
