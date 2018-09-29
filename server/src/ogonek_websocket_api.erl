@@ -91,7 +91,7 @@ request(_Request, Message, State) ->
 request_session(Request) ->
     RemoteIp = elli_request:peer(Request),
     Headers = elli_request:headers(Request),
-    {ok, SessionId, _Rev} = ogonek_db:new_session(RemoteIp, Headers),
+    {ok, SessionId} = ogonek_mongo:new_session(RemoteIp, Headers),
     SessionId.
 
 
@@ -294,7 +294,7 @@ handle_request(_Type, _Request, _Json, State) ->
 
 
 process_session_id(CookieSessionId, Request) ->
-    case ogonek_db:get_session(CookieSessionId) of
+    case ogonek_mongo:get_session(CookieSessionId) of
         {ok, StoredSession} ->
             Socket = self(),
             ogonek_db:refresh_session(CookieSessionId),

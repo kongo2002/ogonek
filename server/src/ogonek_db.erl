@@ -98,7 +98,7 @@ start_link() ->
 
 
 -spec new_session(binary(), [kvalue()]) ->
-    {ok, binary(), binary()} |
+    {ok, binary()} |
     {error, missing_id} |
     {error, missing_rev}.
 new_session(RemoteIP, Headers) ->
@@ -114,7 +114,10 @@ new_session(RemoteIP, Headers) ->
 
     lager:debug("creating new session: ~p", [Doc]),
 
-    insert(Doc, get_info()).
+    case insert(Doc, get_info()) of
+        {ok, Id, _Rev} -> {ok, Id};
+        Otherwise -> Otherwise
+    end.
 
 
 -spec get_session(binary()) -> {ok, session()} | {error, not_found} | {error, invalid}.

@@ -16,7 +16,12 @@
 
 -include("ogonek.hrl").
 
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-endif.
+
 -export([from_json/1,
+         from_doc/1,
          to_json/1,
          to_json/2,
          has_user_id/1]).
@@ -31,6 +36,26 @@ from_json(Json) ->
 
     case ogonek_util:keys(Keys, Json) of
         [Id, Ip, Created, Updated, Headers, UserId] ->
+            {ok, #session{id=Id,
+                          ip=Ip,
+                          created=Created,
+                          updated=Updated,
+                          headers=Headers,
+                          user_id=UserId}};
+        _Otherwise ->
+            {error, invalid}
+    end.
+
+
+-spec from_doc(Doc :: map()) -> {ok, session()} | {error, invalid}.
+from_doc(Doc) ->
+    case Doc of
+        #{<<"_id">> := Id,
+          <<"created">> := Created,
+          <<"updated">> := Updated,
+          <<"headers">> := Headers,
+          <<"ip">> := Ip} ->
+            UserId = maps:get(<<"user_id">>, Doc, undefined),
             {ok, #session{id=Id,
                           ip=Ip,
                           created=Created,
@@ -63,3 +88,30 @@ to_json(Session, _Db) ->
 -spec has_user_id(session()) -> boolean().
 has_user_id(#session{user_id=undefined}) -> false;
 has_user_id(#session{user_id=_UserId}) -> true.
+
+
+%%
+%% TESTS
+%%
+
+-ifdef(TEST).
+
+from_doc_test_() ->
+    Now = ogonek_util:now8601(),
+    Id = <<"id">>,
+    Ip = <<"127.0.0.1">>,
+
+    [?_assertEqual({error, invalid}, from_doc(#{})),
+     ?_assertEqual({ok, #session{id=Id,
+                                 ip=Ip,
+                                 created=Now,
+                                 updated=Now,
+                                 headers=[]}}, from_doc(#{<<"headers">> => [],
+                                                          <<"updated">> => Now,
+                                                          <<"created">> => Now,
+                                                          <<"ip">> => Ip,
+                                                          <<"_id">> => Id
+                                                         }))
+    ].
+
+-endif.

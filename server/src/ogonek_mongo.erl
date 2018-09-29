@@ -99,16 +99,37 @@ start_link() ->
 
 
 -spec new_session(RemoteIP :: binary(), Headers :: [kvalue()]) ->
-    {ok, binary(), binary()} |
+    {ok, binary()} |
     {error, missing_id} |
     {error, missing_rev}.
 new_session(RemoteIP, Headers) ->
-    ok.
+    Info = get_info(),
+    Now = ogonek_util:now8601(),
+    Result = mongo_api:insert(Info, <<"session">>,
+                              #{<<"headers">> => Headers,
+                                <<"updated">> => Now,
+                                <<"created">> => Now,
+                                <<"ip">> => RemoteIP
+                               }),
+    case Result of
+        {{true, _N}, #{<<"_id">> := Id}} -> {ok, objectid_to_binary(Id)};
+        Otherwise ->
+            lager:error("mongo - ~p", [Otherwise]),
+            {error, missing_id}
+    end.
 
 
 -spec get_session(SessionId :: binary()) -> {ok, session()} | {error, not_found} | {error, invalid}.
 get_session(SessionId) ->
-    ok.
+    Info = get_info(),
+    Id = binary_to_objectid(SessionId),
+    Result = mongo_api:find_one(Info, <<"session">>, #{<<"_id">> => Id}, #{}),
+    case Result of
+        undefined ->
+            {error, not_found};
+        Session ->
+            ogonek_session:from_doc(Session)
+    end.
 
 
 -spec refresh_session(SessionId :: binary()) -> ok.
@@ -293,6 +314,9 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_call(get_info, _From, #state{topology=Topology}=State) ->
+    {reply, Topology, State};
+
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
@@ -348,6 +372,13 @@ handle_info(_Info, State) ->
 %% @spec terminate(Reason, State) -> void()
 %% @end
 %%--------------------------------------------------------------------
+terminate(_Reason, #state{topology=undefined}) ->
+    ok;
+
+terminate(_Reason, #state{topology=Topology}) ->
+    mongo_api:disconnect(Topology),
+    ok;
+
 terminate(_Reason, _State) ->
     ok.
 
@@ -365,3 +396,29 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+get_info() ->
+    gen_server:call(?MODULE, get_info).
+
+
+-spec objectid_to_binary(bson:objectid()) -> binary().
+objectid_to_binary({Id}) -> objectid_to_binary(Id, []).
+
+objectid_to_binary(<<>>, Result) ->
+    list_to_binary(lists:reverse(Result));
+objectid_to_binary(<<Hex:8, Bin/binary>>, Result) ->
+    SL1 = erlang:integer_to_list(Hex, 16),
+    SL2 = case erlang:length(SL1) of
+        1 -> ["0"|SL1];
+        _ -> SL1
+    end,
+objectid_to_binary(Bin, [SL2|Result]).
+
+
+-spec binary_to_objectid(binary()) -> bson:objectid().
+binary_to_objectid(BS) -> binary_to_objectid(BS, []).
+
+binary_to_objectid(<<>>, Result) ->
+    {list_to_binary(lists:reverse(Result))};
+binary_to_objectid(<<BS:2/binary, Bin/binary>>, Result) ->
+binary_to_objectid(Bin, [erlang:binary_to_integer(BS, 16)|Result]).
