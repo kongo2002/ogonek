@@ -36,7 +36,7 @@ get_info(Socket) ->
     end.
 
 
--spec auth_user(binary(), binary(), binary()) ->
+-spec auth_user(Code :: binary(), Scope :: binary(), StateStr :: binary()) ->
     {ok, user()} |
     {error, invalid} |
     {error, missing_id} |
@@ -59,7 +59,7 @@ auth_user(Code, Scope, StateStr) ->
     end.
 
 
--spec validate_login(binary(), user()) -> {ok, user()} | error.
+-spec validate_login(SessionId :: binary(), user()) -> {ok, user()} | error.
 validate_login(_SessionId, User) ->
     % there is nothing else to check right now
     {ok, User}.
@@ -67,7 +67,7 @@ validate_login(_SessionId, User) ->
 
 -spec get_user(UserEmail :: binary()) -> {ok, user()} | error.
 get_user(UserEmail) ->
-    case ogonek_db:get_user(UserEmail, <<"local">>) of
+    case ogonek_mongo:get_user(UserEmail, <<"local">>) of
         {ok, _User}=Success -> Success;
         _Error -> error
     end.

@@ -17,6 +17,7 @@
 -include("ogonek.hrl").
 
 -export([from_json/1,
+         from_doc/1,
          to_json/1,
          to_json/2]).
 
@@ -34,6 +35,25 @@ from_json(Json) ->
                                token_type=TokenT
                               }};
         _Otherwise -> {error, invalid}
+    end.
+
+
+-spec from_doc(map()) -> {ok, oauth_access()} | {error, invalid}.
+from_doc(Doc) ->
+    case Doc of
+        #{<<"atoken">> := AToken,
+          <<"id_token">> := IdToken,
+          <<"rtoken">> := RefreshT,
+          <<"scope">> := Scope,
+          <<"ttype">> := TokenT} ->
+            {ok, #oauth_access{access_token=AToken,
+                               id_token=IdToken,
+                               refresh_token=RefreshT,
+                               scope=Scope,
+                               token_type=TokenT
+                              }};
+        _Otherwise ->
+            {error, invalid}
     end.
 
 

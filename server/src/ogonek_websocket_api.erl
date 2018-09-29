@@ -326,7 +326,7 @@ try_auth_user(Socket, #session{id=Id, user_id=UserId}) ->
     lager:info("validating authorization of user '~s' at session: ~s", [UserId, Id]),
 
     LoggedIn =
-    case ogonek_db:get_user(UserId) of
+    case ogonek_mongo:get_user(UserId) of
         {ok, #user{oauth=undefined}} ->
             false;
         {ok, User} ->

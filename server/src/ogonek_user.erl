@@ -17,6 +17,7 @@
 -include("ogonek.hrl").
 
 -export([from_json/1,
+         from_doc/1,
          to_json/1,
          to_json/2,
          has_oauth/1]).
@@ -37,6 +38,28 @@ from_json(UserJson) ->
                        name=Name,
                        img=Img,
                        oauth=from_oauth(OAuth)}};
+        _Otherwise ->
+            {error, invalid}
+    end.
+
+
+-spec from_doc(map()) -> {ok, user()} | {error, invalid}.
+from_doc(Doc) ->
+    case Doc of
+        #{<<"_id">> := Id,
+          <<"provider">> := Provider,
+          <<"pid">> := Pid,
+          <<"email">> := Email,
+          <<"name">> := Name,
+          <<"img">> := Img} ->
+            OAuth = oauth_doc(maps:get(<<"oauth">>, Doc, undefined)),
+            {ok, #user{id=Id,
+                       provider=Provider,
+                       provider_id=Pid,
+                       email=Email,
+                       name=Name,
+                       img=Img,
+                       oauth=OAuth}};
         _Otherwise ->
             {error, invalid}
     end.
@@ -74,6 +97,15 @@ has_oauth(#user{oauth=_OAuth}) -> true.
 from_oauth(undefined) -> undefined;
 from_oauth(Json) ->
     case ogonek_oauth:from_json(Json) of
+        {ok, OAuth} -> OAuth;
+        _Otherwise -> undefined
+    end.
+
+
+-spec oauth_doc(map() | undefined) -> oauth_access() | undefined.
+oauth_doc(undefined) -> undefined;
+oauth_doc(Doc) ->
+    case ogonek_oauth:from_doc(Doc) of
         {ok, OAuth} -> OAuth;
         _Otherwise -> undefined
     end.

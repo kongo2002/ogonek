@@ -77,13 +77,13 @@ auth_user(Code, Scope, StateStr) ->
             Provider = <<"twitch">>,
             case get_user(Token) of
                 {ok, TwitchUser} ->
-                    case ogonek_db:get_user(TwitchUser#twitch_user.id, Provider) of
+                    case ogonek_mongo:get_user(TwitchUser#twitch_user.id, Provider) of
                         {ok, Existing} ->
                             WithAuth = Existing#user{oauth=Token},
                             ogonek_db:update_user(WithAuth),
                             {ok, WithAuth};
                         {error, not_found} ->
-                            ogonek_db:create_user_from_twitch(TwitchUser, Provider)
+                            ogonek_mongo:create_user_from_twitch(TwitchUser, Provider)
                     end;
                 Error ->
                     lager:warning("twitch user request failed: ~p", [Error]),

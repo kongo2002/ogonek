@@ -122,8 +122,7 @@ new_session(RemoteIP, Headers) ->
 -spec get_session(SessionId :: binary()) -> {ok, session()} | {error, not_found} | {error, invalid}.
 get_session(SessionId) ->
     Info = get_info(),
-    Id = binary_to_objectid(SessionId),
-    Result = mongo_api:find_one(Info, <<"session">>, #{<<"_id">> => Id}, #{}),
+    Result = mongo_api:find_one(Info, <<"session">>, id_query(SessionId), #{}),
     case Result of
         undefined ->
             {error, not_found};
@@ -148,13 +147,27 @@ add_user_to_session(UserId, SessionId) ->
     gen_server:cast(?MODULE, {add_user_to_session, UserId, SessionId}).
 
 
--spec create_user_from_twitch(twitch_user(), binary()) ->
+-spec create_user_from_twitch(twitch_user(), Provider :: binary()) ->
     {ok, user()} |
     {error, invalid} |
     {error, missing_id} |
     {error, missing_rev}.
 create_user_from_twitch(User, Provider) ->
-    ok.
+    Info = get_info(),
+    Map = #{<<"provider">> => Provider,
+            <<"pid">> => User#twitch_user.id,
+            <<"email">> => User#twitch_user.email,
+            <<"name">> => User#twitch_user.display_name,
+            <<"img">> => User#twitch_user.profile_image_url},
+
+    Result = mongo_api:insert(Info, <<"user">>, Map),
+    case Result of
+        {{true, _N}, Doc} ->
+            ogonek_user:from_doc(Doc);
+        Otherwise ->
+            lager:error("mongo - create_user_from_twitch: ~p", [Otherwise]),
+            {error, invalid}
+    end.
 
 
 -spec get_user(Id :: binary()) ->
@@ -162,7 +175,14 @@ create_user_from_twitch(User, Provider) ->
     {error, invalid} |
     {error, not_found}.
 get_user(UserId) ->
-    ok.
+    Info = get_info(),
+    Result = mongo_api:find_one(Info, <<"user">>, id_query(UserId), #{}),
+    case Result of
+        undefined ->
+            {error, not_found};
+        User ->
+            ogonek_user:from_doc(User)
+    end.
 
 
 -spec get_user(Id :: binary(), Provider :: binary()) ->
@@ -172,7 +192,15 @@ get_user(UserId) ->
     {error, not_found} |
     error.
 get_user(Id, Provider) ->
-    ok.
+    Info = get_info(),
+    Query = #{<<"pid">> => Id, <<"provider">> => Provider},
+    Result = mongo_api:find_one(Info, <<"user">>, Query, #{}),
+    case Result of
+        undefined ->
+            {error, not_found};
+        User ->
+            ogonek_user:from_doc(User)
+    end.
 
 
 -spec update_user(user()) -> ok.
