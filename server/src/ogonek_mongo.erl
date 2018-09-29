@@ -344,6 +344,21 @@ handle_cast(prepare, State) ->
 
     {noreply, State#state{topology=Topology}};
 
+handle_cast({remove_user_from_session, SessionId}, #state{topology=T}=State) ->
+    Now = ogonek_util:now8601(),
+    Update = #{<<"$set">> => #{<<"updated">> => Now},
+               <<"$unset">> => #{<<"user_id">> => 1}},
+    mongo_api:update(T, <<"session">>, id_query(SessionId), Update, #{}),
+
+    {noreply, State};
+
+handle_cast({add_user_to_session, UserId, SessionId}, #state{topology=T}=State) ->
+    Now = ogonek_util:now8601(),
+    Update = #{<<"$set">> => #{<<"updated">> => Now, <<"user_id">> => UserId}},
+    mongo_api:update(T, <<"session">>, id_query(SessionId), Update, #{}),
+
+    {noreply, State};
+
 handle_cast({refresh_session, SessionId}, #state{topology=T}=State) ->
     Now = ogonek_util:now8601(),
     Update = #{<<"$set">> => #{<<"updated">> => Now}},

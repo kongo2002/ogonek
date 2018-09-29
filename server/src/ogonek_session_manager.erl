@@ -169,10 +169,10 @@ handle_cast({register_socket, Socket, UserId, SessionId}, State) ->
     {OldSession, Sessions0} = record_session(UserId, SessionId, Socket, Sessions),
 
     % moreover we are going to remove any user-id from the old session
-    ogonek_db:remove_user_from_session(OldSession),
+    ogonek_mongo:remove_user_from_session(OldSession),
 
     % and associate the user-id with the new session instead
-    ogonek_db:add_user_to_session(UserId, SessionId),
+    ogonek_mongo:add_user_to_session(UserId, SessionId),
 
     UserSessions0 = maps:put(UserId, Sessions0, UserSessions),
 
@@ -210,7 +210,7 @@ handle_cast({logout, Socket, UserId}, State) ->
             logout_sockets(Session, user_logout),
 
             % and remove user association from session
-            ogonek_db:remove_user_from_session(Session#user_session.session_id),
+            ogonek_mongo:remove_user_from_session(Session#user_session.session_id),
 
             % and terminate the associated user lifecycle as well
             terminate_lifecycle(Session, logout)
