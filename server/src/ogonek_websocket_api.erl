@@ -297,7 +297,7 @@ process_session_id(CookieSessionId, Request) ->
     case ogonek_mongo:get_session(CookieSessionId) of
         {ok, StoredSession} ->
             Socket = self(),
-            ogonek_db:refresh_session(CookieSessionId),
+            ogonek_mongo:refresh_session(CookieSessionId),
 
             % in case the session is associated with a specific user-id
             % we are going to attempt auto-authorization

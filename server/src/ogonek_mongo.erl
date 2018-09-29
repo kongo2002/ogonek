@@ -344,6 +344,13 @@ handle_cast(prepare, State) ->
 
     {noreply, State#state{topology=Topology}};
 
+handle_cast({refresh_session, SessionId}, #state{topology=T}=State) ->
+    Now = ogonek_util:now8601(),
+    Update = #{<<"$set">> => #{<<"updated">> => Now}},
+    mongo_api:update(T, <<"session">>, id_query(SessionId), Update, #{}),
+
+    {noreply, State};
+
 handle_cast(Msg, State) ->
     lager:warning("mongodb - unhandled message: ~p", [Msg]),
     {noreply, State}.
@@ -422,3 +429,15 @@ binary_to_objectid(<<>>, Result) ->
     {list_to_binary(lists:reverse(Result))};
 binary_to_objectid(<<BS:2/binary, Bin/binary>>, Result) ->
 binary_to_objectid(Bin, [erlang:binary_to_integer(BS, 16)|Result]).
+
+
+-spec to_id(binary() | bson:objectid()) -> bson:objectid().
+to_id(Bin) when is_binary(Bin) ->
+    binary_to_objectid(Bin);
+to_id(ObjectId) ->
+    ObjectId.
+
+
+-spec id_query(bson:objectid()) -> map().
+id_query(BinOrObjectId) ->
+    #{<<"_id">> => to_id(BinOrObjectId)}.
