@@ -18,6 +18,7 @@
 
 -export([from_json/1,
          from_doc/1,
+         to_doc/1,
          to_json/1,
          to_json/2,
          has_oauth/1]).
@@ -63,6 +64,16 @@ from_doc(Doc) ->
         _Otherwise ->
             {error, invalid}
     end.
+
+
+-spec to_doc(user()) -> map().
+to_doc(User) ->
+    #{<<"_id">> => User#user.id,
+      <<"provider">> => User#user.provider,
+      <<"pid">> => User#user.provider_id,
+      <<"email">> => User#user.email,
+      <<"name">> => User#user.name,
+      <<"img">> => User#user.img}.
 
 
 -spec to_json(user()) -> tuple().

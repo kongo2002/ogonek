@@ -232,7 +232,7 @@ handle_info({building_finish, Building}, #state{id=Id}=State) ->
             Planets0 = maps:put(PlanetId, PState0, State#state.planets),
             State0 = State#state{planets=Planets0},
 
-            ogonek_db:construction_remove(PlanetId, BuildingType, BuildingLevel),
+            ogonek_mongo:construction_remove(PlanetId, BuildingType, BuildingLevel),
 
             json_to_sockets(ogonek_building, Building, State0),
             json_to_sockets(ogonek_capacity, Capacity, State0),
@@ -291,7 +291,7 @@ handle_info({weapon_update, Weapon, OrderId}, #state{id=Id}=State) ->
     lager:info("user ~s - weapon updated: ~p [order ~s]", [Id, Weapon, OrderId]),
 
     % delete associated weapon order
-    ogonek_db:weapon_order_remove(OrderId),
+    ogonek_mongo:weapon_order_remove(OrderId),
 
     PlanetId = Weapon#weapon.planet,
     State0 = remove_weapon_order(State, PlanetId, OrderId),
@@ -414,7 +414,7 @@ handle_info(start_research, State) ->
 
             lager:info("user ~s - starting research: ~p", [State#state.id, Res]),
 
-            ogonek_db:research_create(Res),
+            ogonek_mongo:research_create(Res),
             Rss = update_research(State#state.research, Res),
 
             Timer = trigger_research_check(Res),
@@ -522,7 +522,7 @@ handle_info({build_building, Planet, Type, Level}=Req, State) ->
                                                     created=ogonek_util:now8601(),
                                                     finish=FinishedAt
                                                    },
-                                  ogonek_db:construction_create(Construction),
+                                  ogonek_mongo:construction_create(Construction),
 
                                   % we keep the new construction in state already although
                                   % the database store might still be ongoing
@@ -571,7 +571,7 @@ handle_info({build_weapon, PlanetId, WDef}, State) ->
 
                     lager:info("user ~s - start weapon order ~p", [UserId, Order]),
 
-                    ogonek_db:weapon_order_create(Order),
+                    ogonek_mongo:weapon_order_create(Order),
 
                     PState0 = claim_resources(PState, WDef),
                     Planets = maps:put(PlanetId, PState0, State#state.planets),
@@ -612,7 +612,7 @@ handle_info({set_utilization, PlanetId, Resource, Value}, State) ->
 
                     self() ! {production_info, PlanetId},
 
-                    ogonek_db:planet_update_utilization(PlanetId, Updated),
+                    ogonek_mongo:planet_update_utilization(PlanetId, Updated),
 
                     {noreply, State#state{planets=Planets}};
                 skipped ->
@@ -636,7 +636,7 @@ handle_info(get_research, State) ->
             % unset progress and move into finished-set
             Pending1 = Pending0#research{progress=false},
 
-            ogonek_db:research_finish(Pending1),
+            ogonek_mongo:research_finish(Pending1),
 
             Updated = update_research(Finished0, Pending1),
             {undefined, Updated, Updated};
@@ -672,7 +672,7 @@ handle_info({get_buildings, Planet, Silent}, State) ->
             {noreply, State};
         % buildings not fetched yet
         #planet_state{buildings=[]}=PState ->
-            Fetched = ogonek_db:buildings_of_planet(Planet),
+            Fetched = ogonek_mongo:buildings_of_planet(Planet),
 
             lager:debug("user ~s - fetched buildings of planet ~s: ~p",
                         [State#state.id, Planet, Fetched]),
@@ -700,7 +700,7 @@ handle_info({get_constructions, Planet, Silent}, State) ->
             {noreply, State};
         % constructions not fetched yet
         #planet_state{constructions=[]}=PState ->
-            Fetched = ogonek_db:constructions_of_planet(Planet),
+            Fetched = ogonek_mongo:constructions_of_planet(Planet),
 
             lager:debug("user ~s - fetched constructions of planet ~s: ~p",
                         [State#state.id, Planet, Fetched]),
@@ -727,7 +727,7 @@ handle_info({get_weapon_orders, Planet, Silent}, State) ->
             {noreply, State};
         % weapon orders not fetched yet
         #planet_state{weapon_orders=[]}=PState ->
-            Fetched = ogonek_db:weapon_orders_of_planet(Planet),
+            Fetched = ogonek_mongo:weapon_orders_of_planet(Planet),
 
             lager:debug("user ~s - fetched weapon orders of planet ~s: ~p",
                         [State#state.id, Planet, Fetched]),
@@ -791,7 +791,7 @@ handle_info({planet_claim, Planet}, State) ->
     Planets0 = maps:put(PlanetId, PState, Planets),
 
     % update resources in db
-    ogonek_db:planet_update_resources(PlanetId, Planet0#planet.resources),
+    ogonek_mongo:planet_update_resources(PlanetId, Planet0#planet.resources),
 
     self() ! {planet_info, PlanetId},
 
@@ -848,7 +848,7 @@ fetch_planets(State) ->
 
 -spec fetch_weapons(PlanetId :: binary()) -> weapon_map().
 fetch_weapons(PlanetId) ->
-    Weapons = ogonek_db:weapons_of_planet(PlanetId),
+    Weapons = ogonek_mongo:weapons_of_planet(PlanetId),
 
     lists:foldl(fun(#weapon{type=Type}=Weapon, Ws) ->
                         maps:put(Type, Weapon, Ws)
@@ -858,7 +858,7 @@ fetch_weapons(PlanetId) ->
 -spec fetch_research(state()) -> [research()].
 fetch_research(State) ->
     case State#state.research of
-        [] -> ogonek_db:research_of_user(State#state.id);
+        [] -> ogonek_mongo:research_of_user(State#state.id);
         Research -> Research
     end.
 
@@ -960,7 +960,7 @@ calc_resources(PState, RelativeTo) ->
         skipped ->
             PState;
         Resources ->
-            ogonek_db:planet_update_resources(Planet#planet.id, Resources),
+            ogonek_mongo:planet_update_resources(Planet#planet.id, Resources),
 
             Planet0 = Planet#planet{resources=Resources},
             PState#planet_state{planet=Planet0}
@@ -1014,7 +1014,7 @@ finish_building(#bdef{name=Def}, PlanetId, Level) ->
                          created=Now},
 
     % maybe this one should be managed via the planet manager
-    ogonek_db:building_finish(Building).
+    ogonek_mongo:building_finish(Building).
 
 
 -spec process_weapon_orders(planet_state(), [weapon_order()]) -> planet_state().
@@ -1049,7 +1049,7 @@ finish_weapon_order(Weapons, WOrder) ->
             Existing#weapon{count=Existing#weapon.count+1}
     end,
 
-    ogonek_db:weapon_update(Updated, WOrder#weapon_order.id),
+    ogonek_mongo:weapon_update(Updated, WOrder#weapon_order.id),
 
     maps:put(Weapon, Updated, Weapons).
 
@@ -1078,7 +1078,7 @@ process_construction({Construction, UpTo}, PState) ->
                    Update = B#building{level=CLevel},
 
                    % trigger asynchronous db update
-                   ogonek_db:building_finish(Update),
+                   ogonek_mongo:building_finish(Update),
 
                    % in order to properly calculate multiple successive
                    % constructions we have to re-calculate resources

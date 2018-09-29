@@ -102,7 +102,7 @@ init([]) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_call({user_planets, UserId}, _From, State) ->
-    UserPlanets = ogonek_db:planets_of_user(UserId),
+    UserPlanets = ogonek_mongo:planets_of_user(UserId),
     State0 = lists:foldl(fun track_planet/2, State, UserPlanets),
     {reply, UserPlanets, State0};
 
@@ -154,8 +154,8 @@ handle_info(create_planet, State) ->
     % create a random planet
     Planet = random_planet(false),
 
-    case ogonek_db:planet_exists(Planet) of
-        false -> ogonek_db:planet_create(Planet);
+    case ogonek_mongo:planet_exists(Planet) of
+        false -> ogonek_mongo:planet_create(Planet);
         true -> ok
     end,
 
@@ -226,10 +226,10 @@ random_planet(ForUser) ->
 -spec claim_random_planet(UserId :: binary()) -> ok.
 claim_random_planet(UserId) ->
     Planet = random_planet(),
-    case ogonek_db:planet_exists(Planet) of
+    case ogonek_mongo:planet_exists(Planet) of
         false ->
             % TODO: race between 'exists' and 'claim'
-            ogonek_db:planet_claim(Planet, UserId),
+            ogonek_mongo:planet_claim(Planet, UserId),
             ok;
         true ->
             claim_random_planet(UserId)

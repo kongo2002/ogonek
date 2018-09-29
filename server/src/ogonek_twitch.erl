@@ -80,7 +80,7 @@ auth_user(Code, Scope, StateStr) ->
                     case ogonek_mongo:get_user(TwitchUser#twitch_user.id, Provider) of
                         {ok, Existing} ->
                             WithAuth = Existing#user{oauth=Token},
-                            ogonek_db:update_user(WithAuth),
+                            ogonek_mongo:update_user(WithAuth),
                             {ok, WithAuth};
                         {error, not_found} ->
                             ogonek_mongo:create_user_from_twitch(TwitchUser, Provider)
@@ -109,7 +109,7 @@ validate_login(_SessionId, User) ->
             case refresh_token(User) of
                 {ok, RefreshOAuth} ->
                     WithAuth = User#user{oauth=RefreshOAuth},
-                    ogonek_db:update_user(WithAuth),
+                    ogonek_mongo:update_user(WithAuth),
                     {ok, WithAuth};
                 error -> error
             end

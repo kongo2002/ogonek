@@ -96,7 +96,7 @@ exists({X, Y, Z}) ->
 
 -spec exists(integer(), integer(), integer()) -> boolean().
 exists(X, Y, Z) ->
-    ogonek_db:planet_exists(X, Y, Z).
+    ogonek_mongo:planet_exists(X, Y, Z).
 
 
 % we 'recycle' the resources record to represent the

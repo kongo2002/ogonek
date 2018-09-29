@@ -394,6 +394,13 @@ handle_cast({refresh_session, SessionId}, #state{topology=T}=State) ->
 
     {noreply, State};
 
+handle_cast({update_user, User}, #state{topology=T}=State) ->
+    UserMap = ogonek_user:to_doc(User),
+    Update = #{<<"$set">> => maps:remove(<<"_id">>, UserMap)},
+    mongo_api:update(T, <<"session">>, id_query(User#user.id), Update, #{}),
+
+    {noreply, State};
+
 handle_cast(Msg, State) ->
     lager:warning("mongodb - unhandled message: ~p", [Msg]),
     {noreply, State}.
