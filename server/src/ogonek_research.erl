@@ -17,6 +17,7 @@
 -include("ogonek.hrl").
 
 -export([from_json/1,
+         from_doc/1,
          to_json/1,
          to_json/2]).
 
@@ -88,6 +89,28 @@ from_json(UserJson) ->
 
     case ogonek_util:keys(Keys, UserJson) of
         [Id, User, Research, Level, Created, Finish, Progress] ->
+            {ok, #research{id=Id,
+                           user=User,
+                           research=to_research(Research),
+                           level=Level,
+                           created=Created,
+                           finish=Finish,
+                           progress=Progress}};
+        _Otherwise ->
+            {error, invalid}
+    end.
+
+
+-spec from_doc(Doc :: map()) -> {ok, research()} | {error, invalid}.
+from_doc(Doc) ->
+    case Doc of
+        #{<<"_id">> := Id,
+          <<"user">> := User,
+          <<"research">> := Research,
+          <<"level">> := Level,
+          <<"created">> := Created,
+          <<"finish">> := Finish,
+          <<"progress">> := Progress} ->
             {ok, #research{id=Id,
                            user=User,
                            research=to_research(Research),

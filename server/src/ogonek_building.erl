@@ -17,6 +17,8 @@
 -include("ogonek.hrl").
 
 -export([from_json/1,
+         to_doc/1,
+         from_doc/1,
          to_json/1,
          to_json/2]).
 
@@ -35,6 +37,33 @@ from_json(Json) ->
         _Otherwise ->
             {error, invalid}
     end.
+
+
+-spec from_doc(map()) -> {ok, building()} | {error, invalid}.
+from_doc(Doc) ->
+    case Doc of
+        #{<<"planet">> := Planet,
+          <<"type">> := Type,
+          <<"level">> := Level,
+          <<"created">> := Created} ->
+            {ok, #building{id=maps:get(<<"_id">>, Doc, undefined),
+                           planet=Planet,
+                           type=ogonek_buildings:to_building_type(Type),
+                           level=Level,
+                           created=Created}};
+        _Otherwise ->
+            {error, invalid}
+    end.
+
+
+-spec to_doc(building()) -> map().
+to_doc(Building) ->
+    Doc = #{<<"planet">> => Building#building.planet,
+            <<"type">> => Building#building.type,
+            <<"level">> => Building#building.level,
+            <<"created">> => Building#building.created},
+
+    ogonek_util:with_id(Building#building.id, Doc).
 
 
 -spec to_json(building()) -> tuple().

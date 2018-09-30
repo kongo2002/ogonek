@@ -21,6 +21,9 @@
 %% API
 -export([start_link/0]).
 
+%% Utils
+-export([to_id/1]).
+
 %% Session API
 -export([new_session/2,
          refresh_session/1,
@@ -215,12 +218,16 @@ building_finish(Building) ->
 
 -spec buildings_of_planet(PlanetId :: binary()) -> [building()].
 buildings_of_planet(PlanetId) ->
-    [].
+    Info = get_info(),
+    Query = #{<<"planet">> => PlanetId},
+    find_all(Info, <<"building">>, Query, fun ogonek_building:from_doc/1).
 
 
 -spec research_of_user(UserId :: binary()) -> [research()].
 research_of_user(UserId) ->
-    [].
+    Info = get_info(),
+    Query = #{<<"user">> => UserId},
+    find_all(Info, <<"research">>, Query, fun ogonek_research:from_doc/1).
 
 
 -spec research_create(research()) -> ok.
@@ -401,6 +408,23 @@ handle_cast({update_user, User}, #state{topology=T}=State) ->
 
     {noreply, State};
 
+handle_cast({building_finish, #building{id=undefined}=B, Sender}, #state{topology=T}=State) ->
+    Doc = ogonek_building:to_doc(B),
+    case mongo_api:insert(T, <<"building">>, Doc) of
+        {{true, _N}, Result} ->
+            Sender ! {building_finish, ogonek_building:from_doc(Result)};
+        Otherwise ->
+            lager:error("mongo - building_finish: ~p", [Otherwise])
+    end,
+    {noreply, State};
+
+handle_cast({building_finish, Building, Sender}, #state{topology=T}=State) ->
+    Now = ogonek_util:now8601(),
+    Update = #{<<"$set">> => #{<<"updated">> => Now, <<"level">> => Building#building.level}},
+    mongo_api:update(T, <<"session">>, id_query(Building#building.id), Update, #{}),
+
+    {noreply, State};
+
 handle_cast(Msg, State) ->
     lager:warning("mongodb - unhandled message: ~p", [Msg]),
     {noreply, State}.
@@ -456,6 +480,25 @@ code_change(_OldVsn, State, _Extra) ->
 
 get_info() ->
     gen_server:call(?MODULE, get_info).
+
+
+-spec find_all(pid(), binary(), map(), fun((map()) -> {ok, term()} | {error, invalid})) -> [term()].
+find_all(Topology, Collection, Query, FromDoc) ->
+    Results = case mongo_api:find(Topology, Collection, Query, #{}) of
+                  [] -> [];
+                  {ok, Cursor} ->
+                      case mc_cursor:rest(Cursor) of
+                          error -> [];
+                          Rss -> Rss
+                      end
+              end,
+
+    lists:flatmap(fun(Doc) ->
+                          case FromDoc(Doc) of
+                              {ok, Obj} -> [Obj];
+                              _Otherwise -> []
+                          end
+                  end, Results).
 
 
 -spec objectid_to_binary(bson:objectid()) -> binary().

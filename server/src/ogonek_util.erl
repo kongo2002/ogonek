@@ -45,6 +45,7 @@
          remove_key/2,
          choose_random/1,
          if_defined/2,
+         with_id/2,
          seconds_since/1,
          seconds_since/2,
          now8601/0
@@ -292,6 +293,12 @@ choose_random(Candidates) ->
 -spec if_defined(binary(), term()) -> list().
 if_defined(_Key, undefined) -> [];
 if_defined(Key, Value) -> [{Key, Value}].
+
+
+-spec with_id(binary() | bson:objectid(), map()) -> map().
+with_id(undefined, Doc) -> Doc;
+with_id(Id, Doc) ->
+    maps:put(<<"_id">>, ogonek_mongo:to_id(Id), Doc).
 
 
 %%
