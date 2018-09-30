@@ -17,6 +17,8 @@
 -include("ogonek.hrl").
 
 -export([from_json/1,
+         from_doc/1,
+         to_doc/1,
          to_json/1,
          to_json/2,
          exists/1,
@@ -51,6 +53,52 @@ from_json(Planet) ->
         _Otherwise ->
             {error, invalid}
     end.
+
+
+-spec from_doc(Doc :: map()) -> {ok, planet()} | {error, invalid}.
+from_doc(Doc) ->
+    case Doc of
+        #{<<"type">> := Type,
+          <<"size">> := Size,
+          <<"pos">> := #{<<"x">> := X, <<"y">> := Y, <<"z">> := Z},
+          <<"idx">> := Idx} ->
+            Id = maps:get(<<"_id">>, Doc, undefined),
+            Owner = maps:get(<<"owner">>, Doc, undefined),
+            Res = maps:get(<<"resources">>, Doc, undefined),
+            Util = maps:get(<<"utilization">>, Doc, undefined),
+
+            case {parse_type(Type), resources_or_empty(Id, Res), resources_or_empty(Id, Util)} of
+                {error, _, _} -> {error, invalid};
+                {_, {error, _}, _} -> {error, invalid};
+                {_, _, {error, _}} -> {error, invalid};
+                {Type0, {ok, Resources}, {ok, Utilization}} ->
+                    {ok, #planet{id=Id,
+                                 type=Type0,
+                                 size=Size,
+                                 position={X, Y, Z},
+                                 index=Idx,
+                                 owner=Owner,
+                                 resources=Resources,
+                                 utilization=Utilization}}
+            end;
+        _Otherwise ->
+            {error, invalid}
+    end.
+
+
+-spec to_doc(planet()) -> map().
+to_doc(Planet) ->
+    {X, Y, Z} = Planet#planet.position,
+    Doc = #{<<"type">> => Planet#planet.type,
+            <<"size">> => Planet#planet.size,
+            <<"pos">> => #{<<"x">> => X, <<"y">> => Y, <<"z">> => Z},
+            <<"idx">> => Planet#planet.index,
+            <<"resources">> => ogonek_resources:to_doc(Planet#planet.resources),
+            <<"utilization">> => ogonek_resources:to_doc(Planet#planet.utilization)
+           },
+
+    Doc0 = ogonek_util:with(<<"owner">>, Planet#planet.owner, fun ogonek_mongo:to_id/1, Doc),
+    ogonek_util:with_id(Planet#planet.id, Doc0).
 
 
 -spec resources_or_empty(json_doc() | undefined) -> {ok, resources()} | {error, invalid}.

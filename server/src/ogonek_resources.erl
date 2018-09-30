@@ -17,6 +17,8 @@
 -include("ogonek.hrl").
 
 -export([from_json/1,
+         from_doc/1,
+         to_doc/1,
          to_json/1,
          to_json/2,
          empty/0,
@@ -71,6 +73,54 @@ from_json(Resources) ->
         _Otherwise ->
             {error, invalid}
     end.
+
+
+-spec from_doc(Doc :: map()) -> {ok, resources()} | {error, invalid}.
+from_doc(Doc) ->
+    case Doc of
+        #{<<"iron_ore">> := IronOre,
+          <<"gold">> := Gold,
+          <<"h2o">> := H2O,
+          <<"oil">> := Oil,
+          <<"h2">> := H2,
+          <<"uranium">> := Uranium,
+          <<"pvc">> := PVC,
+          <<"titan">> := Titan,
+          <<"kyanite">> := Kyanite} ->
+            {ok, #resources{planet=maps:get(<<"planet">>, Doc, undefined),
+                            workers=maps:get(<<"workers">>, Doc, 0),
+                            power=maps:get(<<"power">>, Doc, 0),
+                            iron_ore=IronOre,
+                            gold=Gold,
+                            h2o=H2O,
+                            oil=Oil,
+                            h2=H2,
+                            uranium=Uranium,
+                            pvc=PVC,
+                            titan=Titan,
+                            kyanite=Kyanite,
+                            updated=maps:get(<<"updated">>, Doc, undefined)}};
+        _Otherwise ->
+            {error, invalid}
+    end.
+
+
+-spec to_doc(resources()) -> map().
+to_doc(Resources) ->
+    Doc = #{<<"iron_ore">> => Resources#resources.iron_ore,
+            <<"gold">> => Resources#resources.gold,
+            <<"h2o">> => Resources#resources.h2o,
+            <<"oil">> => Resources#resources.oil,
+            <<"h2">> => Resources#resources.h2,
+            <<"uranium">> => Resources#resources.uranium,
+            <<"pvc">> => Resources#resources.pvc,
+            <<"titan">> => Resources#resources.titan,
+            <<"kyanite">> => Resources#resources.kyanite,
+            <<"workers">> => Resources#resources.workers,
+            <<"power">> => Resources#resources.power
+           },
+
+    ogonek_util:with(<<"updated">>, Resources#resources.updated, Doc).
 
 
 -spec to_json(resources()) -> tuple().

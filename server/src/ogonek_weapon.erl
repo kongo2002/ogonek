@@ -17,6 +17,8 @@
 -include("ogonek.hrl").
 
 -export([from_json/1,
+         from_doc/1,
+         to_doc/1,
          to_json/1,
          to_json/2]).
 
@@ -34,6 +36,30 @@ from_json(Json) ->
         _Otherwise ->
             {error, invalid}
     end.
+
+
+-spec from_doc(Doc :: map()) -> {ok, weapon()} | {error, invalid}.
+from_doc(Doc) ->
+    case Doc of
+        #{<<"planet">> := PlanetId,
+          <<"type">> := Type,
+          <<"count">> := Count} ->
+            {ok, #weapon{id=maps:get(<<"_id">>, Doc, undefined),
+                         planet=PlanetId,
+                         type=ogonek_weapons:to_weapon_type(Type),
+                         count=Count}};
+        _Otherwise ->
+            {error, invalid}
+    end.
+
+
+-spec to_doc(weapon()) -> map().
+to_doc(Weapon) ->
+    Doc = #{<<"planet">> => Weapon#weapon.planet,
+            <<"type">> => Weapon#weapon.type,
+            <<"count">> => Weapon#weapon.count},
+
+    ogonek_util:with_id(Weapon#weapon.id, Doc).
 
 
 -spec to_json(weapon()) -> tuple().

@@ -45,6 +45,8 @@
          remove_key/2,
          choose_random/1,
          if_defined/2,
+         with/3,
+         with/4,
          with_id/2,
          seconds_since/1,
          seconds_since/2,
@@ -293,6 +295,18 @@ choose_random(Candidates) ->
 -spec if_defined(binary(), term()) -> list().
 if_defined(_Key, undefined) -> [];
 if_defined(Key, Value) -> [{Key, Value}].
+
+
+-spec with(Key :: binary(), Value :: undefined | term(), Doc :: map()) -> map().
+with(_Key, undefined, Doc) -> Doc;
+with(Key, Value, Doc) ->
+    maps:put(Key, Value, Doc).
+
+
+-spec with(Key :: binary(), Value :: undefined | term(), fun(), Doc :: map()) -> map().
+with(_Key, undefined, _Convert, Doc) -> Doc;
+with(Key, Value, Convert, Doc) ->
+    maps:put(Key, Convert(Value), Doc).
 
 
 -spec with_id(undefined | binary() | bson:objectid(), map()) -> map().

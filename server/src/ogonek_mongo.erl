@@ -264,7 +264,9 @@ weapon_order_create(WOrder) ->
 
 -spec weapon_orders_of_planet(PlanetId :: binary()) -> [weapon_order()].
 weapon_orders_of_planet(PlanetId) ->
-    [].
+    Info = get_info(),
+    Query = #{<<"planet">> => PlanetId},
+    find_all(Info, <<"weapon_order">>, Query, fun ogonek_weapon_order:from_doc/1).
 
 
 -spec weapon_order_remove(OrderId :: binary()) -> ok.
@@ -279,7 +281,9 @@ weapon_update(Weapon, OrderId) ->
 
 -spec weapons_of_planet(PlanetId :: binary()) -> [weapon()].
 weapons_of_planet(PlanetId) ->
-    [].
+    Info = get_info(),
+    Query = #{<<"planet">> => PlanetId},
+    find_all(Info, <<"weapon">>, Query, fun ogonek_weapon_order:from_doc/1).
 
 
 -spec planet_exists(planet()) -> boolean().
@@ -290,7 +294,13 @@ planet_exists(#planet{position=Pos}) ->
 
 -spec planet_exists(integer(), integer(), integer()) -> boolean().
 planet_exists(X, Y, Z) ->
-    false.
+    Info = get_info(),
+    Query = #{<<"pos">> => #{<<"x">> => X, <<"y">> => Y, <<"z">> => Z}},
+    Result = mongo_api:find_one(Info, <<"planet">>, Query, #{<<"_id">> => 1}),
+    case Result of
+        undefined -> false;
+        _Otherwise -> true
+    end.
 
 
 -spec planet_create(Planet :: planet()) -> ok.
@@ -494,6 +504,31 @@ handle_cast({weapon_order_create, WOrder, Sender}, #state{topology=T}=State) ->
         Otherwise ->
             lager:error("mongo - weapon_order_create: ~p ~p", [WOrder, Otherwise])
     end,
+    {noreply, State};
+
+handle_cast({weapon_order_remove, OrderId}, #state{topology=T}=State) ->
+    mongo_api:delete(T, <<"weapon_order">>, id_query(OrderId)),
+    {noreply, State};
+
+handle_cast({weapon_update, #weapon{id=undefined}=W, OrderId, Sender}, #state{topology=T}=State) ->
+    Doc = ogonek_weapon:to_doc(W),
+    case mongo_api:insert(T, <<"weapon">>, Doc) of
+        {{true, _N}, Result} ->
+            Sender ! {weapon_update, ogonek_weapon:from_doc(Result), OrderId};
+        Otherwise ->
+            lager:error("mongo - weapon_update: ~p ~p", [W, Otherwise])
+    end,
+    {noreply, State};
+
+handle_cast({weapon_update, Weapon, OrderId, Sender}, #state{topology=T}=State) ->
+    Update = #{<<"$set">> => #{<<"count">> => Weapon#weapon.count}},
+    case mongo_api:update(T, <<"weapon">>, id_query(Weapon#weapon.id), Update, #{}) of
+        {true, #{<<"n">> := 1}} ->
+            Sender ! {weapon_update, Weapon, OrderId};
+        Otherwise ->
+            lager:error("mongo - weapon_update: ~p ~p", [Weapon, Otherwise])
+    end,
+
     {noreply, State};
 
 handle_cast(Msg, State) ->
