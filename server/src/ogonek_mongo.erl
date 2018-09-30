@@ -247,12 +247,14 @@ construction_create(Construction) ->
 
 -spec construction_remove(PlanetId :: binary(), Building :: atom(), Level :: integer()) -> ok.
 construction_remove(PlanetId, Building, Level) ->
-    ok.
+    gen_server:cast(?MODULE, {construction_remove, PlanetId, Building, Level}).
 
 
 -spec constructions_of_planet(binary()) -> [construction()].
 constructions_of_planet(PlanetId) ->
-    [].
+    Info = get_info(),
+    Query = #{<<"planet">> => PlanetId},
+    find_all(Info, <<"construction">>, Query, fun ogonek_construction:from_doc/1).
 
 
 -spec weapon_order_create(weapon_order()) -> ok.
@@ -414,15 +416,84 @@ handle_cast({building_finish, #building{id=undefined}=B, Sender}, #state{topolog
         {{true, _N}, Result} ->
             Sender ! {building_finish, ogonek_building:from_doc(Result)};
         Otherwise ->
-            lager:error("mongo - building_finish: ~p", [Otherwise])
+            lager:error("mongo - building_finish: ~p ~p", [B, Otherwise])
     end,
     {noreply, State};
 
 handle_cast({building_finish, Building, Sender}, #state{topology=T}=State) ->
     Now = ogonek_util:now8601(),
     Update = #{<<"$set">> => #{<<"updated">> => Now, <<"level">> => Building#building.level}},
-    mongo_api:update(T, <<"session">>, id_query(Building#building.id), Update, #{}),
+    case mongo_api:update(T, <<"session">>, id_query(Building#building.id), Update, #{}) of
+        {true, #{<<"n">> := 1}} ->
+            Sender ! {building_finish, Building};
+        Otherwise ->
+            lager:error("mongo - building_finish: ~p ~p", [Building, Otherwise])
+    end,
 
+    {noreply, State};
+
+handle_cast({research_create, #research{id=undefined}=R, Sender}, #state{topology=T}=State) ->
+    Doc = ogonek_research:to_doc(R),
+    case mongo_api:insert(T, <<"research">>, Doc) of
+        {{true, _N}, Result} ->
+            Sender ! {research_create, ogonek_research:from_doc(Result)};
+        Otherwise ->
+            lager:error("mongo - research_create: ~p ~p", [R, Otherwise])
+    end,
+    {noreply, State};
+
+handle_cast({research_create, Research, Sender}, #state{topology=T}=State) ->
+    Update = #{<<"$set">> =>
+               #{<<"created">> => Research#research.created,
+                 <<"finish">> => Research#research.finish,
+                 <<"level">> => Research#research.level,
+                 <<"progress">> => Research#research.progress
+                }},
+    case mongo_api:update(T, <<"research">>, id_query(Research#research.id), Update, #{}) of
+        {true, #{<<"n">> := 1}} ->
+            Sender ! {research_create, Research};
+        Otherwise ->
+            lager:error("mongo - research_create: ~p ~p", [Research, Otherwise])
+    end,
+
+    {noreply, State};
+
+handle_cast({research_finish, Research, Sender}, #state{topology=T}=State) ->
+    Update = #{<<"$set">> => #{<<"progress">> => false}},
+    case mongo_api:update(T, <<"research">>, id_query(Research#research.id), Update, #{}) of
+        {true, #{<<"n">> := 1}} ->
+            Sender ! {research_finish, Research};
+        Otherwise ->
+            lager:error("mongo - research_finish: ~p ~p", [Research, Otherwise])
+    end,
+
+    {noreply, State};
+
+handle_cast({construction_create, Construction, Sender}, #state{topology=T}=State) ->
+    Doc = ogonek_construction:to_doc(Construction),
+    case mongo_api:insert(T, <<"construction">>, Doc) of
+        {{true, _N}, Result} ->
+            Sender ! {construction_create, ogonek_construction:from_doc(Result)};
+        Otherwise ->
+            lager:error("mongo - construction_create: ~p ~p", [Construction, Otherwise])
+    end,
+    {noreply, State};
+
+handle_cast({construction_remove, PlanetId, Building, Level}, #state{topology=T}=State) ->
+    Delete = #{<<"planet">> => PlanetId,
+               <<"building">> => Building,
+               <<"level">> => #{<<"$lte">> => Level}},
+    mongo_api:delete(T, <<"construction">>, Delete),
+    {noreply, State};
+
+handle_cast({weapon_order_create, WOrder, Sender}, #state{topology=T}=State) ->
+    Doc = ogonek_weapon_order:to_doc(WOrder),
+    case mongo_api:insert(T, <<"weapon_order">>, Doc) of
+        {{true, _N}, Result} ->
+            Sender ! {weapon_order_create, ogonek_weapon_order:from_doc(Result)};
+        Otherwise ->
+            lager:error("mongo - weapon_order_create: ~p ~p", [WOrder, Otherwise])
+    end,
     {noreply, State};
 
 handle_cast(Msg, State) ->

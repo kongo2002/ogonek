@@ -295,7 +295,7 @@ if_defined(_Key, undefined) -> [];
 if_defined(Key, Value) -> [{Key, Value}].
 
 
--spec with_id(binary() | bson:objectid(), map()) -> map().
+-spec with_id(undefined | binary() | bson:objectid(), map()) -> map().
 with_id(undefined, Doc) -> Doc;
 with_id(Id, Doc) ->
     maps:put(<<"_id">>, ogonek_mongo:to_id(Id), Doc).

@@ -18,6 +18,7 @@
 
 -export([from_json/1,
          from_doc/1,
+         to_doc/1,
          to_json/1,
          to_json/2]).
 
@@ -121,6 +122,18 @@ from_doc(Doc) ->
         _Otherwise ->
             {error, invalid}
     end.
+
+
+-spec to_doc(research()) -> map().
+to_doc(Research) ->
+    Doc = #{<<"user">> => Research#research.user,
+            <<"research">> => Research#research.research,
+            <<"level">> => Research#research.level,
+            <<"created">> => Research#research.created,
+            <<"finish">> => Research#research.finish,
+            <<"progress">> => Research#research.progress},
+
+    ogonek_util:with_id(Research#research.id, Doc).
 
 
 -spec to_json(research()) -> tuple().
