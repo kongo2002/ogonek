@@ -439,7 +439,7 @@ handle_cast({building_finish, #building{id=undefined}=B, Sender}, #state{topolog
 handle_cast({building_finish, Building, Sender}, #state{topology=T}=State) ->
     Now = ogonek_util:now8601(),
     Update = #{<<"$set">> => #{<<"updated">> => Now, <<"level">> => Building#building.level}},
-    case mongo_api:update(T, <<"session">>, id_query(Building#building.id), Update, #{}) of
+    case mongo_api:update(T, <<"building">>, id_query(Building#building.id), Update, #{}) of
         {true, #{<<"n">> := 1}} ->
             Sender ! {building_finish, Building};
         Otherwise ->
@@ -496,7 +496,7 @@ handle_cast({construction_create, Construction, Sender}, #state{topology=T}=Stat
     {noreply, State};
 
 handle_cast({construction_remove, PlanetId, Building, Level}, #state{topology=T}=State) ->
-    Delete = #{<<"planet">> => PlanetId,
+    Delete = #{<<"planet">> => to_id(PlanetId),
                <<"building">> => Building,
                <<"level">> => #{<<"$lte">> => Level}},
     mongo_api:delete(T, <<"construction">>, Delete),
