@@ -196,7 +196,7 @@ handle_cast(prepare, State) ->
         _Correct ->
             ClientId = list_to_binary(ClientId0),
             ClientSecret = list_to_binary(ClientSecret0),
-            RedirectUri = list_to_binary(os:getenv("TWITCH_REDIRECT_URI", "http://localhost:8000/auth")),
+            RedirectUri = list_to_binary(os:getenv("TWITCH_REDIRECT_URI", "http://localhost:8000/auth?provider=twitch")),
 
             {noreply, State#state{enabled=true,
                                   client_id=ClientId,

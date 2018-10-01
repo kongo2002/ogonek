@@ -46,8 +46,8 @@ from_doc(Doc) ->
           <<"type">> := Type,
           <<"level">> := Level,
           <<"created">> := Created} ->
-            {ok, #building{id=maps:get(<<"_id">>, Doc, undefined),
-                           planet=Planet,
+            {ok, #building{id=ogonek_mongo:from_id(maps:get(<<"_id">>, Doc, undefined)),
+                           planet=ogonek_mongo:from_id(Planet),
                            type=ogonek_buildings:to_building_type(Type),
                            level=Level,
                            created=Created}};
@@ -58,8 +58,8 @@ from_doc(Doc) ->
 
 -spec to_doc(building()) -> map().
 to_doc(Building) ->
-    Doc = #{<<"planet">> => Building#building.planet,
-            <<"type">> => Building#building.type,
+    Doc = #{<<"planet">> => ogonek_mongo:to_id(Building#building.planet),
+            <<"type">> => erlang:atom_to_binary(Building#building.type, utf8),
             <<"level">> => Building#building.level,
             <<"created">> => Building#building.created},
 

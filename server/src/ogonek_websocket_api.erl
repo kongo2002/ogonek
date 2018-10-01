@@ -328,6 +328,7 @@ try_auth_user(Socket, #session{id=Id, user_id=UserId}) ->
     LoggedIn =
     case ogonek_mongo:get_user(UserId) of
         {ok, #user{oauth=undefined}} ->
+            lager:info("user ~p is known - but no oauth information present", [UserId]),
             false;
         {ok, User} ->
             Provider = User#user.provider,

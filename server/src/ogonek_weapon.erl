@@ -56,7 +56,7 @@ from_doc(Doc) ->
 -spec to_doc(weapon()) -> map().
 to_doc(Weapon) ->
     Doc = #{<<"planet">> => Weapon#weapon.planet,
-            <<"type">> => Weapon#weapon.type,
+            <<"type">> => erlang:atom_to_binary(Weapon#weapon.type, utf8),
             <<"count">> => Weapon#weapon.count},
 
     ogonek_util:with_id(Weapon#weapon.id, Doc).

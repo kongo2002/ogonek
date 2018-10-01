@@ -112,8 +112,8 @@ from_doc(Doc) ->
           <<"created">> := Created,
           <<"finish">> := Finish,
           <<"progress">> := Progress} ->
-            {ok, #research{id=Id,
-                           user=User,
+            {ok, #research{id=ogonek_mongo:from_id(Id),
+                           user=ogonek_mongo:from_id(User),
                            research=to_research(Research),
                            level=Level,
                            created=Created,
@@ -126,8 +126,8 @@ from_doc(Doc) ->
 
 -spec to_doc(research()) -> map().
 to_doc(Research) ->
-    Doc = #{<<"user">> => Research#research.user,
-            <<"research">> => Research#research.research,
+    Doc = #{<<"user">> => ogonek_mongo:to_id(Research#research.user),
+            <<"research">> => erlang:atom_to_binary(Research#research.research, utf8),
             <<"level">> => Research#research.level,
             <<"created">> => Research#research.created,
             <<"finish">> => Research#research.finish,

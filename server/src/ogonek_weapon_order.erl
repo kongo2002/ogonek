@@ -58,7 +58,7 @@ from_doc(Doc) ->
 
 -spec to_doc(weapon_order()) -> map().
 to_doc(WOrder) ->
-    Doc = #{<<"weapon">> => WOrder#weapon_order.weapon,
+    Doc = #{<<"weapon">> => erlang:atom_to_binary(WOrder#weapon_order.weapon, utf8),
             <<"planet">> => WOrder#weapon_order.planet,
             <<"created">> => WOrder#weapon_order.created,
             <<"finish">> => WOrder#weapon_order.finish},

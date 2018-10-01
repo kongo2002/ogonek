@@ -62,7 +62,7 @@ from_doc(Doc) ->
           <<"size">> := Size,
           <<"pos">> := #{<<"x">> := X, <<"y">> := Y, <<"z">> := Z},
           <<"idx">> := Idx} ->
-            Id = maps:get(<<"_id">>, Doc, undefined),
+            Id = ogonek_mongo:from_id(maps:get(<<"_id">>, Doc, undefined)),
             Owner = maps:get(<<"owner">>, Doc, undefined),
             Res = maps:get(<<"resources">>, Doc, undefined),
             Util = maps:get(<<"utilization">>, Doc, undefined),
@@ -77,7 +77,7 @@ from_doc(Doc) ->
                                  size=Size,
                                  position={X, Y, Z},
                                  index=Idx,
-                                 owner=Owner,
+                                 owner=ogonek_mongo:from_id(Owner),
                                  resources=Resources,
                                  utilization=Utilization}}
             end;
@@ -89,7 +89,7 @@ from_doc(Doc) ->
 -spec to_doc(planet()) -> map().
 to_doc(Planet) ->
     {X, Y, Z} = Planet#planet.position,
-    Doc = #{<<"type">> => Planet#planet.type,
+    Doc = #{<<"type">> => erlang:atom_to_binary(Planet#planet.type, utf8),
             <<"size">> => Planet#planet.size,
             <<"pos">> => #{<<"x">> => X, <<"y">> => Y, <<"z">> => Z},
             <<"idx">> => Planet#planet.index,
@@ -101,14 +101,16 @@ to_doc(Planet) ->
     ogonek_util:with_id(Planet#planet.id, Doc0).
 
 
--spec resources_or_empty(json_doc() | undefined) -> {ok, resources()} | {error, invalid}.
+-spec resources_or_empty(json_doc() | map() | undefined) -> {ok, resources()} | {error, invalid}.
 resources_or_empty(undefined) ->
     {ok, ogonek_resources:empty()};
+resources_or_empty(ResMap) when is_map(ResMap) ->
+    ogonek_resources:from_doc(ResMap);
 resources_or_empty(ResJson) ->
     ogonek_resources:from_json(ResJson).
 
 
--spec resources_or_empty(PlanetId :: binary(), json_doc() | undefined) -> {ok, resources()} | {error, invalid}.
+-spec resources_or_empty(PlanetId :: binary(), json_doc() | map() | undefined) -> {ok, resources()} | {error, invalid}.
 resources_or_empty(PlanetId, ResJson) ->
     case resources_or_empty(ResJson) of
         {ok, Res} -> {ok, Res#resources{planet=PlanetId}};

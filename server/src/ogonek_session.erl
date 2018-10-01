@@ -56,12 +56,12 @@ from_doc(Doc) ->
           <<"headers">> := Headers,
           <<"ip">> := Ip} ->
             UserId = maps:get(<<"user_id">>, Doc, undefined),
-            {ok, #session{id=Id,
+            {ok, #session{id=ogonek_mongo:from_id(Id),
                           ip=Ip,
                           created=Created,
                           updated=Updated,
                           headers=Headers,
-                          user_id=UserId}};
+                          user_id=ogonek_mongo:from_id(UserId)}};
         _Otherwise ->
             {error, invalid}
     end.

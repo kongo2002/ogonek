@@ -273,12 +273,14 @@ doc(DocType, Values) when is_list(Values) ->
     {[{?MSG_TYPE, DocType} | Values]}.
 
 
--spec seconds_since(Timestamp :: binary()) -> integer().
+-spec seconds_since(Timestamp :: timestamp() | undefined) -> integer().
+seconds_since(undefined) -> 0;
 seconds_since(Timestamp) ->
     seconds_since(Timestamp, ogonek_util:now8601()).
 
 
--spec seconds_since(Timestamp :: timestamp(), RelativeTo :: timestamp()) -> integer().
+-spec seconds_since(Timestamp :: timestamp() | undefined, RelativeTo :: timestamp()) -> integer().
+seconds_since(undefined, _RelativeTo) -> 0;
 seconds_since(Timestamp, RelativeTo) ->
     RelativeTime = iso8601:parse(RelativeTo),
     Since = iso8601:parse(Timestamp),

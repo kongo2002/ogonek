@@ -87,7 +87,7 @@ from_doc(Doc) ->
           <<"pvc">> := PVC,
           <<"titan">> := Titan,
           <<"kyanite">> := Kyanite} ->
-            {ok, #resources{planet=maps:get(<<"planet">>, Doc, undefined),
+            {ok, #resources{planet=ogonek_mongo:from_id(maps:get(<<"planet">>, Doc, undefined)),
                             workers=maps:get(<<"workers">>, Doc, 0),
                             power=maps:get(<<"power">>, Doc, 0),
                             iron_ore=IronOre,

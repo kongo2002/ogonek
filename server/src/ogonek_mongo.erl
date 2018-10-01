@@ -22,7 +22,8 @@
 -export([start_link/0]).
 
 %% Utils
--export([to_id/1]).
+-export([to_id/1,
+         from_id/1]).
 
 %% Session API
 -export([new_session/2,
@@ -83,8 +84,6 @@
 -record(state, {
           topology :: pid() | undefined
          }).
-
--type state() :: #state{}.
 
 %%%===================================================================
 %%% API
@@ -163,6 +162,8 @@ create_user_from_twitch(User, Provider) ->
             <<"name">> => User#twitch_user.display_name,
             <<"img">> => User#twitch_user.profile_image_url},
 
+    % TODO: missing oauth information
+
     Result = mongo_api:insert(Info, <<"user">>, Map),
     case Result of
         {{true, _N}, Doc} ->
@@ -219,14 +220,14 @@ building_finish(Building) ->
 -spec buildings_of_planet(PlanetId :: binary()) -> [building()].
 buildings_of_planet(PlanetId) ->
     Info = get_info(),
-    Query = #{<<"planet">> => PlanetId},
+    Query = #{<<"planet">> => to_id(PlanetId)},
     find_all(Info, <<"building">>, Query, fun ogonek_building:from_doc/1).
 
 
 -spec research_of_user(UserId :: binary()) -> [research()].
 research_of_user(UserId) ->
     Info = get_info(),
-    Query = #{<<"user">> => UserId},
+    Query = #{<<"user">> => to_id(UserId)},
     find_all(Info, <<"research">>, Query, fun ogonek_research:from_doc/1).
 
 
@@ -253,7 +254,7 @@ construction_remove(PlanetId, Building, Level) ->
 -spec constructions_of_planet(binary()) -> [construction()].
 constructions_of_planet(PlanetId) ->
     Info = get_info(),
-    Query = #{<<"planet">> => PlanetId},
+    Query = #{<<"planet">> => to_id(PlanetId)},
     find_all(Info, <<"construction">>, Query, fun ogonek_construction:from_doc/1).
 
 
@@ -265,7 +266,7 @@ weapon_order_create(WOrder) ->
 -spec weapon_orders_of_planet(PlanetId :: binary()) -> [weapon_order()].
 weapon_orders_of_planet(PlanetId) ->
     Info = get_info(),
-    Query = #{<<"planet">> => PlanetId},
+    Query = #{<<"planet">> => to_id(PlanetId)},
     find_all(Info, <<"weapon_order">>, Query, fun ogonek_weapon_order:from_doc/1).
 
 
@@ -282,7 +283,7 @@ weapon_update(Weapon, OrderId) ->
 -spec weapons_of_planet(PlanetId :: binary()) -> [weapon()].
 weapons_of_planet(PlanetId) ->
     Info = get_info(),
-    Query = #{<<"planet">> => PlanetId},
+    Query = #{<<"planet">> => to_id(PlanetId)},
     find_all(Info, <<"weapon">>, Query, fun ogonek_weapon_order:from_doc/1).
 
 
@@ -317,7 +318,7 @@ planet_claim(Planet, UserId) ->
 -spec planets_of_user(UserId :: binary()) -> [planet()].
 planets_of_user(UserId) ->
     Info = get_info(),
-    Query = #{<<"owner">> => UserId},
+    Query = #{<<"owner">> => to_id(UserId)},
     find_all(Info, <<"planet">>, Query, fun ogonek_planet:from_doc/1).
 
 
@@ -406,7 +407,7 @@ handle_cast({remove_user_from_session, SessionId}, #state{topology=T}=State) ->
 
 handle_cast({add_user_to_session, UserId, SessionId}, #state{topology=T}=State) ->
     Now = ogonek_util:now8601(),
-    Update = #{<<"$set">> => #{<<"updated">> => Now, <<"user_id">> => UserId}},
+    Update = #{<<"$set">> => #{<<"updated">> => Now, <<"user_id">> => to_id(UserId)}},
     mongo_api:update(T, <<"session">>, id_query(SessionId), Update, #{}),
 
     {noreply, State};
@@ -421,7 +422,7 @@ handle_cast({refresh_session, SessionId}, #state{topology=T}=State) ->
 handle_cast({update_user, User}, #state{topology=T}=State) ->
     UserMap = ogonek_user:to_doc(User),
     Update = #{<<"$set">> => maps:remove(<<"_id">>, UserMap)},
-    mongo_api:update(T, <<"session">>, id_query(User#user.id), Update, #{}),
+    mongo_api:update(T, <<"user">>, id_query(User#user.id), Update, #{}),
 
     {noreply, State};
 
@@ -559,7 +560,7 @@ handle_cast({planet_claim, #planet{id=undefined}=P, Sender}, #state{topology=T}=
     {noreply, State};
 
 handle_cast({planet_claim, Planet, Sender}, #state{topology=T}=State) ->
-    Update = #{<<"$set">> => #{<<"owner">> => Planet#planet.owner}},
+    Update = #{<<"$set">> => #{<<"owner">> => to_id(Planet#planet.owner)}},
     case mongo_api:update(T, <<"planet">>, id_query(Planet#planet.id), Update, #{}) of
         {true, #{<<"n">> := 1}} ->
             Sender ! {planet_claim, Planet};
@@ -650,11 +651,17 @@ get_info() ->
     gen_server:call(?MODULE, get_info).
 
 
--spec insert(Topology :: pid(), Collection :: binary(), Doc :: map(), fun((map()) -> {ok, term()} | {error, invalid})) -> {ok, map()} | {error, invalid} | error.
+-spec insert(Topology :: pid(), Collection :: binary(), Doc :: map(), fun((map()) -> {ok, term()} | {error, invalid})) -> {ok, map()} | error.
 insert(Topology, Collection, Doc, Convert) ->
     case mongo_api:insert(Topology, Collection, Doc) of
         {{true, _N}, Result} ->
-            Convert(Result);
+            case Convert(Result) of
+                {error, invalid} ->
+                    lager:warning("mongodb - failed to convert '~s' document: ~p",
+                                  [Collection, Result]),
+                    error;
+                Success -> Success
+            end;
         _Otherwise ->
             error
     end.
@@ -702,7 +709,14 @@ binary_to_objectid(<<BS:2/binary, Bin/binary>>, Result) ->
 binary_to_objectid(Bin, [erlang:binary_to_integer(BS, 16)|Result]).
 
 
--spec to_id(binary() | bson:objectid()) -> binary() | bson:objectid().
+-spec from_id(undefined | binary() | bson:objectid()) -> undefined | binary().
+from_id(undefined) -> undefined;
+from_id(Bin) when is_binary(Bin) -> Bin;
+from_id(ObjId) -> objectid_to_binary(ObjId).
+
+
+-spec to_id(undefined | binary() | bson:objectid()) -> undefined | binary() | bson:objectid().
+to_id(undefined) -> undefined;
 to_id(Bin) when is_binary(Bin) ->
     % if the given binary is not convertible in to a proper
     % object-id we will return the unmodified binary instead

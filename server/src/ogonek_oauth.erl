@@ -18,6 +18,7 @@
 
 -export([from_json/1,
          from_doc/1,
+         to_doc/1,
          to_json/1,
          to_json/2]).
 
@@ -55,6 +56,15 @@ from_doc(Doc) ->
         _Otherwise ->
             {error, invalid}
     end.
+
+
+-spec to_doc(oauth_access()) -> map().
+to_doc(OAuth) ->
+    #{<<"atoken">> => OAuth#oauth_access.access_token,
+      <<"id_token">> => OAuth#oauth_access.id_token,
+      <<"rtoken">> => OAuth#oauth_access.refresh_token,
+      <<"scope">> => OAuth#oauth_access.scope,
+      <<"ttype">> => OAuth#oauth_access.token_type}.
 
 
 -spec to_json(oauth_access()) -> tuple().

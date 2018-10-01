@@ -54,7 +54,7 @@ from_doc(Doc) ->
           <<"name">> := Name,
           <<"img">> := Img} ->
             OAuth = oauth_doc(maps:get(<<"oauth">>, Doc, undefined)),
-            {ok, #user{id=Id,
+            {ok, #user{id=ogonek_mongo:from_id(Id),
                        provider=Provider,
                        provider_id=Pid,
                        email=Email,
@@ -68,12 +68,14 @@ from_doc(Doc) ->
 
 -spec to_doc(user()) -> map().
 to_doc(User) ->
-    #{<<"_id">> => User#user.id,
-      <<"provider">> => User#user.provider,
-      <<"pid">> => User#user.provider_id,
-      <<"email">> => User#user.email,
-      <<"name">> => User#user.name,
-      <<"img">> => User#user.img}.
+    Doc = #{<<"_id">> => ogonek_mongo:to_id(User#user.id),
+            <<"provider">> => User#user.provider,
+            <<"pid">> => User#user.provider_id,
+            <<"email">> => User#user.email,
+            <<"name">> => User#user.name,
+            <<"img">> => User#user.img},
+
+    ogonek_util:with(<<"oauth">>, User#user.oauth, fun ogonek_oauth:to_doc/1, Doc).
 
 
 -spec to_json(user()) -> tuple().
