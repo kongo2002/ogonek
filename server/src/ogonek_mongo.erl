@@ -702,9 +702,14 @@ binary_to_objectid(<<BS:2/binary, Bin/binary>>, Result) ->
 binary_to_objectid(Bin, [erlang:binary_to_integer(BS, 16)|Result]).
 
 
--spec to_id(binary() | bson:objectid()) -> bson:objectid().
+-spec to_id(binary() | bson:objectid()) -> binary() | bson:objectid().
 to_id(Bin) when is_binary(Bin) ->
-    binary_to_objectid(Bin);
+    % if the given binary is not convertible in to a proper
+    % object-id we will return the unmodified binary instead
+    case binary_to_objectid(Bin) of
+        {<<_:96>>}=Oid -> Oid;
+        _Otherwise -> Bin
+    end;
 to_id(ObjectId) ->
     ObjectId.
 
