@@ -310,22 +310,27 @@ planet_create(Planet) ->
 
 -spec planet_claim(Planet :: planet(), UserId :: binary()) -> ok.
 planet_claim(Planet, UserId) ->
-    ok.
+    Planet0 = Planet#planet{owner=UserId},
+    gen_server:cast(?MODULE, {planet_claim, Planet0, self()}).
 
 
 -spec planets_of_user(UserId :: binary()) -> [planet()].
 planets_of_user(UserId) ->
-    [].
+    Info = get_info(),
+    Query = #{<<"owner">> => UserId},
+    find_all(Info, <<"planet">>, Query, fun ogonek_planet:from_doc/1).
 
 
 -spec planet_update_resources(PlanetId :: binary(), resources()) -> ok.
 planet_update_resources(PlanetId, Resources) ->
-    gen_server:cast(?MODULE, {planet_update_resources, PlanetId, Resources}).
+    Res = Resources#resources{updated=ogonek_util:now8601()},
+    gen_server:cast(?MODULE, {planet_update_resources, PlanetId, Res}).
 
 
 -spec planet_update_utilization(PlanetId :: binary(), Utilization :: resources()) -> ok.
 planet_update_utilization(PlanetId, Utilization) ->
-    gen_server:cast(?MODULE, {planet_update_utilization, PlanetId, Utilization}).
+    Util = Utilization#resources{updated=ogonek_util:now8601()},
+    gen_server:cast(?MODULE, {planet_update_utilization, PlanetId, Util}).
 
 
 %%%===================================================================
@@ -422,9 +427,9 @@ handle_cast({update_user, User}, #state{topology=T}=State) ->
 
 handle_cast({building_finish, #building{id=undefined}=B, Sender}, #state{topology=T}=State) ->
     Doc = ogonek_building:to_doc(B),
-    case mongo_api:insert(T, <<"building">>, Doc) of
-        {{true, _N}, Result} ->
-            Sender ! {building_finish, ogonek_building:from_doc(Result)};
+    case insert(T, <<"building">>, Doc, fun ogonek_building:from_doc/1) of
+        {ok, Building} ->
+            Sender ! {building_finish, Building};
         Otherwise ->
             lager:error("mongo - building_finish: ~p ~p", [B, Otherwise])
     end,
@@ -444,9 +449,9 @@ handle_cast({building_finish, Building, Sender}, #state{topology=T}=State) ->
 
 handle_cast({research_create, #research{id=undefined}=R, Sender}, #state{topology=T}=State) ->
     Doc = ogonek_research:to_doc(R),
-    case mongo_api:insert(T, <<"research">>, Doc) of
-        {{true, _N}, Result} ->
-            Sender ! {research_create, ogonek_research:from_doc(Result)};
+    case insert(T, <<"research">>, Doc, fun ogonek_research:from_doc/1) of
+        {ok, Research} ->
+            Sender ! {research_create, Research};
         Otherwise ->
             lager:error("mongo - research_create: ~p ~p", [R, Otherwise])
     end,
@@ -481,9 +486,9 @@ handle_cast({research_finish, Research, Sender}, #state{topology=T}=State) ->
 
 handle_cast({construction_create, Construction, Sender}, #state{topology=T}=State) ->
     Doc = ogonek_construction:to_doc(Construction),
-    case mongo_api:insert(T, <<"construction">>, Doc) of
-        {{true, _N}, Result} ->
-            Sender ! {construction_create, ogonek_construction:from_doc(Result)};
+    case insert(T, <<"construction">>, Doc, fun ogonek_construction:from_doc/1) of
+        {ok, Constr} ->
+            Sender ! {construction_create, Constr};
         Otherwise ->
             lager:error("mongo - construction_create: ~p ~p", [Construction, Otherwise])
     end,
@@ -498,9 +503,9 @@ handle_cast({construction_remove, PlanetId, Building, Level}, #state{topology=T}
 
 handle_cast({weapon_order_create, WOrder, Sender}, #state{topology=T}=State) ->
     Doc = ogonek_weapon_order:to_doc(WOrder),
-    case mongo_api:insert(T, <<"weapon_order">>, Doc) of
-        {{true, _N}, Result} ->
-            Sender ! {weapon_order_create, ogonek_weapon_order:from_doc(Result)};
+    case insert(T, <<"weapon_order">>, Doc, fun ogonek_weapon_order:from_doc/1) of
+        {ok, Order} ->
+            Sender ! {weapon_order_create, Order};
         Otherwise ->
             lager:error("mongo - weapon_order_create: ~p ~p", [WOrder, Otherwise])
     end,
@@ -512,9 +517,9 @@ handle_cast({weapon_order_remove, OrderId}, #state{topology=T}=State) ->
 
 handle_cast({weapon_update, #weapon{id=undefined}=W, OrderId, Sender}, #state{topology=T}=State) ->
     Doc = ogonek_weapon:to_doc(W),
-    case mongo_api:insert(T, <<"weapon">>, Doc) of
-        {{true, _N}, Result} ->
-            Sender ! {weapon_update, ogonek_weapon:from_doc(Result), OrderId};
+    case insert(T, <<"weapon">>, Doc, fun ogonek_weapon:from_doc/1) of
+        {ok, Weapon} ->
+            Sender ! {weapon_update, Weapon, OrderId};
         Otherwise ->
             lager:error("mongo - weapon_update: ~p ~p", [W, Otherwise])
     end,
@@ -527,6 +532,63 @@ handle_cast({weapon_update, Weapon, OrderId, Sender}, #state{topology=T}=State) 
             Sender ! {weapon_update, Weapon, OrderId};
         Otherwise ->
             lager:error("mongo - weapon_update: ~p ~p", [Weapon, Otherwise])
+    end,
+
+    {noreply, State};
+
+handle_cast({planet_create, Planet}, #state{topology=T}=State) ->
+    Doc = ogonek_planet:to_doc(Planet),
+    Result = mongo_api:insert(T, <<"planet">>, Doc),
+    case Result of
+        {{true, _N}, _Doc} ->
+            ok;
+        Otherwise ->
+            lager:error("mongo - planet_create: ~p", [Otherwise])
+    end,
+
+    {noreply, State};
+
+handle_cast({planet_claim, #planet{id=undefined}=P, Sender}, #state{topology=T}=State) ->
+    Doc = ogonek_planet:to_doc(P),
+    case insert(T, <<"planet">>, Doc, fun ogonek_planet:from_doc/1) of
+        {ok, Planet} ->
+            Sender ! {planet_claim, Planet};
+        Otherwise ->
+            lager:error("mongo - planet_claim: ~p ~p", [P, Otherwise])
+    end,
+    {noreply, State};
+
+handle_cast({planet_claim, Planet, Sender}, #state{topology=T}=State) ->
+    Update = #{<<"$set">> => #{<<"owner">> => Planet#planet.owner}},
+    case mongo_api:update(T, <<"planet">>, id_query(Planet#planet.id), Update, #{}) of
+        {true, #{<<"n">> := 1}} ->
+            Sender ! {planet_claim, Planet};
+        Otherwise ->
+            lager:error("mongo - planet_claim: ~p ~p", [Planet, Otherwise])
+    end,
+
+    {noreply, State};
+
+handle_cast({planet_update_resources, PlanetId, Resources}, #state{topology=T}=State) ->
+    Update = #{<<"$set">> => #{<<"resources">> => ogonek_resources:to_doc(Resources)}},
+    case mongo_api:update(T, <<"planet">>, id_query(PlanetId), Update, #{}) of
+        {true, #{<<"n">> := 1}} ->
+            ok;
+        Otherwise ->
+            lager:error("mongo - planet_update_resources: ~p ~p ~p",
+                        [PlanetId, Resources, Otherwise])
+    end,
+
+    {noreply, State};
+
+handle_cast({planet_update_utilization, PlanetId, Util}, #state{topology=T}=State) ->
+    Update = #{<<"$set">> => #{<<"utilization">> => ogonek_resources:to_doc(Util)}},
+    case mongo_api:update(T, <<"planet">>, id_query(PlanetId), Update, #{}) of
+        {true, #{<<"n">> := 1}} ->
+            ok;
+        Otherwise ->
+            lager:error("mongo - planet_update_utilization: ~p ~p ~p",
+                        [PlanetId, Util, Otherwise])
     end,
 
     {noreply, State};
@@ -586,6 +648,16 @@ code_change(_OldVsn, State, _Extra) ->
 
 get_info() ->
     gen_server:call(?MODULE, get_info).
+
+
+-spec insert(Topology :: pid(), Collection :: binary(), Doc :: map(), fun((map()) -> {ok, term()} | {error, invalid})) -> {ok, map()} | {error, invalid} | error.
+insert(Topology, Collection, Doc, Convert) ->
+    case mongo_api:insert(Topology, Collection, Doc) of
+        {{true, _N}, Result} ->
+            Convert(Result);
+        _Otherwise ->
+            error
+    end.
 
 
 -spec find_all(pid(), binary(), map(), fun((map()) -> {ok, term()} | {error, invalid})) -> [term()].
