@@ -651,7 +651,7 @@ get_info() ->
     gen_server:call(?MODULE, get_info).
 
 
--spec insert(Topology :: pid(), Collection :: binary(), Doc :: map(), fun((map()) -> {ok, term()} | {error, invalid})) -> {ok, map()} | error.
+-spec insert(Topology :: pid(), Collection :: binary(), Doc :: map(), fun((map()) -> {ok, map()} | {error, invalid})) -> {ok, map()} | error.
 insert(Topology, Collection, Doc, Convert) ->
     case mongo_api:insert(Topology, Collection, Doc) of
         {{true, _N}, Result} ->

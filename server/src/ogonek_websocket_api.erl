@@ -91,8 +91,11 @@ request(_Request, Message, State) ->
 request_session(Request) ->
     RemoteIp = elli_request:peer(Request),
     Headers = elli_request:headers(Request),
-    {ok, SessionId} = ogonek_mongo:new_session(RemoteIp, Headers),
-    SessionId.
+
+    case ogonek_mongo:new_session(RemoteIp, Headers) of
+        {ok, SessionId} -> SessionId;
+        _Otherwise -> <<>>
+    end.
 
 
 get_cookie_session(Request) ->
