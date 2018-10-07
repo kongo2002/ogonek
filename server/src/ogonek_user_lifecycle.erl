@@ -387,7 +387,7 @@ handle_info(start_research, State) ->
     case current_research(State#state.research) of
         {undefined, Research} ->
             ResearchDuration = research_duration(State),
-            FinishedAt = finished_at(ResearchDuration),
+            FinishedAt = ogonek_util:finished_at(ResearchDuration),
             Possible = ogonek_research:possible_research(Research),
             Pick = ogonek_util:choose_random(Possible),
 
@@ -513,7 +513,7 @@ handle_info({build_building, Planet, Type, Level}=Req, State) ->
 
                            if Possible == true ->
                                   Duration = ogonek_buildings:calculate_construction_duration(Building),
-                                  FinishedAt = finished_at(Duration),
+                                  FinishedAt = ogonek_util:finished_at(Duration),
 
                                   Construction = #construction{
                                                     planet=Planet,
@@ -561,7 +561,7 @@ handle_info({build_weapon, PlanetId, WDef}, State) ->
             case weapon_order_possible(PState, WDef) of
                 true ->
                     Duration = ogonek_weapons:calculate_order_duration(Bs, WDef),
-                    FinishedAt = finished_at(Duration),
+                    FinishedAt = ogonek_util:finished_at(Duration),
                     Order = #weapon_order{
                                weapon=WDef#wdef.name,
                                planet=PlanetId,
@@ -933,19 +933,6 @@ schedule_recalculate_resources() ->
     ok.
 
 
--spec to_hours(Seconds :: integer()) -> float().
-to_hours(Seconds) ->
-    Seconds / 3600.
-
-
--spec finished_at(Seconds :: integer()) -> timestamp().
-finished_at(DurationSeconds) ->
-    Now = calendar:universal_time(),
-    GregorianNow = calendar:datetime_to_gregorian_seconds(Now),
-    FinishedAt = GregorianNow + DurationSeconds,
-    iso8601:format(calendar:gregorian_seconds_to_datetime(FinishedAt)).
-
-
 -spec calc_resources(planet_state()) -> planet_state().
 calc_resources(PState) ->
     calc_resources(PState, ogonek_util:now8601()).
@@ -986,7 +973,7 @@ calculate_resources(PlanetState, Buildings, RelativeTo, Force) ->
            Production = ogonek_production:of_planet(Planet, Buildings),
            lager:debug("user ~s - production: ~p", [UserId, Production]),
 
-           SimulatedHours = to_hours(SecondsSince),
+           SimulatedHours = ogonek_util:to_hours(SecondsSince),
 
            Produced = ogonek_resources:with_factor(SimulatedHours, Production),
            lager:debug("user ~s - produced since ~s: ~p", [UserId, Resources#resources.updated, Produced]),
