@@ -76,7 +76,7 @@ try_weapon_type(_Type) ->
 calculate_order_duration(_Buildings, #wdef{duration=Duration}) ->
     % TODO: proper distribution
     % take level of weapon_manufacture into account
-    Duration.
+    round(Duration / ?OGONEK_DEFAULT_ACCELERATION).
 
 
 -spec to_json(wdef()) -> json_doc().

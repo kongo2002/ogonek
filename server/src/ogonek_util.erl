@@ -51,7 +51,6 @@
          to_hours/1,
          to_hours/2,
          finished_at/1,
-         finished_at/2,
          seconds_since/1,
          seconds_since/2,
          now8601/0
@@ -279,15 +278,9 @@ doc(DocType, Values) when is_list(Values) ->
 
 -spec finished_at(DurationSeconds :: integer()) -> timestamp().
 finished_at(DurationSeconds) ->
-    finished_at(DurationSeconds, 1.0).
-
-
--spec finished_at(DurationSeconds :: integer(), Acceleration :: float()) -> timestamp().
-finished_at(DurationSeconds, Acceleration) ->
-    Seconds = round(DurationSeconds / Acceleration),
     Now = calendar:universal_time(),
     GregorianNow = calendar:datetime_to_gregorian_seconds(Now),
-    FinishedAt = GregorianNow + Seconds,
+    FinishedAt = GregorianNow + DurationSeconds,
     iso8601:format(calendar:gregorian_seconds_to_datetime(FinishedAt)).
 
 

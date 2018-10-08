@@ -387,7 +387,7 @@ handle_info(start_research, State) ->
     case current_research(State#state.research) of
         {undefined, Research} ->
             ResearchDuration = research_duration(State),
-            FinishedAt = ogonek_util:finished_at(ResearchDuration, ?OGONEK_DEFAULT_ACCELERATION),
+            FinishedAt = ogonek_util:finished_at(ResearchDuration),
             Possible = ogonek_research:possible_research(Research),
             Pick = ogonek_util:choose_random(Possible),
 
@@ -513,7 +513,7 @@ handle_info({build_building, Planet, Type, Level}=Req, State) ->
 
                            if Possible == true ->
                                   Duration = ogonek_buildings:calculate_construction_duration(Building),
-                                  FinishedAt = ogonek_util:finished_at(Duration, ?OGONEK_DEFAULT_ACCELERATION),
+                                  FinishedAt = ogonek_util:finished_at(Duration),
 
                                   Construction = #construction{
                                                     planet=Planet,
@@ -561,7 +561,7 @@ handle_info({build_weapon, PlanetId, WDef}, State) ->
             case weapon_order_possible(PState, WDef) of
                 true ->
                     Duration = ogonek_weapons:calculate_order_duration(Bs, WDef),
-                    FinishedAt = ogonek_util:finished_at(Duration, ?OGONEK_DEFAULT_ACCELERATION),
+                    FinishedAt = ogonek_util:finished_at(Duration),
                     Order = #weapon_order{
                                weapon=WDef#wdef.name,
                                planet=PlanetId,
