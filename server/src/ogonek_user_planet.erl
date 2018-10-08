@@ -157,6 +157,13 @@ handle_cast(prepare, State) ->
 
     {noreply, State};
 
+handle_cast({terminate, Reason}, State) ->
+    PlanetId = planet_id(State),
+    UserId = State#state.user,
+    lager:debug("user ~s - terminating planet ~s due to ~p",
+                [UserId, PlanetId, Reason]),
+    {stop, normal, State};
+
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -573,9 +580,7 @@ handle_info(Info, #state{user=Id}=State) ->
 %% @end
 %%--------------------------------------------------------------------
 terminate(_Reason, State) ->
-    PlanetId = planet_id(State),
-    UserId = State#state.user,
-    lager:debug("user ~s - terminating planet ~s", [UserId, PlanetId]),
+    lager:debug("terminating planet ~s", [planet_id(State)]),
     ok.
 
 %%--------------------------------------------------------------------
@@ -614,7 +619,7 @@ json_to_sockets(Module, Json, State, _) ->
 -spec schedule_recalculate_resources() -> ok.
 schedule_recalculate_resources() ->
     Interval = ?OGONEK_REFRESH_RESOURCE_INTERVAL_SECS * 1000,
-    erlang:send_after(Interval, self(), calc_resources),
+    erlang:send_after(Interval, self(), {calc_resources, false}),
     ok.
 
 

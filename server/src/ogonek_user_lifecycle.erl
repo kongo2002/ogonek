@@ -132,6 +132,12 @@ handle_cast(prepare, #state{id=UserId}=State) ->
 
 handle_cast({terminate, Reason}, #state{id=UserId}=State) ->
     lager:info("user ~s - request to terminate [reason ~p]", [UserId, Reason]),
+
+    % terminate child planet actors
+    Terminate = {terminate, Reason},
+    Planets = maps:values(State#state.planets),
+    lists:foreach(fun(Pid) -> gen_server:cast(Pid, Terminate) end, Planets),
+
     {stop, normal, State};
 
 handle_cast(_Msg, State) ->
