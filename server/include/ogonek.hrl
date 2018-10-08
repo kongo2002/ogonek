@@ -14,6 +14,8 @@
 
 -define(MSG_TYPE, <<"t">>).
 
+-define(OGONEK_DEFAULT_ACCELERATION, 1.0).
+
 -type json_props() :: [tuple()].
 
 -type json_doc() :: json_props() | {json_props()}.

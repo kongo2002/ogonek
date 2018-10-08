@@ -387,7 +387,7 @@ handle_info(start_research, State) ->
     case current_research(State#state.research) of
         {undefined, Research} ->
             ResearchDuration = research_duration(State),
-            FinishedAt = ogonek_util:finished_at(ResearchDuration),
+            FinishedAt = ogonek_util:finished_at(ResearchDuration, ?OGONEK_DEFAULT_ACCELERATION),
             Possible = ogonek_research:possible_research(Research),
             Pick = ogonek_util:choose_random(Possible),
 
@@ -513,7 +513,7 @@ handle_info({build_building, Planet, Type, Level}=Req, State) ->
 
                            if Possible == true ->
                                   Duration = ogonek_buildings:calculate_construction_duration(Building),
-                                  FinishedAt = ogonek_util:finished_at(Duration),
+                                  FinishedAt = ogonek_util:finished_at(Duration, ?OGONEK_DEFAULT_ACCELERATION),
 
                                   Construction = #construction{
                                                     planet=Planet,
@@ -561,7 +561,7 @@ handle_info({build_weapon, PlanetId, WDef}, State) ->
             case weapon_order_possible(PState, WDef) of
                 true ->
                     Duration = ogonek_weapons:calculate_order_duration(Bs, WDef),
-                    FinishedAt = ogonek_util:finished_at(Duration),
+                    FinishedAt = ogonek_util:finished_at(Duration, ?OGONEK_DEFAULT_ACCELERATION),
                     Order = #weapon_order{
                                weapon=WDef#wdef.name,
                                planet=PlanetId,
@@ -973,7 +973,7 @@ calculate_resources(PlanetState, Buildings, RelativeTo, Force) ->
            Production = ogonek_production:of_planet(Planet, Buildings),
            lager:debug("user ~s - production: ~p", [UserId, Production]),
 
-           SimulatedHours = ogonek_util:to_hours(SecondsSince),
+           SimulatedHours = ogonek_util:to_hours(SecondsSince, ?OGONEK_DEFAULT_ACCELERATION),
 
            Produced = ogonek_resources:with_factor(SimulatedHours, Production),
            lager:debug("user ~s - produced since ~s: ~p", [UserId, Resources#resources.updated, Produced]),
@@ -1279,7 +1279,8 @@ update_research(Researches, #research{research=Name}=Research) ->
 -spec research_duration(state()) -> integer().
 research_duration(State) ->
     Buildings = all_buildings(State),
-    ogonek_research:research_duration(Buildings).
+    Duration = ogonek_research:research_duration(Buildings),
+    round(Duration / ?OGONEK_DEFAULT_ACCELERATION).
 
 
 -spec construction_possible(PlanetState :: planet_state(), [research()], Costs :: bdef()) -> boolean().

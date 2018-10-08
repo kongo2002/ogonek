@@ -316,7 +316,7 @@ calculate_construction_duration(Type, Level) ->
     % TODO: we need a proper distribution from level to duration
     BaseDuration = base_construction_duration(Type),
     LevelDuration = 50 * math:pow(Level, 1.5),
-    round(BaseDuration + LevelDuration).
+    round((BaseDuration + LevelDuration) / ?OGONEK_DEFAULT_ACCELERATION).
 
 
 % TODO: rather move into buildings configuration
