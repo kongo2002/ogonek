@@ -29,6 +29,7 @@
          to_building_type/1,
          try_building_type/1,
          unlocked_buildings/2,
+         finish/3,
          calculate_power/1,
          calculate_workers/1,
          calculate_power_workers/2,
@@ -116,6 +117,18 @@ has_requirement([#building{type=Type, level=Lvl} | Bs], {building, Name, MinLeve
 -spec has_requirements([building()], [requirement()]) -> boolean().
 has_requirements(Buildings, Requirements) ->
     lists:all(fun(Req) -> has_requirement(Buildings, Req) end, Requirements).
+
+
+-spec finish(bdef(), PlanetId :: binary(), Level :: integer()) -> ok.
+finish(#bdef{name=Def}, PlanetId, Level) ->
+    Now = ogonek_util:now8601(),
+    Building = #building{planet=PlanetId,
+                         type=Def,
+                         level=Level,
+                         created=Now},
+
+    % maybe this one should be managed via the planet manager
+    ogonek_mongo:building_finish(Building).
 
 
 -spec unlocked_buildings([building()], [research()]) -> [bdef()].

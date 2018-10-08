@@ -16,10 +16,6 @@
 
 -include("ogonek.hrl").
 
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
--endif.
-
 -behaviour(gen_server).
 
 %% API
@@ -34,25 +30,9 @@
          code_change/3]).
 
 
--define(OGONEK_REFRESH_RESOURCE_INTERVAL_SECS, 300).
-
--type weapon_map() :: #{atom() => weapon()}.
-
--record(planet_state, {
-          planet :: planet(),
-          buildings :: [building()],
-          constructions :: [construction()],
-          capacity :: capacity(),
-          weapon_orders :: [weapon_order()],
-          weapons :: weapon_map()
-         }).
-
-
--type planet_state() :: #planet_state{}.
-
 -record(state, {
           id :: binary(),
-          planets :: #{binary() => planet_state()},
+          planets :: #{binary() => pid()},
           session :: pid(),
           research :: [research()],
           research_timer :: undefined | reference()
@@ -133,48 +113,20 @@ handle_cast(prepare, #state{id=UserId}=State) ->
     lager:debug("preparing user lifecycle of '~s'", [UserId]),
 
     Self = self(),
+    Session = State#state.session,
     Planets = fetch_planets(State),
-    PlanetMap = lists:foldl(fun(#planet{id=Id}=P, Ps) ->
-                                    PState = #planet_state{
-                                                planet=P,
-                                                buildings=[],
-                                                constructions=[],
-                                                capacity=ogonek_capacity:empty(Id),
-                                                weapon_orders=[],
-                                                weapons=maps:new()
-                                               },
-                                    maps:put(Id, PState, Ps)
+    PlanetMap = lists:foldl(fun(#planet{id=Id}=Planet, Ps) ->
+                                    {ok, UserPlanet} = ogonek_user_planet:start_link(Planet, Session),
+                                    maps:put(Id, UserPlanet, Ps)
                             end, maps:new(), Planets),
 
     lager:debug("user '~s' has ~p planets: ~p",
                 [UserId, maps:size(PlanetMap), maps:keys(PlanetMap)]),
 
-    % trigger initialization of all planets
-    lists:foreach(fun(P) ->
-                          % get buildings of planet
-                          Self ! {get_buildings, P, true},
 
-                          % get open construction orders of planet
-                          Self ! {get_constructions, P, true},
-
-                          % fetch open weapon orders
-                          % and weapons just before that
-                          Self ! {weapons_info, P, true},
-                          Self ! {get_weapon_orders, P, true},
-
-                          % calculate resources after that
-                          Self ! {calc_resources, P, false},
-
-                          % push production info as well
-                          Self ! {production_info, P},
-
-                          % fetch research progress
-                          Self ! get_research
-                  end, maps:keys(PlanetMap)),
-
-    schedule_recalculate_resources(),
-
-    self() ! unlock_buildings,
+    % fetch research progress
+    Self ! get_research,
+    Self ! unlock_buildings,
 
     {noreply, State#state{planets=PlanetMap}};
 
@@ -195,149 +147,11 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info({building_finish, Building}, #state{id=Id}=State) ->
-    lager:info("user ~s - building finished: ~p", [Id, Building]),
-
-    PlanetId = Building#building.planet,
-
-    case maps:get(PlanetId, State#state.planets, undefined) of
-        undefined ->
-            {noreply, State};
-        PState ->
-            BuildingType = Building#building.type,
-            BuildingLevel = Building#building.level,
-            Buildings = PState#planet_state.buildings,
-
-            Buildings0 = update_building(Buildings, Building),
-            Cs0 = remove_construction(PState#planet_state.constructions, BuildingType, BuildingLevel),
-
-            % in case we finished a capacity-relevant building we
-            % have to re-calculate the capacities
-            Capacity = ogonek_capacity:from_buildings(PlanetId, Buildings0),
-
-            % re-calculate the power/worker amounts in case a relevant
-            % building was just finished
-            Planet = PState#planet_state.planet,
-            Res = Planet#planet.resources,
-            {Power, Workers} = ogonek_buildings:calculate_power_workers(Buildings0, Cs0),
-            Res1 = Res#resources{power=Power, workers=Workers},
-            Planet0 = Planet#planet{resources=Res1},
-
-            PState0 = PState#planet_state{
-                        planet=Planet0,
-                        buildings=Buildings0,
-                        capacity=Capacity,
-                        constructions=Cs0},
-
-            Planets0 = maps:put(PlanetId, PState0, State#state.planets),
-            State0 = State#state{planets=Planets0},
-
-            ogonek_mongo:construction_remove(PlanetId, BuildingType, BuildingLevel),
-
-            json_to_sockets(ogonek_building, Building, State0),
-            json_to_sockets(ogonek_capacity, Capacity, State0),
-            json_to_sockets(ogonek_resources, Res1, State0),
-
-            % push production info
-            self() ! {production_info, PlanetId},
-
-            {noreply, State0}
-    end;
-
-handle_info({construction_create, Construction}, #state{id=Id}=State) ->
-    lager:info("user ~s - construction created: ~p", [Id, Construction]),
-
-    % push construction to client
-    json_to_sockets(ogonek_construction, Construction, State),
-
-    % update resources as well
-    PlanetId = Construction#construction.planet,
-    case maps:get(PlanetId, State#state.planets, undefined) of
-        undefined -> ok;
-        #planet_state{planet=Planet} ->
-            Resources = Planet#planet.resources,
-            json_to_sockets(ogonek_resources, Resources, State)
-    end,
-
-    {noreply, State};
-
-handle_info({weapon_order_create, WOrder}, #state{id=Id}=State) ->
-    lager:info("user ~s - weapon order created: ~p", [Id, WOrder]),
-
-    % push construction to client
-    json_to_sockets(ogonek_weapon_order, WOrder, State),
-
-    PlanetId = WOrder#weapon_order.planet,
-    case maps:get(PlanetId, State#state.planets, undefined) of
-        undefined ->
-            {noreply, State};
-        #planet_state{planet=Planet}=PState ->
-
-            % publish resource update
-            Resources = Planet#planet.resources,
-            json_to_sockets(ogonek_resources, Resources, State),
-
-            trigger_weapon_order_checks([WOrder]),
-
-            % update weapon orders
-            Orders = [WOrder | PState#planet_state.weapon_orders],
-            PState0 = PState#planet_state{weapon_orders=Orders},
-            Planets0 = maps:put(PlanetId, PState0, State#state.planets),
-
-            {noreply, State#state{planets=Planets0}}
-    end;
-
-handle_info({weapon_update, Weapon, OrderId}, #state{id=Id}=State) ->
-    lager:info("user ~s - weapon updated: ~p [order ~s]", [Id, Weapon, OrderId]),
-
-    % delete associated weapon order
-    ogonek_mongo:weapon_order_remove(OrderId),
-
-    PlanetId = Weapon#weapon.planet,
-    State0 = remove_weapon_order(State, PlanetId, OrderId),
-
-    OrderFinished = ogonek_util:doc(<<"w_order_finished">>,
-                                    [{<<"_id">>, OrderId}, {<<"planet">>, PlanetId}]),
-    json_to_sockets(OrderFinished, State),
-
-    self() ! {weapons_info, Weapon#weapon.planet, false},
-
-    {noreply, State0};
 
 handle_info({get_planets, Sender}, State) ->
     Planets = maps:keys(State#state.planets),
     Sender ! {planets, Planets},
     {noreply, State};
-
-handle_info(calc_resources, State) ->
-    lists:foreach(fun(P) -> self() ! {calc_resources, P, false} end,
-                  maps:keys(State#state.planets)),
-
-    schedule_recalculate_resources(),
-    {noreply, State};
-
-handle_info({calc_resources, PlanetId, Silent}, State) ->
-    lager:debug("user ~s - calculating resources for ~s", [State#state.id, PlanetId]),
-
-    case maps:get(PlanetId, State#state.planets, undefined) of
-        undefined ->
-            {noreply, State};
-        PState ->
-            PState0 = calc_resources(PState),
-
-            % update power/workers as well
-            PState1 = update_power_workers(PState0),
-
-            Planets0 = maps:put(PlanetId, PState1, State#state.planets),
-            State0 = State#state{planets=Planets0},
-
-            Planet = PState1#planet_state.planet,
-            Res = Planet#planet.resources,
-
-            json_to_sockets(ogonek_resources, Res, State0, Silent),
-
-            {noreply, State0}
-    end;
 
 handle_info(planet_info, State) ->
     for_all_planets(planet_info, State),
@@ -349,39 +163,6 @@ handle_info(planet_info, State) ->
 handle_info(weapons_info, State) ->
     for_all_planets(weapons_info, false, State),
     {noreply, State};
-
-handle_info({weapons_info, PlanetId, Silent}, State) ->
-    case maps:get(PlanetId, State#state.planets, undefined) of
-        undefined ->
-            {noreply, State};
-        PState ->
-            Buildings = PState#planet_state.buildings,
-
-            case has_weapon_manufacture(Buildings) of
-                true ->
-                    Weapons = PState#planet_state.weapons,
-                    Weapons0 =
-                    case maps:size(Weapons) =< 0 of
-                        true ->
-                            % fetch weapons from database
-                            Fetched = fetch_weapons(PlanetId),
-                            lager:info("user ~s - fetched weapons: ~p",
-                                       [State#state.id, Fetched]),
-                            Fetched;
-                        false ->
-                            Weapons
-                    end,
-
-                    Info = weapons_info(PlanetId, Weapons0),
-                    json_to_sockets(ogonek_weapon, Info, State, Silent),
-
-                    PState0 = PState#planet_state{weapons=Weapons0},
-                    Planets0 = maps:put(PlanetId, PState0, State#state.planets),
-                    {noreply, State#state{planets=Planets0}};
-                false ->
-                    {noreply, State}
-            end
-    end;
 
 handle_info(start_research, State) ->
     case current_research(State#state.research) of
@@ -439,188 +220,32 @@ handle_info({research_finish, _Research}, State) ->
     {noreply, State0};
 
 handle_info(unlock_buildings, State) ->
-    UserId = State#state.id,
     Researches = State#state.research,
 
-    lists:foreach(fun({PId, Planet}) ->
-                          Buildings = Planet#planet_state.buildings,
-                          case ogonek_buildings:unlocked_buildings(Buildings, Researches) of
-                              [] -> ok;
-                              Unlocked ->
-                                  lager:info("user ~s - unlocked new buildings on planet ~s: ~p",
-                                             [UserId, PId, Unlocked]),
-
-                                  lists:foreach(fun(Def) ->
-                                                        finish_building(Def, PId, 0)
-                                                end, Unlocked)
-                          end
-                  end, maps:to_list(State#state.planets)),
+    for_all_planets({unlock_buildings, Researches}, State),
 
     {noreply, State};
 
-handle_info({planet_info, PlanetId}, State) ->
-    case maps:get(PlanetId, State#state.planets, undefined) of
-        undefined -> ok;
-        PState ->
-            % push planet at first
-            json_to_sockets(ogonek_planet, PState#planet_state.planet, State),
+handle_info({build_building, PlanetId, Type, Level}, State) ->
+    Msg = {build_building, State#state.research, Type, Level},
+    to_planet(PlanetId, Msg, State),
+    {noreply, State};
 
-            % trigger building and resource information after that
-            Self = self(),
-            Self ! {get_buildings, PlanetId, false},
-            Self ! {get_constructions, PlanetId, false},
-            Self ! {get_weapon_orders, PlanetId, false},
-            Self ! {weapons_info, PlanetId, false},
-            Self ! {calc_resources, PlanetId, false},
-            Self ! {production_info, PlanetId}
-    end,
+handle_info({build_weapon, PlanetId, WDef}, State) ->
+    to_planet(PlanetId, {build_weapon, WDef}, State),
     {noreply, State};
 
 handle_info({production_info, PlanetId}, State) ->
-    case maps:get(PlanetId, State#state.planets, undefined) of
-        undefined -> ok;
-        #planet_state{planet=Planet, buildings=Buildings} ->
-            Production = ogonek_production:of_planet(Planet, Buildings),
-            Utilization = Planet#planet.utilization,
-            WithConsumption = ogonek_buildings:apply_building_consumption(Production, Utilization, Buildings),
-            json_to_sockets(ogonek_production, WithConsumption, State)
-    end,
-
+    to_planet(PlanetId, production_info, State),
     {noreply, State};
 
-handle_info({build_building, Planet, Type, Level}=Req, State) ->
-    case maps:get(Planet, State#state.planets, undefined) of
-        undefined ->
-            {noreply, State};
-        #planet_state{buildings=Bs, constructions=Cs}=PState ->
-            case {ogonek_buildings:get_building(Bs, Type), get_construction(Cs, Type)} of
-                % no building of this available
-                {undefined, _} ->
-                    lager:info("user ~s - build-building rejected, building not available [request ~p]",
-                               [State#state.id, Req]),
-                    {noreply, State};
-                % already construction ongoing of this type
-                {_, {ok, _Construction}} ->
-                    lager:info("user ~s - build-building rejected, same construction ongoing [request ~p]",
-                               [State#state.id, Req]),
-                    {noreply, State};
-                % building available and no construction ongoing
-                {{ok, Building}, undefined} ->
-                    if Building#building.level + 1 == Level ->
-                           Research = State#state.research,
-                           Costs = ogonek_buildings:calculate_building_costs(Building),
-                           Possible = construction_possible(PState, Research, Costs),
-
-                           if Possible == true ->
-                                  Duration = ogonek_buildings:calculate_construction_duration(Building),
-                                  FinishedAt = ogonek_util:finished_at(Duration),
-
-                                  Construction = #construction{
-                                                    planet=Planet,
-                                                    building=Type,
-                                                    level=Level,
-                                                    created=ogonek_util:now8601(),
-                                                    finish=FinishedAt
-                                                   },
-                                  ogonek_mongo:construction_create(Construction),
-
-                                  % we keep the new construction in state already although
-                                  % the database store might still be ongoing
-                                  % however we want to prevent multiple successive constructions
-                                  % to be happening
-                                  Cs0 = update_construction(Cs, Construction),
-                                  PState0 = PState#planet_state{constructions=Cs0},
-                                  PState1 = claim_resources(PState0, Costs),
-                                  Planets0 = maps:put(Planet, PState1, State#state.planets),
-
-                                  % schedule check for the time the construction will be finished
-                                  trigger_construction_check(Planet, Duration + 1),
-
-                                  State0 = State#state{planets=Planets0},
-                                  {noreply, State0};
-                              true ->
-                                  lager:info("user ~s - build-building rejected due to insufficient resources [costs ~p, request ~p]",
-                                             [State#state.id, Costs, Req]),
-                                  {noreply, State}
-                           end;
-                       true ->
-                           lager:info("user ~s - build-building rejected [current ~p, request ~p]",
-                                      [State#state.id, Building, Req]),
-                           {noreply, State}
-                    end
-            end
-    end;
-
-handle_info({build_weapon, PlanetId, WDef}, State) ->
-    UserId = State#state.id,
-
-    case maps:get(PlanetId, State#state.planets, undefined) of
-        undefined ->
-            {noreply, State};
-        #planet_state{buildings=Bs}=PState ->
-            case weapon_order_possible(PState, WDef) of
-                true ->
-                    Duration = ogonek_weapons:calculate_order_duration(Bs, WDef),
-                    FinishedAt = ogonek_util:finished_at(Duration),
-                    Order = #weapon_order{
-                               weapon=WDef#wdef.name,
-                               planet=PlanetId,
-                               created=ogonek_util:now8601(),
-                               finish=FinishedAt
-                              },
-
-                    lager:info("user ~s - start weapon order ~p", [UserId, Order]),
-
-                    ogonek_mongo:weapon_order_create(Order),
-
-                    PState0 = claim_resources(PState, WDef),
-                    Planets = maps:put(PlanetId, PState0, State#state.planets),
-                    {noreply, State#state{planets=Planets}};
-                false ->
-                    lager:warning("user ~s - build weapon not possible ~p", [UserId, WDef]),
-                    {noreply, State}
-            end
-    end;
-
 handle_info({get_utilization, PlanetId}, State) ->
-    case maps:get(PlanetId, State#state.planets, undefined) of
-        % unknown, invalid or foreign planet
-        undefined -> ok;
-        % buildings not fetched yet
-        #planet_state{planet=Planet} ->
-            Utilization = Planet#planet.utilization,
-            json_to_sockets(ogonek_utilization, Utilization, State)
-    end,
+    to_planet(PlanetId, get_utilization, State),
     {noreply, State};
 
 handle_info({set_utilization, PlanetId, Resource, Value}, State) ->
-    case maps:get(PlanetId, State#state.planets, undefined) of
-        % unknown, invalid or foreign planet
-        undefined ->
-            {noreply, State};
-        % buildings not fetched yet
-        #planet_state{planet=Planet}=PState ->
-            Utilization = Planet#planet.utilization,
-
-            case ogonek_utilization:validate(Utilization, Resource, Value) of
-                {ok, Updated} ->
-                    lager:info("user ~s - updating utilization to ~p", [State#state.id, Updated]),
-
-                    Planet0 = Planet#planet{utilization=Updated},
-                    PState0 = PState#planet_state{planet=Planet0},
-                    Planets = maps:put(PlanetId, PState0, State#state.planets),
-
-                    self() ! {production_info, PlanetId},
-
-                    ogonek_mongo:planet_update_utilization(PlanetId, Updated),
-
-                    {noreply, State#state{planets=Planets}};
-                skipped ->
-                    {noreply, State};
-                error ->
-                    {noreply, State}
-            end
-    end;
+    to_planet(PlanetId, {set_utilization, Resource, Value}, State),
+    {noreply, State};
 
 handle_info(get_research, State) ->
     Now = ogonek_util:now8601(),
@@ -665,137 +290,21 @@ handle_info(get_research, State) ->
 
     {noreply, State1};
 
-handle_info({get_buildings, Planet, Silent}, State) ->
-    case maps:get(Planet, State#state.planets, undefined) of
-        % unknown, invalid or foreign planet
-        undefined ->
-            {noreply, State};
-        % buildings not fetched yet
-        #planet_state{buildings=[]}=PState ->
-            Fetched = ogonek_mongo:buildings_of_planet(Planet),
-
-            lager:debug("user ~s - fetched buildings of planet ~s: ~p",
-                        [State#state.id, Planet, Fetched]),
-
-            Capacity = ogonek_capacity:from_buildings(Planet, Fetched),
-            PState0 = PState#planet_state{buildings=Fetched, capacity=Capacity},
-
-            Planets0 = maps:put(Planet, PState0, State#state.planets),
-
-            json_to_sockets(ogonek_building, PState0#planet_state.buildings, State, Silent),
-            json_to_sockets(ogonek_capacity, Capacity, State, Silent),
-
-            {noreply, State#state{planets=Planets0}};
-        % buildings already present
-        PState ->
-            json_to_sockets(ogonek_building, PState#planet_state.buildings, State, Silent),
-            json_to_sockets(ogonek_capacity, PState#planet_state.capacity, State, Silent),
-            {noreply, State}
-    end;
-
-handle_info({get_constructions, Planet, Silent}, State) ->
-    case maps:get(Planet, State#state.planets, undefined) of
-        % unknown, invalid or foreign planet
-        undefined ->
-            {noreply, State};
-        % constructions not fetched yet
-        #planet_state{constructions=[]}=PState ->
-            Fetched = ogonek_mongo:constructions_of_planet(Planet),
-
-            lager:debug("user ~s - fetched constructions of planet ~s: ~p",
-                        [State#state.id, Planet, Fetched]),
-
-            PState0 = process_constructions(PState, Fetched),
-
-            trigger_construction_checks(PState0#planet_state.constructions),
-
-            Planets0 = maps:put(Planet, PState0, State#state.planets),
-
-            json_to_sockets(ogonek_construction, PState0#planet_state.constructions, State, Silent),
-
-            {noreply, State#state{planets=Planets0}};
-        % constructions already present
-        PState ->
-            json_to_sockets(ogonek_construction, PState#planet_state.constructions, State, Silent),
-            {noreply, State}
-    end;
-
-handle_info({get_weapon_orders, Planet, Silent}, State) ->
-    case maps:get(Planet, State#state.planets, undefined) of
-        % unknown, invalid or foreign planet
-        undefined ->
-            {noreply, State};
-        % weapon orders not fetched yet
-        #planet_state{weapon_orders=[]}=PState ->
-            Fetched = ogonek_mongo:weapon_orders_of_planet(Planet),
-
-            lager:debug("user ~s - fetched weapon orders of planet ~s: ~p",
-                        [State#state.id, Planet, Fetched]),
-
-            PState0 = PState#planet_state{weapon_orders=Fetched},
-            PState1 = process_weapon_orders(PState0, Fetched),
-
-            trigger_weapon_order_checks(PState1#planet_state.weapon_orders),
-
-            Planets0 = maps:put(Planet, PState1, State#state.planets),
-
-            json_to_sockets(ogonek_weapon_order, PState1#planet_state.weapon_orders, State, Silent),
-
-            {noreply, State#state{planets=Planets0}};
-        % weapon orders already present
-        PState ->
-            json_to_sockets(ogonek_weapon_order, PState#planet_state.weapon_orders, State, Silent),
-            {noreply, State}
-    end;
-
-handle_info({process_weapon_orders, PlanetId}, #state{id=Id}=State) ->
-    case maps:get(PlanetId, State#state.planets, undefined) of
-        % unknown, invalid or foreign planet
-        undefined ->
-            {noreply, State};
-        #planet_state{weapon_orders=Ws}=PState ->
-            lager:debug("user ~s - processing weapon orders", [Id]),
-
-            PState0 = process_weapon_orders(PState, Ws),
-            Planets0 = maps:put(PlanetId, PState0, State#state.planets),
-
-            {noreply, State#state{planets=Planets0}}
-    end;
-
-handle_info({process_constructions, PlanetId}, #state{id=Id}=State) ->
-    case maps:get(PlanetId, State#state.planets, undefined) of
-        % unknown, invalid or foreign planet
-        undefined ->
-            {noreply, State};
-        #planet_state{constructions=Cs}=PState ->
-            lager:debug("user ~s - processing constructions", [Id]),
-
-            PState0 = process_constructions(PState, Cs),
-            Planets0 = maps:put(PlanetId, PState0, State#state.planets),
-
-            {noreply, State#state{planets=Planets0}}
-    end;
-
-handle_info({planet_claim, Planet}, State) ->
+handle_info({planet_claim, Planet}=Claim, State) ->
     PlanetId = Planet#planet.id,
-    Planets = State#state.planets,
-    Planet0 = bootstrap_free_planet(Planet),
-    PState = #planet_state{
-                planet=Planet0,
-                buildings=[],
-                constructions=[],
-                capacity=ogonek_capacity:empty(PlanetId),
-                weapon_orders=[],
-                weapons=maps:new()
-               },
-    Planets0 = maps:put(PlanetId, PState, Planets),
+    case maps:get(PlanetId, State#state.planets, undefined) of
+        undefined ->
+            Planet0 = bootstrap_free_planet(Planet),
 
-    % update resources in db
-    ogonek_mongo:planet_update_resources(PlanetId, Planet0#planet.resources),
+            ogonek_mongo:planet_update_resources(PlanetId, Planet0#planet.resources),
 
-    self() ! {planet_info, PlanetId},
-
-    {noreply, State#state{planets=Planets0}};
+            {ok, Pid} = ogonek_user_planet:start_link(Planet0, State#state.session),
+            Planets0 = maps:put(PlanetId, Pid, State#state.planets),
+            {noreply, State#state{planets=Planets0}};
+        Pid ->
+            Pid ! Claim,
+            {noreply, State}
+    end;
 
 handle_info(Info, #state{id=Id}=State) ->
     lager:warning("user ~s - unhandled message: ~p", [Id, Info]),
@@ -846,15 +355,6 @@ fetch_planets(State) ->
     end.
 
 
--spec fetch_weapons(PlanetId :: binary()) -> weapon_map().
-fetch_weapons(PlanetId) ->
-    Weapons = ogonek_mongo:weapons_of_planet(PlanetId),
-
-    lists:foldl(fun(#weapon{type=Type}=Weapon, Ws) ->
-                        maps:put(Type, Weapon, Ws)
-                end, maps:new(), Weapons).
-
-
 -spec fetch_research(state()) -> [research()].
 fetch_research(State) ->
     case State#state.research of
@@ -863,18 +363,91 @@ fetch_research(State) ->
     end.
 
 
--spec update_power_workers(planet_state()) -> planet_state().
-update_power_workers(PState) ->
-    Planet = PState#planet_state.planet,
-    Buildings = PState#planet_state.buildings,
-    Constructions = PState#planet_state.constructions,
+-spec current_research([research()]) -> {research() | undefined, [research()]}.
+current_research(Research) ->
+    InProgress = fun(R) -> R#research.progress end,
 
-    {Power, Workers} = ogonek_buildings:calculate_power_workers(Buildings, Constructions),
+    case lists:partition(InProgress, Research) of
+        {[], Finished} ->
+            {undefined, Finished};
+        {[Pending], Finished} when Pending#research.level > 1 ->
+            Pending0 = Pending#research{level=Pending#research.level-1},
+            {Pending, update_research(Finished, Pending0)};
+        {[Pending], Finished} ->
+            {Pending, Finished};
+        {MultiplePending, Finished} ->
+            lager:error("multiple pending researches: ~p", [MultiplePending]),
+            {hd(MultiplePending), Finished}
+    end.
 
-    Res = Planet#planet.resources,
-    Res1 = Res#resources{power=Power, workers=Workers},
-    Planet0 = Planet#planet{resources=Res1},
-    PState#planet_state{planet=Planet0}.
+
+-spec trigger_research_check(research()) -> reference().
+trigger_research_check(Research) ->
+    Progress = ogonek_research:progress(Research),
+    DueIn = ogonek_util:seconds_since(Research#research.finish) + 1,
+
+    ScheduleIn = if Progress < 50 ->
+                        round((DueIn * (50 - Progress) / 100) + 10);
+                    true ->
+                        DueIn + 1
+                 end,
+
+    lager:debug("user ~s - scheduling research timer in ~p sec",
+                [Research#research.user, ScheduleIn]),
+
+    erlang:send_after(ScheduleIn * 1000, self(), get_research).
+
+
+-spec get_research([research()], atom()) -> {ok, research()} | undefined.
+get_research(Rss, Type) ->
+    case lists:keyfind(Type, 4, Rss) of
+        false -> undefined;
+        Research -> {ok, Research}
+    end.
+
+
+-spec update_research([research()], research()) -> [research()].
+update_research(Researches, #research{research=Name}=Research) ->
+    case get_research(Researches, Name) of
+        undefined -> [Research | Researches];
+        _Otherwise ->
+            lists:keyreplace(Name, 4, Researches, Research)
+    end.
+
+
+-spec research_duration(state()) -> integer().
+research_duration(State) ->
+    Buildings = all_buildings(State),
+    Duration = ogonek_research:research_duration(Buildings),
+    round(Duration / ?OGONEK_DEFAULT_ACCELERATION).
+
+
+-spec all_buildings(state()) -> [building()].
+all_buildings(State) ->
+    Pids = maps:values(State#state.planets),
+    lists:flatmap(fun(Pid) ->
+                          gen_server:call(Pid, get_buildings)
+                  end, Pids).
+
+
+-spec for_all_planets(Msg :: term(), state()) -> ok.
+for_all_planets(Msg, #state{planets=Planets}) ->
+    lists:foreach(fun(P) -> P ! Msg end, maps:values(Planets)).
+
+
+-spec for_all_planets(Msg :: term(), Silent :: boolean(), state()) -> ok.
+for_all_planets(Msg, Silent, #state{planets=Planets}) ->
+    lists:foreach(fun(P) -> P ! {Msg, Silent} end, maps:values(Planets)).
+
+
+-spec to_planet(PlanetId :: binary(), Msg :: term(), state()) -> ok.
+to_planet(PlanetId, Msg, State) ->
+    case maps:get(PlanetId, State#state.planets, undefined) of
+        undefined ->
+            ok;
+        Pid ->
+            Pid ! Msg
+    end.
 
 
 -spec bootstrap_free_planet(planet()) -> planet().
@@ -918,522 +491,9 @@ bootstrap_free_planet(Planet) ->
                             lager:error("user ~s - there is no building definition for ~p - skipping",
                                         [Planet#planet.owner, B]);
                         Def ->
-                            finish_building(Def, PlanetId, Level)
+                            ogonek_buildings:finish(Def, PlanetId, Level)
                     end
             end,
     lists:foreach(Build, InitialBuildings),
 
     Planet#planet{resources=Resources}.
-
-
--spec schedule_recalculate_resources() -> ok.
-schedule_recalculate_resources() ->
-    Interval = ?OGONEK_REFRESH_RESOURCE_INTERVAL_SECS * 1000,
-    erlang:send_after(Interval, self(), calc_resources),
-    ok.
-
-
--spec calc_resources(planet_state()) -> planet_state().
-calc_resources(PState) ->
-    calc_resources(PState, ogonek_util:now8601()).
-
-
--spec calc_resources(planet_state(), timestamp()) -> planet_state().
-calc_resources(PState, RelativeTo) ->
-    Planet = PState#planet_state.planet,
-    Buildings = PState#planet_state.buildings,
-
-    case calculate_resources(PState, Buildings, RelativeTo) of
-        skipped ->
-            PState;
-        Resources ->
-            ogonek_mongo:planet_update_resources(Planet#planet.id, Resources),
-
-            Planet0 = Planet#planet{resources=Resources},
-            PState#planet_state{planet=Planet0}
-    end.
-
-
--spec calculate_resources(planet_state(), [building()], timestamp()) -> resources() | skipped.
-calculate_resources(PlanetState, Buildings, RelativeTo) ->
-    calculate_resources(PlanetState, Buildings, RelativeTo, false).
-
-
--spec calculate_resources(planet_state(), [building()], timestamp(), boolean()) -> resources() | skipped.
-calculate_resources(PlanetState, Buildings, RelativeTo, Force) ->
-    Planet = PlanetState#planet_state.planet,
-    UserId = Planet#planet.owner,
-    Resources = Planet#planet.resources,
-    Capacity = PlanetState#planet_state.capacity,
-
-    SecondsSince = ogonek_util:seconds_since(Resources#resources.updated, RelativeTo),
-
-    if SecondsSince >= 60 orelse Force == true ->
-           Utilization = Planet#planet.utilization,
-           Production = ogonek_production:of_planet(Planet, Buildings),
-           lager:debug("user ~s - production: ~p", [UserId, Production]),
-
-           SimulatedHours = ogonek_util:to_hours(SecondsSince, ?OGONEK_DEFAULT_ACCELERATION),
-
-           Produced = ogonek_resources:with_factor(SimulatedHours, Production),
-           lager:debug("user ~s - produced since ~s: ~p", [UserId, Resources#resources.updated, Produced]),
-
-           Summed = ogonek_resources:sum(Resources, Produced),
-           AfterConsumption = ogonek_buildings:calculate_building_consumption(Summed, Utilization, Buildings, SimulatedHours),
-
-           lager:debug("user ~s - after consumption: ~p", [UserId, AfterConsumption]),
-
-           Capped = ogonek_resources:with_capacity(AfterConsumption, Capacity),
-           Capped#resources{updated=RelativeTo};
-       true ->
-           lager:debug("user ~s - skipping resources calculation [~p sec ago]",
-                       [UserId, SecondsSince]),
-           skipped
-    end.
-
-
--spec finish_building(bdef(), binary(), integer()) -> ok.
-finish_building(#bdef{name=Def}, PlanetId, Level) ->
-    Now = ogonek_util:now8601(),
-    Building = #building{planet=PlanetId,
-                         type=Def,
-                         level=Level,
-                         created=Now},
-
-    % maybe this one should be managed via the planet manager
-    ogonek_mongo:building_finish(Building).
-
-
--spec process_weapon_orders(planet_state(), [weapon_order()]) -> planet_state().
-process_weapon_orders(PState, []) -> PState;
-process_weapon_orders(PState, WOrders) ->
-    Now = ogonek_util:now8601(),
-    {Finished, Running} = lists:partition(fun(#weapon_order{finish=F}) ->
-                                                  F =< Now
-                                          end, WOrders),
-
-    Ws = lists:foldl(fun(WOrder, Weapons) ->
-                             lager:info("planet ~s - finishing weapon order ~p",
-                                        [WOrder#weapon_order.planet, WOrder]),
-                             finish_weapon_order(Weapons, WOrder)
-                     end, PState#planet_state.weapons, Finished),
-
-    PState#planet_state{weapon_orders=Running, weapons=Ws}.
-
-
--spec finish_weapon_order(Weapons :: #{atom() => weapon()}, weapon_order()) -> #{atom() => weapon()}.
-finish_weapon_order(Weapons, WOrder) ->
-    Planet = WOrder#weapon_order.planet,
-    Weapon = WOrder#weapon_order.weapon,
-
-    Updated =
-    case maps:get(Weapon, Weapons, undefined) of
-        undefined ->
-            % new weapon
-            #weapon{planet=Planet, type=Weapon, count=1};
-        Existing ->
-            % increment existing weapon's count
-            Existing#weapon{count=Existing#weapon.count+1}
-    end,
-
-    ogonek_mongo:weapon_update(Updated, WOrder#weapon_order.id),
-
-    maps:put(Weapon, Updated, Weapons).
-
-
--spec process_constructions(planet_state(), [construction()]) -> planet_state().
-process_constructions(PState, []) -> PState;
-process_constructions(PState, Constructions) ->
-    {Finished, Running} = split_constructions(Constructions),
-
-    PState0 = lists:foldl(fun process_construction/2, PState, Finished),
-    PState0#planet_state{constructions=Running}.
-
-
--spec process_construction({construction(), timestamp()}, planet_state()) -> planet_state().
-process_construction({Construction, UpTo}, PState) ->
-    Planet = PState#planet_state.planet,
-    Buildings = PState#planet_state.buildings,
-    PlanetId = Planet#planet.id,
-    Type = Construction#construction.building,
-
-    case ogonek_buildings:get_building(Buildings, Type) of
-        {ok, B} ->
-            CLevel = Construction#construction.level,
-            BLevel = B#building.level,
-            if BLevel + 1 == CLevel ->
-                   Update = B#building{level=CLevel},
-
-                   % trigger asynchronous db update
-                   ogonek_mongo:building_finish(Update),
-
-                   % in order to properly calculate multiple successive
-                   % constructions we have to re-calculate resources
-                   % in here already
-                   Buildings0 = update_building(Buildings, Update),
-                   Capacity = ogonek_capacity:from_buildings(PlanetId, Buildings0),
-
-                   PState0 = PState#planet_state{
-                              buildings=Buildings0,
-                              capacity=Capacity},
-
-                   calc_resources(PState0, UpTo);
-               true ->
-                   lager:warning("invalid construction building level: ~p",
-                                 [Construction]),
-                   PState
-            end;
-        undefined ->
-            lager:warning("construction finished for unknown building: ~p",
-                          [Construction]),
-            PState
-    end.
-
-
--spec split_constructions([construction()]) ->
-    {[{construction(), timestamp()}], [construction()]}.
-split_constructions(Constructions) ->
-    split_constructions(Constructions, ogonek_util:now8601()).
-
-
--spec split_constructions([construction()], RelativeTo :: timestamp()) ->
-    {[{construction(), timestamp()}], [construction()]}.
-split_constructions(Constructions, RelativeTo) ->
-    % divide the list of constructions into finished and running ones
-    {Finished, StillRunning} = lists:partition(fun(#construction{finish=F}) ->
-                                                       F =< RelativeTo
-                                               end, Constructions),
-
-    % after that we want to prepare the finished constructions
-    % by sorting by finish timestamp as well
-    SortedFinished = lists:keysort(7, Finished),
-
-    % now we add the respective next timestamp to which the
-    % resources have to be re-calculated until
-    Ts = lists:map(fun(#construction{finish=F}) -> F end, SortedFinished),
-    % the last construction will be calculated up to 'now'
-    Ts0 = tl(Ts ++ [RelativeTo]),
-
-    {lists:zip(SortedFinished, Ts0), StillRunning}.
-
-
--spec current_research([research()]) -> {research() | undefined, [research()]}.
-current_research(Research) ->
-    InProgress = fun(R) -> R#research.progress end,
-
-    case lists:partition(InProgress, Research) of
-        {[], Finished} ->
-            {undefined, Finished};
-        {[Pending], Finished} when Pending#research.level > 1 ->
-            Pending0 = Pending#research{level=Pending#research.level-1},
-            {Pending, update_research(Finished, Pending0)};
-        {[Pending], Finished} ->
-            {Pending, Finished};
-        {MultiplePending, Finished} ->
-            lager:error("multiple pending researches: ~p", [MultiplePending]),
-            {hd(MultiplePending), Finished}
-    end.
-
-
--spec json_to_sockets(Json :: term(), state()) -> ok.
-json_to_sockets(Json, State) ->
-    Session = State#state.session,
-    gen_server:cast(Session, {json_to_sockets, Json}).
-
-
--spec json_to_sockets(Module :: atom(), Json :: term(), state()) -> ok.
-json_to_sockets(Module, Json, State) ->
-    Session = State#state.session,
-    gen_server:cast(Session, {json_to_sockets, Module, Json}).
-
-
--spec json_to_sockets(Module :: atom(), Json :: term(), state(), Silent :: boolean()) -> ok.
-json_to_sockets(_Module, _Json, _State, true) -> ok;
-json_to_sockets(Module, Json, State, _) ->
-    json_to_sockets(Module, Json, State).
-
-
--spec trigger_research_check(research()) -> reference().
-trigger_research_check(Research) ->
-    Progress = ogonek_research:progress(Research),
-    DueIn = ogonek_util:seconds_since(Research#research.finish) + 1,
-
-    ScheduleIn = if Progress < 50 ->
-                        round((DueIn * (50 - Progress) / 100) + 10);
-                    true ->
-                        DueIn + 1
-                 end,
-
-    lager:debug("user ~s - scheduling research timer in ~p sec",
-                [Research#research.user, ScheduleIn]),
-
-    erlang:send_after(ScheduleIn * 1000, self(), get_research).
-
-
--spec trigger_construction_checks([construction()]) -> ok.
-trigger_construction_checks(Constructions) ->
-    lists:foreach(fun(C) ->
-                          Planet = C#construction.planet,
-                          DueIn = ogonek_util:seconds_since(C#construction.finish),
-                          trigger_construction_check(Planet, DueIn + 1)
-                  end, Constructions).
-
-
--spec trigger_construction_check(PlanetId :: binary(), Seconds :: integer()) -> ok.
-trigger_construction_check(PlanetId, Seconds) ->
-    erlang:send_after(Seconds * 1000, self(), {process_constructions, PlanetId}),
-    ok.
-
-
--spec trigger_weapon_order_checks([weapon_order()]) -> ok.
-trigger_weapon_order_checks(WOrders) ->
-    lists:foreach(fun(WO) ->
-                          Planet = WO#weapon_order.planet,
-                          DueIn = ogonek_util:seconds_since(WO#weapon_order.finish),
-                          trigger_weapon_order_check(Planet, DueIn + 1)
-                  end, WOrders).
-
-
--spec trigger_weapon_order_check(PlanetId :: binary(), Seconds :: integer()) -> ok.
-trigger_weapon_order_check(PlanetId, Seconds) ->
-    erlang:send_after(Seconds * 1000, self(), {process_weapon_orders, PlanetId}),
-    ok.
-
-
--spec weapons_info(PlanetId ::  binary(), Weapons :: weapon_map()) -> [weapon()].
-weapons_info(PlanetId, Weapons) ->
-    lists:foldl(fun(#wdef{name=Name}, Ws) ->
-                        case maps:get(Name, Weapons, undefined) of
-                            undefined ->
-                                [#weapon{type=Name, count=0, planet=PlanetId} | Ws];
-                            Weapon ->
-                                [Weapon | Ws]
-                        end
-                end, [], ogonek_weapons:definitions()).
-
-
--spec update_building([building()], building()) -> [building()].
-update_building(Buildings, #building{type=Type}=Building) ->
-    case ogonek_buildings:get_building(Buildings, Type) of
-        undefined -> [Building | Buildings];
-        _Otherwise ->
-            lists:keyreplace(Type, 4, Buildings, Building)
-    end.
-
-
--spec get_construction([construction()], atom()) -> {ok, construction()} | undefined.
-get_construction(Constructions, Type) ->
-    case lists:keyfind(Type, 3, Constructions) of
-        false -> undefined;
-        Construction -> {ok, Construction}
-    end.
-
-
--spec update_construction([construction()], construction()) -> [construction()].
-update_construction(Constructions, #construction{building=Type}=Construction) ->
-    case get_construction(Constructions, Type) of
-        undefined -> [Construction | Constructions];
-        _Otherwise ->
-            lists:keyreplace(Type, 3, Constructions, Construction)
-    end.
-
-
--spec remove_construction([construction()], atom(), integer()) -> [construction()].
-remove_construction(Constructions, Type, Level) ->
-    lists:foldl(fun(#construction{building=T, level=Lvl}, Cs)
-                      when T == Type andalso Lvl =< Level -> Cs;
-                   (C, Cs) -> [C | Cs]
-                end, [], Constructions).
-
-
--spec remove_weapon_order(state(), PlanetId :: binary(), OrderId :: binary()) -> state().
-remove_weapon_order(State, PlanetId, OrderId) ->
-    case maps:get(PlanetId, State#state.planets, undefined) of
-        undefined -> State;
-        PState ->
-            WeaponOrders = PState#planet_state.weapon_orders,
-            Orders = lists:filter(fun(#weapon_order{id=Id}) -> Id /= OrderId end, WeaponOrders),
-            PState0 = PState#planet_state{weapon_orders=Orders},
-            Planets0 = maps:put(PlanetId, PState0, State#state.planets),
-            State#state{planets=Planets0}
-    end.
-
-
--spec get_research([research()], atom()) -> {ok, research()} | undefined.
-get_research(Rss, Type) ->
-    case lists:keyfind(Type, 4, Rss) of
-        false -> undefined;
-        Research -> {ok, Research}
-    end.
-
-
--spec update_research([research()], research()) -> [research()].
-update_research(Researches, #research{research=Name}=Research) ->
-    case get_research(Researches, Name) of
-        undefined -> [Research | Researches];
-        _Otherwise ->
-            lists:keyreplace(Name, 4, Researches, Research)
-    end.
-
-
--spec research_duration(state()) -> integer().
-research_duration(State) ->
-    Buildings = all_buildings(State),
-    Duration = ogonek_research:research_duration(Buildings),
-    round(Duration / ?OGONEK_DEFAULT_ACCELERATION).
-
-
--spec construction_possible(PlanetState :: planet_state(), [research()], Costs :: bdef()) -> boolean().
-construction_possible(PlanetState, Research, Costs) ->
-    Planet = PlanetState#planet_state.planet,
-    Constructions = PlanetState#planet_state.constructions,
-    Buildings = PlanetState#planet_state.buildings,
-    Resources = Planet#planet.resources,
-
-    NumConstructions = length(Constructions),
-    MaxConcurrentConstructions = max_concurrent_constructions(Buildings),
-
-    Requirements = Costs#bdef.requirements,
-
-    % check if research and building requirements are met
-    ogonek_research:has_requirements(Research, Requirements) andalso
-    ogonek_buildings:has_requirements(Buildings, Requirements) andalso
-
-    MaxConcurrentConstructions > NumConstructions andalso
-
-    Resources#resources.workers >= Costs#bdef.workers andalso
-    Resources#resources.power >= Costs#bdef.power andalso
-
-    Resources#resources.iron_ore >= Costs#bdef.iron_ore andalso
-    Resources#resources.gold >= Costs#bdef.gold andalso
-    Resources#resources.h2o >= Costs#bdef.h2o andalso
-    Resources#resources.oil >= Costs#bdef.oil andalso
-    Resources#resources.h2 >= Costs#bdef.h2 andalso
-    Resources#resources.uranium >= Costs#bdef.uranium andalso
-    Resources#resources.pvc >= Costs#bdef.pvc andalso
-    Resources#resources.titan >= Costs#bdef.titan andalso
-    Resources#resources.kyanite >= Costs#bdef.kyanite.
-
-
--spec weapon_order_possible(planet_state(), wdef()) -> boolean().
-weapon_order_possible(PState, WDef) ->
-    Planet = PState#planet_state.planet,
-    Buildings = PState#planet_state.buildings,
-    Resources = Planet#planet.resources,
-
-    Resources#resources.iron_ore >= WDef#wdef.iron_ore andalso
-    Resources#resources.gold >= WDef#wdef.gold andalso
-    Resources#resources.h2o >= WDef#wdef.h2o andalso
-    Resources#resources.oil >= WDef#wdef.oil andalso
-    Resources#resources.h2 >= WDef#wdef.h2 andalso
-    Resources#resources.uranium >= WDef#wdef.uranium andalso
-    Resources#resources.pvc >= WDef#wdef.pvc andalso
-    Resources#resources.titan >= WDef#wdef.titan andalso
-    Resources#resources.kyanite >= WDef#wdef.kyanite andalso
-
-    has_weapon_manufacture(Buildings) == true.
-
-
--spec max_concurrent_constructions([building()]) -> integer().
-max_concurrent_constructions(Buildings) ->
-    CCLevel = construction_center_level(Buildings),
-    CCLevel div 10 + 1.
-
-
--spec construction_center_level([building()]) -> integer().
-construction_center_level(Buildings) ->
-    ogonek_buildings:get_building_level(Buildings, construction_center).
-
-
--spec has_weapon_manufacture([building()]) -> boolean().
-has_weapon_manufacture(Buildings) ->
-    ogonek_buildings:get_building_level(Buildings, weapon_manufacture) > 0.
-
-
--spec claim_resources(PlanetState :: planet_state(), Costs :: bdef() | wdef()) -> planet_state().
-claim_resources(PlanetState, Costs) ->
-    Planet = PlanetState#planet_state.planet,
-    Resources = Planet#planet.resources,
-
-    % claim_resources is called immediately on the creation of the construction
-    % that's why we claim only the 'positive' costs at this point
-    % see 'ogonek_resources:substract_costs'
-    Res0 = ogonek_resources:substract_costs(Resources, Costs),
-
-    Planet0 = Planet#planet{resources=Res0},
-    PlanetState#planet_state{planet=Planet0}.
-
-
--spec all_buildings(state()) -> [building()].
-all_buildings(State) ->
-    PStates = maps:values(State#state.planets),
-    lists:flatmap(fun(#planet_state{buildings=Bs}) -> Bs end, PStates).
-
-
--spec for_all_planets(Msg :: atom(), state()) -> ok.
-for_all_planets(Msg, #state{planets=Planets}) ->
-    lists:foreach(fun(P) -> self() ! {Msg, P} end, maps:keys(Planets)).
-
-
--spec for_all_planets(Msg :: atom(), Silent :: boolean(), state()) -> ok.
-for_all_planets(Msg, Silent, #state{planets=Planets}) ->
-    lists:foreach(fun(P) -> self() ! {Msg, P, Silent} end, maps:keys(Planets)).
-
-
-%%
-%% TESTS
-%%
-
--ifdef(TEST).
-
-update_building_test_() ->
-    P = <<"p1">>,
-    Now = ogonek_util:now8601(),
-    B1 = #building{type=gold_depot, level=1, planet=P, created=Now},
-    B2 = #building{type=gold_depot, level=2, planet=P, created=Now},
-
-    [?_assertEqual([B1], update_building([], B1)),
-     ?_assertEqual([B1], update_building([B1], B1)),
-     ?_assertEqual([B2], update_building([B1], B2))
-    ].
-
-update_construction_test_() ->
-    P = <<"p1">>,
-    Now = ogonek_util:now8601(),
-    C1 = #construction{building=gold_depot, level=1, planet=P, created=Now, finish=Now},
-    C2 = #construction{building=gold_depot, level=2, planet=P, created=Now, finish=Now},
-
-    [?_assertEqual([C1], update_construction([], C1)),
-     ?_assertEqual([C1], update_construction([C1], C1)),
-     ?_assertEqual([C2], update_construction([C1], C2))
-    ].
-
-remove_construction_test_() ->
-    P = <<"p1">>,
-    Now = ogonek_util:now8601(),
-    C1 = #construction{building=gold_depot, level=1, planet=P, created=Now, finish=Now},
-    C2 = #construction{building=gold_depot, level=2, planet=P, created=Now, finish=Now},
-
-    [?_assertEqual([], remove_construction([], gold_depot, 1)),
-     ?_assertEqual([C1], remove_construction([C1], oil_depot, 1)),
-     ?_assertEqual([C2], remove_construction([C2], gold_depot, 1)),
-     ?_assertEqual([], remove_construction([C2], gold_depot, 2))
-    ].
-
-split_constructions_test_() ->
-    P = <<"p1">>,
-    Past = <<"2000-08-19T06:49:04Z">>,
-    Between = <<"2010-08-09T16:49:04Z">>,
-    Now = ogonek_util:now8601(),
-    C1 = #construction{building=gold_depot, level=1, planet=P, created=Past, finish=Now},
-    C2 = #construction{building=gold_depot, level=2, planet=P, created=Past, finish=Past},
-    C3 = #construction{building=gold_depot, level=3, planet=P, created=Past, finish=Between},
-
-    [?_assertEqual({[], []}, split_constructions([])),
-     ?_assertEqual({[{C2, Between}], [C1]}, split_constructions([C1, C2], Between)),
-     ?_assertEqual({[{C2, Between}], [C1]}, split_constructions([C2, C1], Between)),
-     ?_assertEqual({[{C2, Between}, {C3, Now}], []}, split_constructions([C2, C3], Now)),
-     ?_assertEqual({[{C2, Between}, {C3, Now}], []}, split_constructions([C3, C2], Now))
-    ].
-
--endif.
