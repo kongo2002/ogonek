@@ -79,7 +79,9 @@
 
 -record(ws_state, {
           session_id :: binary(),
-          user_id :: maybe_unset_id()
+          user_id :: maybe_unset_id(),
+          dispatcher :: pid() | undefined,
+          lifecycle :: pid() | undefined
          }).
 
 -type ws_state() :: #ws_state{}.
