@@ -38,6 +38,7 @@
 
 -type weapon_map() :: #{atom() => weapon()}.
 
+
 -record(state, {
           user :: binary(),
           planet :: planet(),
@@ -48,7 +49,6 @@
           weapon_orders :: [weapon_order()],
           weapons :: weapon_map()
          }).
-
 
 -type state() :: #state{}.
 
@@ -159,9 +159,11 @@ handle_cast(prepare, State) ->
 
 handle_cast({terminate, Reason}, State) ->
     PlanetId = planet_id(State),
-    UserId = State#state.user,
+    UserId = user_id(State),
+
     lager:debug("user ~s - terminating planet ~s due to ~p",
                 [UserId, PlanetId, Reason]),
+
     {stop, normal, State};
 
 handle_cast(_Msg, State) ->
@@ -177,14 +179,14 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info({building_finish, Building}, #state{user=Id}=State) ->
-    lager:info("user ~s - building finished: ~p", [Id, Building]),
-
+handle_info({building_finish, Building}, State) ->
+    UserId = user_id(State),
     PlanetId = Building#building.planet,
-
     BuildingType = Building#building.type,
     BuildingLevel = Building#building.level,
     Buildings = State#state.buildings,
+
+    lager:info("user ~s - building finished: ~p", [UserId, Building]),
 
     Buildings0 = update_building(Buildings, Building),
     Cs0 = remove_construction(State#state.constructions, BuildingType, BuildingLevel),
@@ -218,29 +220,30 @@ handle_info({building_finish, Building}, #state{user=Id}=State) ->
 
     {noreply, State0};
 
-handle_info({construction_create, Construction}, #state{user=Id}=State) ->
-    lager:info("user ~s - construction created: ~p", [Id, Construction]),
+handle_info({construction_create, Construction}, State) ->
+    UserId = user_id(State),
+
+    lager:info("user ~s - construction created: ~p", [UserId, Construction]),
 
     % push construction to client
     json_to_sockets(ogonek_construction, Construction, State),
 
     % update resources as well
-    Planet = State#state.planet,
-    Resources = Planet#planet.resources,
+    Resources = resources(State),
     json_to_sockets(ogonek_resources, Resources, State),
 
     {noreply, State};
 
-handle_info({weapon_order_create, WOrder}, #state{user=Id}=State) ->
-    lager:info("user ~s - weapon order created: ~p", [Id, WOrder]),
+handle_info({weapon_order_create, WOrder}, State) ->
+    UserId = user_id(State),
+
+    lager:info("user ~s - weapon order created: ~p", [UserId, WOrder]),
 
     % push construction to client
     json_to_sockets(ogonek_weapon_order, WOrder, State),
 
-    Planet = State#state.planet,
-
     % publish resource update
-    Resources = Planet#planet.resources,
+    Resources = resources(State),
     json_to_sockets(ogonek_resources, Resources, State),
 
     trigger_weapon_order_checks([WOrder]),
@@ -251,7 +254,8 @@ handle_info({weapon_order_create, WOrder}, #state{user=Id}=State) ->
 
     {noreply, State0};
 
-handle_info({unlock_buildings, Researches}, #state{user=Id}=State) ->
+handle_info({unlock_buildings, Researches}, State) ->
+    UserId = user_id(State),
     Planet = State#state.planet,
     Buildings = State#state.buildings,
 
@@ -259,7 +263,7 @@ handle_info({unlock_buildings, Researches}, #state{user=Id}=State) ->
         [] -> ok;
         Unlocked ->
             lager:info("user ~s - unlocked new buildings on planet ~s: ~p",
-                       [Id, Planet#planet.id, Unlocked]),
+                       [UserId, Planet#planet.id, Unlocked]),
 
             lists:foreach(fun(Def) ->
                                   ogonek_buildings:finish(Def, Planet#planet.id, 0)
@@ -327,8 +331,10 @@ handle_info({build_building, Research, Type, Level}=Req, State) ->
             end
     end;
 
-handle_info({weapon_update, Weapon, OrderId}, #state{user=Id}=State) ->
-    lager:info("user ~s - weapon updated: ~p [order ~s]", [Id, Weapon, OrderId]),
+handle_info({weapon_update, Weapon, OrderId}, State) ->
+    UserId = user_id(State),
+
+    lager:info("user ~s - weapon updated: ~p [order ~s]", [UserId, Weapon, OrderId]),
 
     % delete associated weapon order
     ogonek_mongo:weapon_order_remove(OrderId),
@@ -340,22 +346,21 @@ handle_info({weapon_update, Weapon, OrderId}, #state{user=Id}=State) ->
                                     [{<<"_id">>, OrderId}, {<<"planet">>, PlanetId}]),
     json_to_sockets(OrderFinished, State0),
 
-    self() ! {weapons_info, Weapon#weapon.planet, false},
+    self() ! {weapons_info, false},
 
     {noreply, State0};
 
 handle_info({calc_resources, Silent}, State) ->
     PlanetId = planet_id(State),
+    UserId = user_id(State),
 
-    lager:debug("user ~s - calculating resources for ~s", [State#state.user, PlanetId]),
+    lager:debug("user ~s - calculating resources for ~s", [UserId, PlanetId]),
 
     State0 = calc_resources(State),
 
     % update power/workers as well
     State1 = update_power_workers(State0),
-
-    Planet = State1#state.planet,
-    Res = Planet#planet.resources,
+    Res = resources(State1),
 
     json_to_sockets(ogonek_resources, Res, State1, Silent),
 
@@ -366,15 +371,17 @@ handle_info({weapons_info, Silent}, State) ->
 
     case has_weapon_manufacture(Buildings) of
         true ->
+            UserId = user_id(State),
             PlanetId = planet_id(State),
             Weapons = State#state.weapons,
+
             Weapons0 =
             case maps:size(Weapons) =< 0 of
                 true ->
                     % fetch weapons from database
                     Fetched = fetch_weapons(PlanetId),
                     lager:info("user ~s - fetched weapons: ~p",
-                               [State#state.user, Fetched]),
+                               [UserId, Fetched]),
                     Fetched;
                 false ->
                     Weapons
@@ -417,7 +424,7 @@ handle_info(production_info, State) ->
 
 handle_info({build_weapon, WDef}, State) ->
     PlanetId = planet_id(State),
-    UserId = State#state.user,
+    UserId = user_id(State),
 
     case weapon_order_possible(State, WDef) of
         true ->
@@ -456,10 +463,11 @@ handle_info({set_utilization, Resource, Value}, State) ->
 
     case ogonek_utilization:validate(Utilization, Resource, Value) of
         {ok, Updated} ->
+            UserId = user_id(State),
             PlanetId = planet_id(State),
 
             lager:info("user ~s - updating utilization to ~p [~s]",
-                       [State#state.user, Updated, PlanetId]),
+                       [UserId, Updated, PlanetId]),
 
             Planet0 = Planet#planet{utilization=Updated},
             State0 = State#state{planet=Planet0},
@@ -479,11 +487,12 @@ handle_info({get_buildings, Silent}, State) ->
     case State#state.buildings of
         % buildings not fetched yet
         [] ->
+            UserId = user_id(State),
             PlanetId = planet_id(State),
 
             Fetched = ogonek_mongo:buildings_of_planet(PlanetId),
             lager:debug("user ~s - fetched buildings of planet ~s: ~p",
-                        [State#state.user, PlanetId, Fetched]),
+                        [UserId, PlanetId, Fetched]),
 
             Capacity = ogonek_capacity:from_buildings(PlanetId, Fetched),
             State0 = State#state{buildings=Fetched, capacity=Capacity},
@@ -503,11 +512,12 @@ handle_info({get_constructions, Silent}, State) ->
     case State#state.constructions of
         % constructions not fetched yet
         [] ->
+            UserId = user_id(State),
             PlanetId = planet_id(State),
             Fetched = ogonek_mongo:constructions_of_planet(PlanetId),
 
             lager:debug("user ~s - fetched constructions of planet ~s: ~p",
-                        [State#state.user, PlanetId, Fetched]),
+                        [UserId, PlanetId, Fetched]),
 
             State0 = process_constructions(State, Fetched),
 
@@ -526,11 +536,12 @@ handle_info({get_weapon_orders, Silent}, State) ->
     case State#state.weapon_orders of
         % weapon orders not fetched yet
         [] ->
+            UserId = user_id(State),
             PlanetId = planet_id(State),
             Fetched = ogonek_mongo:weapon_orders_of_planet(PlanetId),
 
             lager:debug("user ~s - fetched weapon orders of planet ~s: ~p",
-                        [State#state.user, PlanetId, Fetched]),
+                        [UserId, PlanetId, Fetched]),
 
             State0 = State#state{weapon_orders=Fetched},
             State1 = process_weapon_orders(State0, Fetched),
@@ -546,26 +557,29 @@ handle_info({get_weapon_orders, Silent}, State) ->
             {noreply, State}
     end;
 
-handle_info(process_weapon_orders, #state{user=Id}=State) ->
+handle_info(process_weapon_orders, State) ->
+    UserId = user_id(State),
     Ws = State#state.weapon_orders,
 
-    lager:debug("user ~s - processing weapon orders", [Id]),
+    lager:debug("user ~s - processing weapon orders", [UserId]),
 
     State0 = process_weapon_orders(State, Ws),
 
     {noreply, State0};
 
-handle_info(process_constructions, #state{user=Id}=State) ->
+handle_info(process_constructions, State) ->
+    UserId = user_id(State),
     Cs = State#state.constructions,
 
-    lager:debug("user ~s - processing constructions", [Id]),
+    lager:debug("user ~s - processing constructions", [UserId]),
 
     State0 = process_constructions(State, Cs),
 
     {noreply, State0};
 
-handle_info(Info, #state{user=Id}=State) ->
-    lager:warning("user ~s - unhandled message: ~p", [Id, Info]),
+handle_info(Info, State) ->
+    UserId = user_id(State),
+    lager:warning("user ~s - unhandled message: ~p", [UserId, Info]),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -705,8 +719,8 @@ remove_weapon_order(State, _PlanetId, OrderId) ->
 
 
 -spec calc_resources(state()) -> state().
-calc_resources(PState) ->
-    calc_resources(PState, ogonek_util:now8601()).
+calc_resources(State) ->
+    calc_resources(State, ogonek_util:now8601()).
 
 
 -spec calc_resources(state(), timestamp()) -> state().
@@ -726,16 +740,16 @@ calc_resources(State, RelativeTo) ->
 
 
 -spec calculate_resources(state(), [building()], timestamp()) -> resources() | skipped.
-calculate_resources(PlanetState, Buildings, RelativeTo) ->
-    calculate_resources(PlanetState, Buildings, RelativeTo, false).
+calculate_resources(State, Buildings, RelativeTo) ->
+    calculate_resources(State, Buildings, RelativeTo, false).
 
 
 -spec calculate_resources(state(), [building()], timestamp(), boolean()) -> resources() | skipped.
-calculate_resources(PlanetState, Buildings, RelativeTo, Force) ->
-    Planet = PlanetState#state.planet,
-    UserId = Planet#planet.owner,
+calculate_resources(State, Buildings, RelativeTo, Force) ->
+    UserId = user_id(State),
+    Planet = State#state.planet,
     Resources = Planet#planet.resources,
-    Capacity = PlanetState#state.capacity,
+    Capacity = State#state.capacity,
 
     SecondsSince = ogonek_util:seconds_since(Resources#resources.updated, RelativeTo),
 
@@ -810,9 +824,9 @@ construction_possible(PlanetState, Research, Costs) ->
 
 
 -spec weapon_order_possible(state(), wdef()) -> boolean().
-weapon_order_possible(PState, WDef) ->
-    Planet = PState#state.planet,
-    Buildings = PState#state.buildings,
+weapon_order_possible(State, WDef) ->
+    Planet = State#state.planet,
+    Buildings = State#state.buildings,
     Resources = Planet#planet.resources,
 
     Resources#resources.iron_ore >= WDef#wdef.iron_ore andalso
@@ -844,9 +858,9 @@ has_weapon_manufacture(Buildings) ->
     ogonek_buildings:get_building_level(Buildings, weapon_manufacture) > 0.
 
 
--spec claim_resources(PlanetState :: state(), Costs :: bdef() | wdef()) -> state().
-claim_resources(PlanetState, Costs) ->
-    Planet = PlanetState#state.planet,
+-spec claim_resources(State :: state(), Costs :: bdef() | wdef()) -> state().
+claim_resources(State, Costs) ->
+    Planet = State#state.planet,
     Resources = Planet#planet.resources,
 
     % claim_resources is called immediately on the creation of the construction
@@ -855,7 +869,7 @@ claim_resources(PlanetState, Costs) ->
     Res0 = ogonek_resources:substract_costs(Resources, Costs),
 
     Planet0 = Planet#planet{resources=Res0},
-    PlanetState#state{planet=Planet0}.
+    State#state{planet=Planet0}.
 
 
 -spec fetch_weapons(PlanetId :: binary()) -> weapon_map().
@@ -868,18 +882,18 @@ fetch_weapons(PlanetId) ->
 
 
 -spec process_constructions(state(), [construction()]) -> state().
-process_constructions(PState, []) -> PState;
-process_constructions(PState, Constructions) ->
+process_constructions(State, []) -> State;
+process_constructions(State, Constructions) ->
     {Finished, Running} = split_constructions(Constructions),
 
-    PState0 = lists:foldl(fun process_construction/2, PState, Finished),
+    PState0 = lists:foldl(fun process_construction/2, State, Finished),
     PState0#state{constructions=Running}.
 
 
 -spec process_construction({construction(), timestamp()}, state()) -> state().
-process_construction({Construction, UpTo}, PState) ->
-    Planet = PState#state.planet,
-    Buildings = PState#state.buildings,
+process_construction({Construction, UpTo}, State) ->
+    Planet = State#state.planet,
+    Buildings = State#state.buildings,
     PlanetId = Planet#planet.id,
     Type = Construction#construction.building,
 
@@ -899,20 +913,20 @@ process_construction({Construction, UpTo}, PState) ->
                    Buildings0 = update_building(Buildings, Update),
                    Capacity = ogonek_capacity:from_buildings(PlanetId, Buildings0),
 
-                   PState0 = PState#state{
+                   State0 = State#state{
                               buildings=Buildings0,
                               capacity=Capacity},
 
-                   calc_resources(PState0, UpTo);
+                   calc_resources(State0, UpTo);
                true ->
                    lager:warning("invalid construction building level: ~p",
                                  [Construction]),
-                   PState
+                   State
             end;
         undefined ->
             lager:warning("construction finished for unknown building: ~p",
                           [Construction]),
-            PState
+            State
     end.
 
 
@@ -944,8 +958,8 @@ split_constructions(Constructions, RelativeTo) ->
 
 
 -spec process_weapon_orders(state(), [weapon_order()]) -> state().
-process_weapon_orders(PState, []) -> PState;
-process_weapon_orders(PState, WOrders) ->
+process_weapon_orders(State, []) -> State;
+process_weapon_orders(State, WOrders) ->
     Now = ogonek_util:now8601(),
     {Finished, Running} = lists:partition(fun(#weapon_order{finish=F}) ->
                                                   F =< Now
@@ -955,9 +969,9 @@ process_weapon_orders(PState, WOrders) ->
                              lager:info("planet ~s - finishing weapon order ~p",
                                         [WOrder#weapon_order.planet, WOrder]),
                              finish_weapon_order(Weapons, WOrder)
-                     end, PState#state.weapons, Finished),
+                     end, State#state.weapons, Finished),
 
-    PState#state{weapon_orders=Running, weapons=Ws}.
+    State#state{weapon_orders=Running, weapons=Ws}.
 
 
 -spec finish_weapon_order(Weapons :: #{atom() => weapon()}, weapon_order()) -> #{atom() => weapon()}.
@@ -983,6 +997,16 @@ finish_weapon_order(Weapons, WOrder) ->
 -spec planet_id(state()) -> binary().
 planet_id(#state{planet=#planet{id=PlanetId}}) ->
     PlanetId.
+
+
+-spec user_id(state()) -> binary().
+user_id(#state{user=UserId}) ->
+    UserId.
+
+
+-spec resources(state()) -> resources().
+resources(#state{planet=#planet{resources=Resources}}) ->
+    Resources.
 
 
 %%
