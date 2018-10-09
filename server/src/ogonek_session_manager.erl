@@ -65,27 +65,27 @@ start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 
--spec register_socket(binary(), binary()) -> ok.
+-spec register_socket(UserId :: binary(), SessionId :: binary()) -> ok.
 register_socket(UserId, SessionId) ->
     register_socket(self(), UserId, SessionId).
 
 
--spec register_socket(pid(), binary(), binary()) -> ok.
+-spec register_socket(Socket :: pid(), UserId :: binary(), SessionId :: binary()) -> ok.
 register_socket(Socket, UserId, SessionId) ->
     gen_server:cast(?MODULE, {register_socket, Socket, UserId, SessionId}).
 
 
--spec publish_to_user(binary(), term()) -> ok.
+-spec publish_to_user(UserId :: binary(), Msg :: term()) -> ok.
 publish_to_user(UserId, Msg) ->
     gen_server:cast(?MODULE, {publish_to_user, UserId, undefined, Msg}).
 
 
--spec publish_to_user(binary(), binary(), term()) -> ok.
+-spec publish_to_user(UserId :: binary(), SessionId :: binary(), Msg :: term()) -> ok.
 publish_to_user(UserId, SessionId, Msg) ->
     gen_server:cast(?MODULE, {publish_to_user, UserId, SessionId, Msg}).
 
 
--spec publish_to_sockets(binary(), term()) -> ok.
+-spec publish_to_sockets(UserId :: binary(), Msg :: term()) -> ok.
 publish_to_sockets(UserId, Msg) ->
     gen_server:cast(?MODULE, {publish_to_sockets, UserId, Msg}).
 
@@ -95,22 +95,22 @@ kill_timeout(UserId) ->
     gen_server:cast(?MODULE, {kill_timeout, UserId}).
 
 
--spec logout(binary()) -> ok.
+-spec logout(UserId :: binary()) -> ok.
 logout(UserId) ->
     logout(self(), UserId).
 
 
--spec logout(pid(), binary()) -> ok.
+-spec logout(Socket :: pid(), UserId :: binary()) -> ok.
 logout(Socket, UserId) ->
     gen_server:cast(?MODULE, {logout, Socket, UserId}).
 
 
--spec close_socket(binary()) -> ok.
+-spec close_socket(UserId :: binary()) -> ok.
 close_socket(UserId) ->
     close_socket(self(), UserId).
 
 
--spec close_socket(pid(), binary() | undefined) -> ok.
+-spec close_socket(Socket :: pid(), UserId :: binary() | undefined) -> ok.
 close_socket(_Socket, undefined) -> ok;
 close_socket(Socket, UserId) ->
     gen_server:cast(?MODULE, {close_socket, Socket, UserId}).
@@ -173,6 +173,12 @@ handle_cast({register_socket, Socket, UserId, SessionId}, State) ->
 
     % and associate the user-id with the new session instead
     ogonek_mongo:add_user_to_session(UserId, SessionId),
+
+    % pass user's session dispatcher to socket
+    Socket ! {dispatcher, Sessions0#user_session.dispatcher},
+
+    % pass user's lifecycle to socket as well
+    Socket ! {lifecycle, Sessions0#user_session.lifecycle},
 
     UserSessions0 = maps:put(UserId, Sessions0, UserSessions),
 

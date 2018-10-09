@@ -60,6 +60,18 @@ info(_Request, {session_login, SessionId, UserId}, State) ->
                   [SessionId, UserId, State#ws_state.session_id]),
     {ok, State};
 
+info(_Request, {dispatcher, Dispatcher}, State) ->
+    SessionId = State#ws_state.session_id,
+    lager:debug("session ~s - associating with user session dispatcher ~p", [SessionId, Dispatcher]),
+
+    {ok, State#ws_state{dispatcher=Dispatcher}};
+
+info(_Request, {lifecycle, Lifecycle}, State) ->
+    SessionId = State#ws_state.session_id,
+    lager:debug("session ~s - associating with user lifecycle ~p", [SessionId, Lifecycle]),
+
+    {ok, State#ws_state{lifecycle=Lifecycle}};
+
 info(_Request, {logout, Reason}, State) ->
     lager:info("received logout request with reason: ~p", [Reason]),
     {shutdown, State};
@@ -171,18 +183,14 @@ handle_request(<<"planet_info">>, _Request, _Json, #ws_state{user_id=undefined}=
     not_logged_in(State);
 
 handle_request(<<"planet_info">>, _Request, _Json, State) ->
-    UserId = State#ws_state.user_id,
-    SessionId = State#ws_state.session_id,
-    ogonek_session_manager:publish_to_user(UserId, SessionId, planet_info),
+    publish_to_user(State, planet_info),
     {ok, State};
 
 handle_request(<<"weapons_info">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
     not_logged_in(State);
 
 handle_request(<<"weapons_info">>, _Request, _Json, State) ->
-    UserId = State#ws_state.user_id,
-    SessionId = State#ws_state.session_id,
-    ogonek_session_manager:publish_to_user(UserId, SessionId, weapons_info),
+    publish_to_user(State, weapons_info),
     {ok, State};
 
 handle_request(<<"get_utilization">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
@@ -191,9 +199,7 @@ handle_request(<<"get_utilization">>, _Request, _Json, #ws_state{user_id=undefin
 handle_request(<<"get_utilization">>, _Request, Json, State) ->
     case ogonek_util:keys([<<"planet">>], Json) of
         [PlanetId] ->
-            UserId = State#ws_state.user_id,
-            SessionId = State#ws_state.session_id,
-            ogonek_session_manager:publish_to_user(UserId, SessionId, {get_utilization, PlanetId}),
+            publish_to_user(State, {get_utilization, PlanetId}),
             {ok, State};
         _Otherwise ->
             {reply, error_json(<<"get_utilization: expecting planet">>), State}
@@ -205,10 +211,8 @@ handle_request(<<"set_utilization">>, _Request, _Json, #ws_state{user_id=undefin
 handle_request(<<"set_utilization">>, _Request, Json, State) ->
     case ogonek_util:keys([<<"planet">>, <<"resource">>, <<"value">>], Json) of
         [PlanetId, Resource, Value] when is_integer(Value) ->
-            UserId = State#ws_state.user_id,
-            SessionId = State#ws_state.session_id,
             Msg = {set_utilization, PlanetId, Resource, Value},
-            ogonek_session_manager:publish_to_user(UserId, SessionId, Msg),
+            publish_to_user(State, Msg),
             {ok, State};
         _Otherwise ->
             {reply, error_json(<<"set_utilization: expecting planet, resource and value">>), State}
@@ -218,9 +222,7 @@ handle_request(<<"start_research">>, _Request, _Json, #ws_state{user_id=undefine
     not_logged_in(State);
 
 handle_request(<<"start_research">>, _Request, _Json, State) ->
-    UserId = State#ws_state.user_id,
-    SessionId = State#ws_state.session_id,
-    ogonek_session_manager:publish_to_user(UserId, SessionId, start_research),
+    publish_to_user(State, start_research),
     {ok, State};
 
 handle_request(<<"production_info">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
@@ -229,9 +231,7 @@ handle_request(<<"production_info">>, _Request, _Json, #ws_state{user_id=undefin
 handle_request(<<"production_info">>, _Request, Json, State) ->
     case ogonek_util:keys([<<"planet">>], Json) of
         [PlanetId] ->
-            UserId = State#ws_state.user_id,
-            SessionId = State#ws_state.session_id,
-            ogonek_session_manager:publish_to_user(UserId, SessionId, {production_info, PlanetId}),
+            publish_to_user(State, {production_info, PlanetId}),
             {ok, State};
         _Otherwise ->
             {reply, error_json(<<"production_info: expecting planet">>), State}
@@ -241,9 +241,6 @@ handle_request(<<"build_building">>, _Request, _Json, #ws_state{user_id=undefine
     not_logged_in(State);
 
 handle_request(<<"build_building">>, _Request, Json, State) ->
-    UserId = State#ws_state.user_id,
-    SessionId = State#ws_state.session_id,
-
     case ogonek_util:keys([<<"planet">>, <<"type">>, <<"level">>], Json) of
         [Planet, Type, Level] when is_integer(Level) ->
             case ogonek_buildings:try_building_type(Type) of
@@ -251,7 +248,7 @@ handle_request(<<"build_building">>, _Request, Json, State) ->
                     {reply, error_json(<<"build_building: invalid type">>), State};
                 Type0 ->
                     Msg = {build_building, Planet, Type0, Level},
-                    ogonek_session_manager:publish_to_user(UserId, SessionId, Msg),
+                    publish_to_user(State, Msg),
                     {ok, State}
             end;
         _Otherwise ->
@@ -262,9 +259,6 @@ handle_request(<<"build_weapon">>, _Request, _Json, #ws_state{user_id=undefined}
     not_logged_in(State);
 
 handle_request(<<"build_weapon">>, _Request, Json, State) ->
-    UserId = State#ws_state.user_id,
-    SessionId = State#ws_state.session_id,
-
     case ogonek_util:keys([<<"planet">>, <<"weapon">>], Json) of
         [Planet, Weapon] ->
             case ogonek_weapons:try_weapon_type(Weapon) of
@@ -274,7 +268,7 @@ handle_request(<<"build_weapon">>, _Request, Json, State) ->
                     {reply, error_json(<<"build_weapon: invalid weapon">>), State};
                 WDef ->
                     Msg = {build_weapon, Planet, WDef},
-                    ogonek_session_manager:publish_to_user(UserId, SessionId, Msg),
+                    publish_to_user(State, Msg),
                     {ok, State}
             end;
         _Otherwise ->
@@ -372,3 +366,18 @@ not_logged_in(State) ->
 json(Payload) ->
     Encoded = jiffy:encode(Payload),
     {text, Encoded}.
+
+
+-spec publish_to_user(ws_state(), Msg :: term()) -> ok.
+publish_to_user(State, Msg) ->
+    case State#ws_state.lifecycle of
+        undefined ->
+            % no associated user lifecycle (yet):
+            % publish via global session manager
+            UserId = State#ws_state.user_id,
+            SessionId = State#ws_state.session_id,
+            ogonek_session_manager:publish_to_user(UserId, SessionId, Msg);
+        Lifecycle ->
+            % directly send to lifecycle otherwise
+            Lifecycle ! Msg
+    end.
