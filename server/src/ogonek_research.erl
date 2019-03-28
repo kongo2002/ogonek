@@ -67,16 +67,20 @@ has_requirement([Research | Rs], {research, Name, MinLevel}=Req) ->
     end.
 
 
--spec research_duration([building()]) -> integer().
+-spec research_duration([building()]) -> integer() | undefined.
 research_duration(Buildings) ->
     % TODO: proper research duration distribution
     ResearchLab = ogonek_buildings:get_building_max_level(Buildings, research_lab),
     ResearchFacility = ogonek_buildings:get_building_max_level(Buildings, research_facility),
     CombinedLevel = ResearchLab + ResearchFacility * 2,
 
-    % for now we simply limit the duration to 2h at minimum
-    % usually the formula should take care of that
-    round(max(2, 8 - math:pow(CombinedLevel, 0.3)) * 3600).
+    if CombinedLevel > 0 ->
+           % for now we simply limit the duration to 2h at minimum
+           % usually the formula should take care of that
+           round(max(2, 8 - math:pow(CombinedLevel, 0.3)) * 3600);
+       true ->
+           undefined
+    end.
 
 
 -spec has_requirements([research()], [requirement()]) -> boolean().
@@ -155,7 +159,7 @@ to_json(Research, _Db) ->
     ogonek_util:doc(<<"research">>, Values).
 
 
--spec research_info_json(research() | undefined, [research()], integer()) -> json_doc().
+-spec research_info_json(research() | undefined, [research()], integer() | undefined) -> json_doc().
 research_info_json(Running, Finished, Duration) ->
     Status = case Running of
                  undefined -> [];

@@ -35,13 +35,17 @@ research model =
 
       statusText = status model res
       status0 =
-        case res.status of
-          Just status ->
+        case (res.status, res.duration) of
+          (_, Nothing) ->
+            div []
+            [ p [] [ text statusText ]
+            ]
+          (Just status, _) ->
             div []
             [ p [] [ text "research target: ", text (target status) ]
             , p [] [ text statusText ]
             ]
-          Nothing ->
+          (Nothing, _) ->
             div []
             [ p [] [ text statusText ]
             , button [ onClick (ApiRequest StartResearchRequest) ] [ text "Research" ]
@@ -84,7 +88,11 @@ status model research =
         Nothing ->
           "research finished at: " ++ zonedIso8601 model status.finish
     Nothing ->
-      "no research in progress - duration (" ++ deltaToString research.duration ++ ")"
+      case research.duration of
+        Just duration ->
+          "no research in progress - duration (" ++ deltaToString duration ++ ")"
+        Nothing ->
+          "no research possible yet"
 
 
 duration : ResearchStatusInfo -> Time.DateTime.DateTime -> String

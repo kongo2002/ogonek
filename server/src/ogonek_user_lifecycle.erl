@@ -165,10 +165,14 @@ handle_info(weapons_info, State) ->
     {noreply, State};
 
 handle_info(start_research, State) ->
-    case current_research(State#state.research) of
-        {undefined, Research} ->
-            ResearchDuration = research_duration(State),
-            FinishedAt = ogonek_util:finished_at(ResearchDuration),
+    Duration = research_duration(State),
+
+    case {current_research(State#state.research), Duration} of
+        {_, undefined} ->
+            % research not possible (yet)
+            {noreply, State};
+        {{undefined, Research}, _Duration} ->
+            FinishedAt = ogonek_util:finished_at(Duration),
             Possible = ogonek_research:possible_research(Research),
             Pick = ogonek_util:choose_random(Possible),
 
@@ -203,6 +207,7 @@ handle_info(start_research, State) ->
             {noreply, State#state{research=Rss, research_timer=Timer}};
         _Otherwise ->
             % research already ongoing
+            lager:warning("user ~s - starting research impossible - research ongoing", [State#state.id]),
             {noreply, State}
     end;
 
@@ -419,11 +424,15 @@ update_research(Researches, #research{research=Name}=Research) ->
     end.
 
 
--spec research_duration(state()) -> integer().
+-spec research_duration(state()) -> integer() | undefined.
 research_duration(State) ->
     Buildings = all_buildings(State),
     Duration = ogonek_research:research_duration(Buildings),
-    round(Duration / ?OGONEK_DEFAULT_ACCELERATION).
+
+    case Duration of
+        undefined -> undefined;
+        _ -> round(Duration / ?OGONEK_DEFAULT_ACCELERATION)
+    end.
 
 
 -spec all_buildings(state()) -> [building()].

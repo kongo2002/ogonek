@@ -34,8 +34,7 @@ import View.Utils exposing ( translateBuilding, translateResearch )
 init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
 init flags location =
   let route = Routing.parse location
-      deltaZero = Time.DateTime.DateTimeDelta 0 0 0 0 0 0 0
-      research = ResearchInfo [] deltaZero Nothing
+      research = ResearchInfo [] Nothing Nothing
       timeZone =
         Time.TimeZones.fromName flags.defaultTimeZone
         |> Maybe.withDefault (Time.TimeZones.etc_utc ())
