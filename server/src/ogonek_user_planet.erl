@@ -356,6 +356,12 @@ handle_info({weapon_update, Weapon, OrderId}, State) ->
 
     {noreply, State0};
 
+handle_info(schedule_calc_resources, State) ->
+    self() ! {calc_resources, false},
+    schedule_recalculate_resources(),
+
+    {noreply, State};
+
 handle_info({calc_resources, Silent}, State) ->
     PlanetId = planet_id(State),
     UserId = user_id(State),
@@ -670,7 +676,7 @@ json_to_sockets(Module, Json, State, _) ->
 -spec schedule_recalculate_resources() -> ok.
 schedule_recalculate_resources() ->
     Interval = ?OGONEK_REFRESH_RESOURCE_INTERVAL_SECS * 1000,
-    erlang:send_after(Interval, self(), {calc_resources, false}),
+    erlang:send_after(Interval, self(), schedule_calc_resources),
     ok.
 
 
