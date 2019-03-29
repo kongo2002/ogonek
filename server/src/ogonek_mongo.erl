@@ -61,6 +61,9 @@
 -export([weapon_update/2,
          weapons_of_planet/1]).
 
+%% Ships API
+-export([ships_of_planet/1]).
+
 %% Planet API
 -export([planet_exists/1,
          planet_exists/3,
@@ -284,7 +287,14 @@ weapon_update(Weapon, OrderId) ->
 weapons_of_planet(PlanetId) ->
     Info = get_info(),
     Query = #{<<"planet">> => to_id(PlanetId)},
-    find_all(Info, <<"weapon">>, Query, fun ogonek_weapon_order:from_doc/1).
+    find_all(Info, <<"weapon">>, Query, fun ogonek_weapon:from_doc/1).
+
+
+-spec ships_of_planet(PlanetId :: binary()) -> [ship()].
+ships_of_planet(PlanetId) ->
+    Info = get_info(),
+    Query = #{<<"planet">> => to_id(PlanetId)},
+    find_all(Info, <<"ship">>, Query, fun ogonek_ship:from_doc/1).
 
 
 -spec planet_exists(planet()) -> boolean().

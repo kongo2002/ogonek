@@ -193,6 +193,13 @@ handle_request(<<"weapons_info">>, _Request, _Json, State) ->
     publish_to_user(State, weapons_info),
     {ok, State};
 
+handle_request(<<"ships_info">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
+    not_logged_in(State);
+
+handle_request(<<"ships_info">>, _Request, _Json, State) ->
+    publish_to_user(State, ships_info),
+    {ok, State};
+
 handle_request(<<"get_utilization">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
     not_logged_in(State);
 

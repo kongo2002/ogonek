@@ -164,6 +164,10 @@ handle_info(weapons_info, State) ->
     for_all_planets(weapons_info, false, State),
     {noreply, State};
 
+handle_info(ships_info, State) ->
+    for_all_planets(ships_info, false, State),
+    {noreply, State};
+
 handle_info(start_research, State) ->
     Duration = research_duration(State),
 

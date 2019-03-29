@@ -20,7 +20,9 @@
          definitions_map/0,
          get_definition/1,
          to_ship_type/1,
-         try_ship_type/1]).
+         try_ship_type/1,
+         to_json/1,
+         to_json/2]).
 
 
 -spec definitions() -> [sdef()].
@@ -67,3 +69,35 @@ try_ship_type(Type) when is_binary(Type) ->
 
 try_ship_type(_Type) ->
     {error, invalid}.
+
+
+-spec to_json(sdef()) -> json_doc().
+to_json(SDef) ->
+    to_json(SDef, true).
+
+
+-spec to_json(sdef(), boolean()) -> json_doc().
+to_json(SDef, Db) ->
+    Vs = [{<<"name">>, SDef#sdef.name},
+          % stats
+          {<<"duration">>, SDef#sdef.duration},
+          {<<"space">>, SDef#sdef.space},
+          % resources
+          {<<"iron_ore">>, SDef#sdef.iron_ore},
+          {<<"gold">>, SDef#sdef.gold},
+          {<<"h2o">>, SDef#sdef.h2o},
+          {<<"oil">>, SDef#sdef.oil},
+          {<<"h2">>, SDef#sdef.h2},
+          {<<"uranium">>, SDef#sdef.uranium},
+          {<<"pvc">>, SDef#sdef.pvc},
+          {<<"titan">>, SDef#sdef.titan},
+          {<<"kyanite">>, SDef#sdef.kyanite}
+         ],
+
+    % as 'wdef' objects won't ever be stored in the database
+    % at all we can use the 'db-mode' flag to toggle the
+    % type tag 't' in the generated json properties
+    case Db of
+        true -> {Vs};
+        false -> ogonek_util:doc(<<"sdef">>, Vs)
+    end.

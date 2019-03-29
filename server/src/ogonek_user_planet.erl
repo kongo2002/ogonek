@@ -38,6 +38,8 @@
 
 -type weapon_map() :: #{atom() => weapon()}.
 
+-type ship_map() :: #{atom() => ship()}.
+
 
 -record(state, {
           user :: binary(),
@@ -47,7 +49,9 @@
           constructions :: [construction()],
           capacity :: capacity(),
           weapon_orders :: [weapon_order()],
-          weapons :: weapon_map()
+          weapons :: weapon_map(),
+          ship_orders :: [ship_order()],
+          ships :: ship_map()
          }).
 
 -type state() :: #state{}.
@@ -92,7 +96,9 @@ init({Planet, Session}) ->
                constructions=[],
                capacity=ogonek_capacity:empty(Id),
                weapon_orders=[],
-               weapons=maps:new()
+               weapons=maps:new(),
+               ship_orders=[],
+               ships=maps:new()
               },
 
     gen_server:cast(self(), prepare),
@@ -394,6 +400,37 @@ handle_info({weapons_info, Silent}, State) ->
             {noreply, State0};
         false ->
             {noreply, State}
+    end;
+
+handle_info({ships_info, Silent}, State) ->
+    Buildings = State#state.buildings,
+
+    case has_space_shipyard(Buildings) of
+        true ->
+            UserId = user_id(State),
+            PlanetId = planet_id(State),
+            Ships = State#state.ships,
+
+            Ships0 =
+            case maps:size(Ships) =< 0 of
+                true ->
+                    % fetch ships from database
+                    Fetched = fetch_ships(PlanetId),
+                    lager:info("user ~s - fetched ships: ~p",
+                               [UserId, Fetched]),
+                    Fetched;
+                false ->
+                    Ships
+            end,
+
+            Info = ships_info(PlanetId, Ships0),
+            json_to_sockets(ogonek_ship, Info, State, Silent),
+
+            State0 = State#state{ships=Ships0},
+            {noreply, State0};
+        false ->
+            {noreply, State}
+
     end;
 
 handle_info(planet_info, State) ->
@@ -718,6 +755,18 @@ remove_weapon_order(State, _PlanetId, OrderId) ->
     State#state{weapon_orders=Orders}.
 
 
+-spec ships_info(PlanetId ::  binary(), Ships :: ship_map()) -> [ship()].
+ships_info(PlanetId, Ships) ->
+    lists:foldl(fun(#sdef{name=Name}, Ss) ->
+                        case maps:get(Name, Ships, undefined) of
+                            undefined ->
+                                [#ship{type=Name, count=0, planet=PlanetId} | Ss];
+                            Ship ->
+                                [Ship | Ss]
+                        end
+                end, [], ogonek_ships:definitions()).
+
+
 -spec calc_resources(state()) -> state().
 calc_resources(State) ->
     calc_resources(State, ogonek_util:now8601()).
@@ -858,6 +907,11 @@ has_weapon_manufacture(Buildings) ->
     ogonek_buildings:get_building_level(Buildings, weapon_manufacture) > 0.
 
 
+-spec has_space_shipyard([building()]) -> boolean().
+has_space_shipyard(Buildings) ->
+    ogonek_buildings:get_building_level(Buildings, space_shipyard) > 0.
+
+
 -spec claim_resources(State :: state(), Costs :: bdef() | wdef()) -> state().
 claim_resources(State, Costs) ->
     Planet = State#state.planet,
@@ -879,6 +933,15 @@ fetch_weapons(PlanetId) ->
     lists:foldl(fun(#weapon{type=Type}=Weapon, Ws) ->
                         maps:put(Type, Weapon, Ws)
                 end, maps:new(), Weapons).
+
+
+-spec fetch_ships(PlanetId :: binary()) -> ship_map().
+fetch_ships(PlanetId) ->
+    Ships = ogonek_mongo:ships_of_planet(PlanetId),
+
+    lists:foldl(fun(#ship{type=Type}=Ship, Ss) ->
+                        maps:put(Type, Ship, Ss)
+                end, maps:new(), Ships).
 
 
 -spec process_constructions(state(), [construction()]) -> state().
