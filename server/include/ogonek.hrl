@@ -14,7 +14,7 @@
 
 -define(MSG_TYPE, <<"t">>).
 
--define(OGONEK_DEFAULT_ACCELERATION, 1.0).
+-define(OGONEK_DEFAULT_ACCELERATION, 5.0).
 
 -type json_props() :: [tuple()].
 
@@ -251,3 +251,42 @@
          }).
 
 -type weapon() :: #weapon{}.
+
+
+-record(sdef, {
+          name :: atom(),
+          duration :: non_neg_integer(),
+          space :: non_neg_integer(),
+          iron_ore :: integer(),
+          gold :: integer(),
+          h2o :: integer(),
+          oil :: integer() ,
+          h2 :: integer(),
+          uranium :: integer(),
+          pvc :: integer(),
+          titan :: integer(),
+          kyanite :: integer()
+         }).
+
+-type sdef() :: #sdef{}.
+
+
+-record(ship_order, {
+          id :: maybe_unset_id(),
+          ship :: atom(),
+          planet :: binary(),
+          created :: timestamp(),
+          finish :: timestamp()
+         }).
+
+-type ship_order() :: #ship_order{}.
+
+
+-record(ship, {
+          id :: maybe_unset_id(),
+          type :: atom(),
+          count :: non_neg_integer(),
+          planet :: binary()
+         }).
+
+-type ship() :: #ship{}.
