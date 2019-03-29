@@ -14,7 +14,7 @@
 
 -module(ogonek_capacity).
 
--include("ogonek.hrl").
+-include("include/ogonek.hrl").
 
 -export([empty/1,
          from_buildings/2,

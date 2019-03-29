@@ -14,7 +14,7 @@
 
 -module(ogonek_util).
 
--include("ogonek.hrl").
+-include("include/ogonek.hrl").
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

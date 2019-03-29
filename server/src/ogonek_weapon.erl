@@ -14,7 +14,7 @@
 
 -module(ogonek_weapon).
 
--include("ogonek.hrl").
+-include("include/ogonek.hrl").
 
 -export([from_json/1,
          from_doc/1,

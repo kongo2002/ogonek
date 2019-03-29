@@ -14,7 +14,7 @@
 
 -module(ogonek_utilization).
 
--include("ogonek.hrl").
+-include("include/ogonek.hrl").
 
 -export([validate/3,
          from_json/1,

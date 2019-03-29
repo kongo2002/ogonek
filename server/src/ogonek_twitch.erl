@@ -18,7 +18,7 @@
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
--include("ogonek.hrl").
+-include("include/ogonek.hrl").
 
 -behaviour(gen_server).
 -behaviour(ogonek_auth).

@@ -14,7 +14,7 @@
 
 -module(ogonek_websocket_api).
 
--include("ogonek.hrl").
+-include("include/ogonek.hrl").
 
 -export([init/2,
          info/3,
@@ -273,6 +273,26 @@ handle_request(<<"build_weapon">>, _Request, Json, State) ->
             end;
         _Otherwise ->
             {reply, error_json(<<"build_weapon: expecting planet and weapon">>), State}
+    end;
+
+handle_request(<<"build_ship">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->
+    not_logged_in(State);
+
+handle_request(<<"build_ship">>, _Request, Json, State) ->
+    case ogonek_util:keys([<<"planet">>, <<"ship">>], Json) of
+        [Planet, Ship] ->
+            case ogonek_ships:try_ship_type(Ship) of
+                error ->
+                    {reply, error_json(<<"build_ship: invalid ship">>), State};
+                {error, invalid} ->
+                    {reply, error_json(<<"build_ship: invalid ship">>), State};
+                SDef ->
+                    Msg = {build_ship, Planet, SDef},
+                    publish_to_user(State, Msg),
+                    {ok, State}
+            end;
+        _Otherwise ->
+            {reply, error_json(<<"build_ship: expecting planet and ship">>), State}
     end;
 
 handle_request(<<"logout">>, _Request, _Json, #ws_state{user_id=undefined}=State) ->

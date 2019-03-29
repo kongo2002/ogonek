@@ -14,7 +14,7 @@
 
 -module(ogonek_weapons).
 
--include("ogonek.hrl").
+-include("include/ogonek.hrl").
 
 -export([definitions/0,
          definitions_map/0,

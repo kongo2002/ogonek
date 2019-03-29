@@ -14,7 +14,7 @@
 
 -module(ogonek_auth_local).
 
--include("ogonek.hrl").
+-include("include/ogonek.hrl").
 
 -behaviour(ogonek_auth).
 

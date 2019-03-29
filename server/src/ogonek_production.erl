@@ -14,7 +14,7 @@
 
 -module(ogonek_production).
 
--include("ogonek.hrl").
+-include("include/ogonek.hrl").
 
 -export([to_json/1,
          to_json/2,

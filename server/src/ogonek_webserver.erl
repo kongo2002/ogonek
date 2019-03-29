@@ -14,7 +14,7 @@
 
 -module(ogonek_webserver).
 
--include("ogonek.hrl").
+-include("include/ogonek.hrl").
 
 -export([init/2,
          handle/2,

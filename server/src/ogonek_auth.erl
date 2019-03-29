@@ -14,7 +14,7 @@
 
 -module(ogonek_auth).
 
--include("ogonek.hrl").
+-include("include/ogonek.hrl").
 
 -export([default_provider/0,
          provider_module/1,

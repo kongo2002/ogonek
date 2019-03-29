@@ -14,7 +14,7 @@
 
 -module(ogonek_db).
 
--include("ogonek.hrl").
+-include("include/ogonek.hrl").
 
 -behaviour(gen_server).
 
