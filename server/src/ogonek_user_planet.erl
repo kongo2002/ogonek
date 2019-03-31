@@ -361,6 +361,25 @@ handle_info({weapon_update, Weapon, OrderId}, State) ->
 
     {noreply, State0};
 
+handle_info({ship_update, Ship, OrderId}, State) ->
+    UserId = user_id(State),
+
+    lager:info("user ~s - ship updated: ~p [order ~s]", [UserId, Ship, OrderId]),
+
+    % delete associated ship order
+    ogonek_mongo:ship_order_remove(OrderId),
+
+    PlanetId = Ship#ship.planet,
+    State0 = remove_ship_order(State, PlanetId, OrderId),
+
+    OrderFinished = ogonek_util:doc(<<"s_order_finished">>,
+                                    [{<<"_id">>, OrderId}, {<<"planet">>, PlanetId}]),
+    json_to_sockets(OrderFinished, State0),
+
+    self() ! {ships_info, false},
+
+    {noreply, State0};
+
 handle_info(schedule_calc_resources, State) ->
     self() ! {calc_resources, false},
     schedule_recalculate_resources(),
@@ -494,6 +513,33 @@ handle_info({build_weapon, WDef}, State) ->
             {noreply, State0};
         false ->
             lager:warning("user ~s - build weapon not possible ~p [~s]", [UserId, WDef, PlanetId]),
+            {noreply, State}
+    end;
+
+handle_info({build_ship, SDef}, State) ->
+    PlanetId = planet_id(State),
+    UserId = user_id(State),
+
+    case ship_order_possible(State, SDef) of
+        true ->
+            Bs = State#state.buildings,
+            Duration = ogonek_ships:calculate_order_duration(Bs, SDef),
+            FinishedAt = ogonek_util:finished_at(Duration),
+            Order = #ship_order{
+                       ship=SDef#sdef.name,
+                       planet=PlanetId,
+                       created=ogonek_util:now8601(),
+                       finish=FinishedAt
+                      },
+
+            lager:info("user ~s - start ship order ~p [~s]", [UserId, Order, PlanetId]),
+
+            ogonek_mongo:ship_order_create(Order),
+
+            State0 = claim_resources(State, SDef),
+            {noreply, State0};
+        false ->
+            lager:warning("user ~s - build ship not possible ~p [~s]", [UserId, SDef, PlanetId]),
             {noreply, State}
     end;
 
@@ -815,6 +861,13 @@ remove_weapon_order(State, _PlanetId, OrderId) ->
     State#state{weapon_orders=Orders}.
 
 
+-spec remove_ship_order(state(), PlanetId :: binary(), OrderId :: binary()) -> state().
+remove_ship_order(State, _PlanetId, OrderId) ->
+    ShipOrders = State#state.ship_orders,
+    Orders = lists:filter(fun(#ship_order{id=Id}) -> Id /= OrderId end, ShipOrders),
+    State#state{ship_orders=Orders}.
+
+
 -spec ships_info(PlanetId ::  binary(), Ships :: ship_map()) -> [ship()].
 ships_info(PlanetId, Ships) ->
     lists:foldl(fun(#sdef{name=Name}, Ss) ->
@@ -951,6 +1004,25 @@ weapon_order_possible(State, WDef) ->
     has_weapon_manufacture(Buildings) == true.
 
 
+-spec ship_order_possible(state(), sdef()) -> boolean().
+ship_order_possible(State, SDef) ->
+    Planet = State#state.planet,
+    Buildings = State#state.buildings,
+    Resources = Planet#planet.resources,
+
+    Resources#resources.iron_ore >= SDef#sdef.iron_ore andalso
+    Resources#resources.gold >= SDef#sdef.gold andalso
+    Resources#resources.h2o >= SDef#sdef.h2o andalso
+    Resources#resources.oil >= SDef#sdef.oil andalso
+    Resources#resources.h2 >= SDef#sdef.h2 andalso
+    Resources#resources.uranium >= SDef#sdef.uranium andalso
+    Resources#resources.pvc >= SDef#sdef.pvc andalso
+    Resources#resources.titan >= SDef#sdef.titan andalso
+    Resources#resources.kyanite >= SDef#sdef.kyanite andalso
+
+    has_space_shipyard(Buildings) == true.
+
+
 -spec max_concurrent_constructions([building()]) -> integer().
 max_concurrent_constructions(Buildings) ->
     CCLevel = construction_center_level(Buildings),
@@ -972,7 +1044,7 @@ has_space_shipyard(Buildings) ->
     ogonek_buildings:get_building_level(Buildings, space_shipyard) > 0.
 
 
--spec claim_resources(State :: state(), Costs :: bdef() | wdef()) -> state().
+-spec claim_resources(State :: state(), Costs :: bdef() | wdef() | sdef()) -> state().
 claim_resources(State, Costs) ->
     Planet = State#state.planet,
     Resources = Planet#planet.resources,

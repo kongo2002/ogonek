@@ -19,6 +19,7 @@
 -export([definitions/0,
          definitions_map/0,
          get_definition/1,
+         calculate_order_duration/2,
          to_ship_type/1,
          try_ship_type/1,
          to_json/1,
@@ -50,6 +51,13 @@ get_definition(_Name, []) -> error;
 get_definition(Name, [#sdef{name=Name}=Def | _Ds]) -> Def;
 get_definition(Name, [_ | Ds]) ->
     get_definition(Name, Ds).
+
+
+-spec calculate_order_duration([building()], sdef()) -> non_neg_integer().
+calculate_order_duration(_Buildings, #sdef{duration=Duration}) ->
+    % TODO: proper distribution
+    % take level of weapon_manufacture into account
+    round(Duration / ?OGONEK_DEFAULT_ACCELERATION).
 
 
 -spec to_ship_type(binary()) -> atom().

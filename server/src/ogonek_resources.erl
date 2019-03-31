@@ -212,7 +212,7 @@ with_capacity(Resources, Capacity) ->
      }.
 
 
--spec substract_costs(resources(), Costs :: bdef() | wdef()) -> resources().
+-spec substract_costs(resources(), Costs :: bdef() | wdef() | sdef()) -> resources().
 substract_costs(Resources, #bdef{}=Costs) ->
     % the 'positive' gain of workers and/or power will not be
     % considered in here but instead once the construction is actually finished
@@ -244,4 +244,17 @@ substract_costs(Resources, #wdef{}=Costs) ->
       pvc=Resources#resources.pvc - Costs#wdef.pvc,
       titan=Resources#resources.titan - Costs#wdef.titan,
       kyanite=Resources#resources.kyanite - Costs#wdef.kyanite
+     };
+
+substract_costs(Resources, #sdef{}=Costs) ->
+    Resources#resources{
+      iron_ore=Resources#resources.iron_ore - Costs#sdef.iron_ore,
+      gold=Resources#resources.gold - Costs#sdef.gold,
+      h2o=Resources#resources.h2o - Costs#sdef.h2o,
+      oil=Resources#resources.oil - Costs#sdef.oil,
+      h2=Resources#resources.h2 - Costs#sdef.h2,
+      uranium=Resources#resources.uranium - Costs#sdef.uranium,
+      pvc=Resources#resources.pvc - Costs#sdef.pvc,
+      titan=Resources#resources.titan - Costs#sdef.titan,
+      kyanite=Resources#resources.kyanite - Costs#sdef.kyanite
      }.

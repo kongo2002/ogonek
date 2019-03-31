@@ -66,7 +66,9 @@
          ships_of_planet/1]).
 
 %% Ship Order API
--export([ship_orders_of_planet/1]).
+-export([ship_order_create/1,
+         ship_orders_of_planet/1,
+         ship_order_remove/1]).
 
 %% Planet API
 -export([planet_exists/1,
@@ -304,6 +306,16 @@ ships_of_planet(PlanetId) ->
     Info = get_info(),
     Query = #{<<"planet">> => to_id(PlanetId)},
     find_all(Info, <<"ship">>, Query, fun ogonek_ship:from_doc/1).
+
+
+-spec ship_order_create(ship_order()) -> ok.
+ship_order_create(SOrder) ->
+    gen_server:cast(?MODULE, {ship_order_create, SOrder, self()}).
+
+
+-spec ship_order_remove(OrderId :: binary()) -> ok.
+ship_order_remove(OrderId) ->
+    gen_server:cast(?MODULE, {ship_order_remove, OrderId}).
 
 
 -spec ship_orders_of_planet(PlanetId :: binary()) -> [ship_order()].
@@ -582,6 +594,20 @@ handle_cast({ship_update, Ship, OrderId, Sender}, #state{topology=T}=State) ->
             lager:error("mongo - ship_update: ~p ~p", [Ship, Otherwise])
     end,
 
+    {noreply, State};
+
+handle_cast({ship_order_create, SOrder, Sender}, #state{topology=T}=State) ->
+    Doc = ogonek_ship_order:to_doc(SOrder),
+    case insert(T, <<"ship_order">>, Doc, fun ogonek_ship_order:from_doc/1) of
+        {ok, Order} ->
+            Sender ! {ship_order_create, Order};
+        Otherwise ->
+            lager:error("mongo - ship_order_create: ~p ~p", [SOrder, Otherwise])
+    end,
+    {noreply, State};
+
+handle_cast({ship_order_remove, OrderId}, #state{topology=T}=State) ->
+    mongo_api:delete(T, <<"ship_order">>, id_query(OrderId)),
     {noreply, State};
 
 handle_cast({planet_create, Planet}, #state{topology=T}=State) ->
