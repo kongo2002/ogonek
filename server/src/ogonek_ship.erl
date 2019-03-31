@@ -18,6 +18,7 @@
 
 -export([to_json/1,
          to_json/2,
+         to_doc/1,
          from_doc/1]).
 
 
@@ -63,3 +64,12 @@ from_doc(Doc) ->
         _Otherwise ->
             {error, invalid}
     end.
+
+
+-spec to_doc(ship()) -> map().
+to_doc(Ship) ->
+    Doc = #{<<"planet">> => Ship#ship.planet,
+            <<"type">> => erlang:atom_to_binary(Ship#ship.type, utf8),
+            <<"count">> => Ship#ship.count},
+
+    ogonek_util:with_id(Ship#ship.id, Doc).

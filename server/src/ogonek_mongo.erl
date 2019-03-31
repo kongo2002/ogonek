@@ -62,7 +62,11 @@
          weapons_of_planet/1]).
 
 %% Ships API
--export([ships_of_planet/1]).
+-export([ship_update/2,
+         ships_of_planet/1]).
+
+%% Ship Order API
+-export([ship_orders_of_planet/1]).
 
 %% Planet API
 -export([planet_exists/1,
@@ -290,11 +294,23 @@ weapons_of_planet(PlanetId) ->
     find_all(Info, <<"weapon">>, Query, fun ogonek_weapon:from_doc/1).
 
 
+-spec ship_update(ship(), OrderId :: maybe_unset_id()) -> ok.
+ship_update(Ship, OrderId) ->
+    gen_server:cast(?MODULE, {ship_update, Ship, OrderId, self()}).
+
+
 -spec ships_of_planet(PlanetId :: binary()) -> [ship()].
 ships_of_planet(PlanetId) ->
     Info = get_info(),
     Query = #{<<"planet">> => to_id(PlanetId)},
     find_all(Info, <<"ship">>, Query, fun ogonek_ship:from_doc/1).
+
+
+-spec ship_orders_of_planet(PlanetId :: binary()) -> [ship_order()].
+ship_orders_of_planet(PlanetId) ->
+    Info = get_info(),
+    Query = #{<<"planet">> => to_id(PlanetId)},
+    find_all(Info, <<"ship_order">>, Query, fun ogonek_ship_order:from_doc/1).
 
 
 -spec planet_exists(planet()) -> boolean().
@@ -543,6 +559,27 @@ handle_cast({weapon_update, Weapon, OrderId, Sender}, #state{topology=T}=State) 
             Sender ! {weapon_update, Weapon, OrderId};
         Otherwise ->
             lager:error("mongo - weapon_update: ~p ~p", [Weapon, Otherwise])
+    end,
+
+    {noreply, State};
+
+handle_cast({ship_update, #ship{id=undefined}=S, OrderId, Sender}, #state{topology=T}=State) ->
+    Doc = ogonek_ship:to_doc(S),
+    case insert(T, <<"ship">>, Doc, fun ogonek_ship:from_doc/1) of
+        {ok, Ship} ->
+            Sender ! {ship_update, Ship, OrderId};
+        Otherwise ->
+            lager:error("mongo - ship_update: ~p ~p", [S, Otherwise])
+    end,
+    {noreply, State};
+
+handle_cast({ship_update, Ship, OrderId, Sender}, #state{topology=T}=State) ->
+    Update = #{<<"$set">> => #{<<"count">> => Ship#ship.count}},
+    case mongo_api:update(T, <<"ship">>, id_query(Ship#ship.id), Update, #{}) of
+        {true, #{<<"n">> := 1}} ->
+            Sender ! {ship_update, Ship, OrderId};
+        Otherwise ->
+            lager:error("mongo - ship_update: ~p ~p", [Ship, Otherwise])
     end,
 
     {noreply, State};

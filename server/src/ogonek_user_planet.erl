@@ -153,6 +153,11 @@ handle_cast(prepare, State) ->
     Self ! {weapons_info, true},
     Self ! {get_weapon_orders, true},
 
+    % fetch open ship orders
+    % and ships just before that
+    Self ! {ships_info, true},
+    Self ! {get_ship_orders, true},
+
     % calculate resources after that
     Self ! {calc_resources, false},
 
@@ -600,6 +605,31 @@ handle_info({get_weapon_orders, Silent}, State) ->
             {noreply, State}
     end;
 
+handle_info({get_ship_orders, Silent}, State) ->
+    case State#state.ship_orders of
+        % ship orders not fetched yet
+        [] ->
+            UserId = user_id(State),
+            PlanetId = planet_id(State),
+            Fetched = ogonek_mongo:ship_orders_of_planet(PlanetId),
+
+            lager:debug("user ~s - fetched ship orders of planet ~s: ~p",
+                        [UserId, PlanetId, Fetched]),
+
+            State0 = State#state{ship_orders=Fetched},
+            State1 = process_ship_orders(State0, Fetched),
+
+            trigger_ship_order_checks(State1#state.ship_orders),
+
+            json_to_sockets(ogonek_ship_order, State1#state.ship_orders, State1, Silent),
+
+            {noreply, State1};
+        % ship orders already present
+        Orders ->
+            json_to_sockets(ogonek_ship_order, Orders, State, Silent),
+            {noreply, State}
+    end;
+
 handle_info(process_weapon_orders, State) ->
     UserId = user_id(State),
     Ws = State#state.weapon_orders,
@@ -607,6 +637,16 @@ handle_info(process_weapon_orders, State) ->
     lager:debug("user ~s - processing weapon orders", [UserId]),
 
     State0 = process_weapon_orders(State, Ws),
+
+    {noreply, State0};
+
+handle_info(process_ship_orders, State) ->
+    UserId = user_id(State),
+    Ss = State#state.ship_orders,
+
+    lager:debug("user ~s - processing ship orders", [UserId]),
+
+    State0 = process_ship_orders(State, Ss),
 
     {noreply, State0};
 
@@ -739,6 +779,20 @@ trigger_weapon_order_checks(WOrders) ->
 -spec trigger_weapon_order_check(Seconds :: integer()) -> ok.
 trigger_weapon_order_check(Seconds) ->
     erlang:send_after(Seconds * 1000, self(), process_weapon_orders),
+    ok.
+
+
+-spec trigger_ship_order_checks([ship_order()]) -> ok.
+trigger_ship_order_checks(SOrders) ->
+    lists:foreach(fun(SO) ->
+                          DueIn = ogonek_util:seconds_since(SO#ship_order.finish),
+                          trigger_ship_order_check(DueIn + 1)
+                  end, SOrders).
+
+
+-spec trigger_ship_order_check(Seconds :: integer()) -> ok.
+trigger_ship_order_check(Seconds) ->
+    erlang:send_after(Seconds * 1000, self(), process_ship_orders),
     ok.
 
 
@@ -1061,6 +1115,43 @@ finish_weapon_order(Weapons, WOrder) ->
     ogonek_mongo:weapon_update(Updated, WOrder#weapon_order.id),
 
     maps:put(Weapon, Updated, Weapons).
+
+
+-spec process_ship_orders(state(), [ship_order()]) -> state().
+process_ship_orders(State, []) -> State;
+process_ship_orders(State, SOrders) ->
+    Now = ogonek_util:now8601(),
+    {Finished, Running} = lists:partition(fun(#ship_order{finish=F}) ->
+                                                  F =< Now
+                                          end, SOrders),
+
+    Ss = lists:foldl(fun(SOrder, Ships) ->
+                             lager:info("planet ~s - finishing ship order ~p",
+                                        [SOrder#ship_order.planet, SOrder]),
+                             finish_ship_order(Ships, SOrder)
+                     end, State#state.ships, Finished),
+
+    State#state{ship_orders=Running, ships=Ss}.
+
+
+-spec finish_ship_order(Ships :: #{atom() => ship()}, ship_order()) -> #{atom() => ship()}.
+finish_ship_order(Ships, SOrder) ->
+    Planet = SOrder#ship_order.planet,
+    Ship = SOrder#ship_order.ship,
+
+    Updated =
+    case maps:get(Ship, Ships, undefined) of
+        undefined ->
+            % new ship
+            #ship{planet=Planet, type=Ship, count=1};
+        Existing ->
+            % increment existing ship's count
+            Existing#ship{count=Existing#ship.count+1}
+    end,
+
+    ogonek_mongo:ship_update(Updated, SOrder#ship_order.id),
+
+    maps:put(Ship, Updated, Ships).
 
 
 -spec planet_id(state()) -> binary().
