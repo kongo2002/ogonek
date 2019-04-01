@@ -250,7 +250,7 @@ handle_info({weapon_order_create, WOrder}, State) ->
 
     lager:info("user ~s - weapon order created: ~p", [UserId, WOrder]),
 
-    % push construction to client
+    % push weapon order to client
     json_to_sockets(ogonek_weapon_order, WOrder, State),
 
     % publish resource update
@@ -262,6 +262,26 @@ handle_info({weapon_order_create, WOrder}, State) ->
     % update weapon orders
     Orders = [WOrder | State#state.weapon_orders],
     State0 = State#state{weapon_orders=Orders},
+
+    {noreply, State0};
+
+handle_info({ship_order_create, SOrder}, State) ->
+    UserId = user_id(State),
+
+    lager:info("user ~s - ship order created: ~p", [UserId, SOrder]),
+
+    % push ship order to client
+    json_to_sockets(ogonek_ship_order, SOrder, State),
+
+    % publish resource update
+    Resources = resources(State),
+    json_to_sockets(ogonek_resources, Resources, State),
+
+    trigger_ship_order_checks([SOrder]),
+
+    % update ship orders
+    Orders = [SOrder | State#state.ship_orders],
+    State0 = State#state{ship_orders=Orders},
 
     {noreply, State0};
 
