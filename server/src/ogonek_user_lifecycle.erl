@@ -215,9 +215,10 @@ handle_info(start_research, State) ->
             {noreply, State}
     end;
 
-handle_info({research_create, _Research}, State) ->
+handle_info({research_create, Research}, State) ->
+    Rss = update_research(State#state.research, Research),
     self() ! get_research,
-    {noreply, State};
+    {noreply, State#state{research=Rss}};
 
 handle_info({research_finish, _Research}, State) ->
     self() ! get_research,
