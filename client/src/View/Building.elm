@@ -17,8 +17,9 @@ module View.Building exposing ( building )
 import Html exposing (..)
 import Html.Attributes exposing (..)
 
+import Routing
 import Types exposing (..)
-import View.Utils exposing ( translateBuildingName )
+import View.Utils exposing ( numbClick, translateBuildingName )
 
 
 building : String -> Model -> List (Html Msg)
@@ -44,25 +45,25 @@ content name =
     "ext_ore_mine" -> []
     "ext_water_rig" -> []
     "gold_depot" -> []
-    "gold_mine" -> []
+    "gold_mine" -> goldMine
     "h2_depot" -> []
     "hydro_plant" -> []
     "kyanite_depot" -> []
     "kyanite_mine" -> []
-    "oil_rig" -> []
+    "oil_rig" -> oilRig
     "oil_tank" -> []
     "ore_depot" -> []
-    "ore_mine" -> []
+    "ore_mine" -> oreMine
     "plastic_factory" -> []
     "power_plant" -> []
     "pvc_depot" -> []
-    "research_lab" -> []
+    "research_lab" -> researchLab
     "smelting_plant" -> []
     "space_shipyard" -> []
     "titan_depot" -> []
     "uranium_depot" -> []
     "uranium_mine" -> []
-    "water_rig" -> []
+    "water_rig" -> waterRig
     "water_tank" -> []
     "wind_turbine" -> []
     unknown ->
@@ -97,6 +98,59 @@ constructionCenter =
   in  [ p [] [ text short ]
       , p [] [ text desc ]
       ]
+
+
+researchLab : List (Html Msg)
+researchLab =
+  [ p [] [ text "The research lab is the main research facility that allows you to discover new technologies. By issuing new research orders you can unlock various new research topics that themselves unlock new buildings and research topics in your colony. " ]
+  , p [] [ text "The higher the level of your research lab, the faster a research order will be finished. As soon as half of the total research's duration you will be able to observe what the research staff is currently working on. However you have no possibility to influence what topic will be researched." ]
+  ]
+
+
+goldMine : List (Html Msg)
+goldMine =
+  [ p [] [ text "The gold mine is the primary source of the gold production of your colony. By gold being one of the four elemental materials, this building is crucial for your production and therefore your colony's overall growth." ]
+  , p [] [ text "The higher your gold mine's level, the higher your gold production will be." ]
+  , resources [ "gold_depot", "ext_gold_mine" ]
+  ]
+
+
+oreMine : List (Html Msg)
+oreMine =
+  [ p [] [ text "The ore mine is the primary source of the iron ore production of your colony. By iron ore being one of the four elemental materials, this building is crucial for your production and therefore your colony's overall growth. Moreover you will require a decent iron ore supply in order to produce titan later on." ]
+  , p [] [ text "The higher your iron mine's level, the higher your iron ore production will be." ]
+  , resources [ "ore_depot", "ext_ore_mine", "smelting_plant" ]
+  ]
+
+
+oilRig : List (Html Msg)
+oilRig =
+  [ p [] [ text "The oil rig is the primary source of the oil production of your colony. By oil being one of the four elemental materials, this building is crucial for your production and therefore your colony's overall growth. Moreover you will require a decent oil supply in order to produce PVC later on." ]
+  , p [] [ text "The higher your oil rig's level, the higher your oil production will be." ]
+  , resources [ "oil_tank", "ext_oil_rig", "plastic_factory" ]
+  ]
+
+
+waterRig : List (Html Msg)
+waterRig =
+  [ p [] [ text "The water rig is the primary source of the water production of your colony. By water being one of the four elemental materials, this building is crucial for your production and therefore your colony's overall growth. Moreover you will require a decent water supply in order to produce hydrogen later on." ]
+  , p [] [ text "The higher your water rig's level, the higher your water production will be." ]
+  , resources [ "water_tank", "ext_water_rig", "chemical_factory" ]
+  ]
+
+
+resources : List String -> Html Msg
+resources rss =
+  let buildLink name =
+        let route = BuildingRoute name
+            translated = translateBuildingName name
+            link = Routing.routeToPath route
+            click = numbClick (NewUrl route)
+        in  li [ class "compact" ] [ a [ href link, click ] [ text translated ] ]
+      elems = List.map buildLink rss
+      header = h5 [] [ text "Resources" ]
+      list = ul [] elems
+  in  div [] [ header, list ]
 
 
 -- vim: et sw=2 sts=2

@@ -57,6 +57,12 @@ thead {
   text-transform: uppercase;
 }
 
+li.compact {
+  padding-left: 1.5em;
+  margin-bottom: 0.4ex;
+  font-size: 85%;
+}
+
 a.icon {
   border: solid 1px;
   border-radius: 4px;
