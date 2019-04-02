@@ -44,15 +44,15 @@ content name =
     "ext_oil_rig" -> []
     "ext_ore_mine" -> []
     "ext_water_rig" -> []
-    "gold_depot" -> []
+    "gold_depot" -> goldDepot
     "gold_mine" -> goldMine
     "h2_depot" -> []
     "hydro_plant" -> []
     "kyanite_depot" -> []
     "kyanite_mine" -> []
     "oil_rig" -> oilRig
-    "oil_tank" -> []
-    "ore_depot" -> []
+    "oil_tank" -> oilTank
+    "ore_depot" -> oreDepot
     "ore_mine" -> oreMine
     "plastic_factory" -> []
     "power_plant" -> []
@@ -64,7 +64,7 @@ content name =
     "uranium_depot" -> []
     "uranium_mine" -> []
     "water_rig" -> waterRig
-    "water_tank" -> []
+    "water_tank" -> waterTank
     "wind_turbine" -> []
     unknown ->
       [ p [] [ text "unknown building" ] ]
@@ -115,11 +115,25 @@ goldMine =
   ]
 
 
+goldDepot : List (Html Msg)
+goldDepot =
+  [ p [] [ text "The gold depot increases the storage capacity of gold in the colony with each level." ]
+  , resources [ "gold_mine", "ext_gold_mine" ]
+  ]
+
+
 oreMine : List (Html Msg)
 oreMine =
   [ p [] [ text "The ore mine is the primary source of the iron ore production of your colony. By iron ore being one of the four elemental materials, this building is crucial for your production and therefore your colony's overall growth. Moreover you will require a decent iron ore supply in order to produce titan later on." ]
   , p [] [ text "The higher your iron mine's level, the higher your iron ore production will be." ]
   , resources [ "ore_depot", "ext_ore_mine", "smelting_plant" ]
+  ]
+
+
+oreDepot : List (Html Msg)
+oreDepot =
+  [ p [] [ text "The ore depot increases the storage capacity of iron ore in the colony with each level." ]
+  , resources [ "ore_mine", "ext_ore_mine" ]
   ]
 
 
@@ -131,11 +145,25 @@ oilRig =
   ]
 
 
+oilTank : List (Html Msg)
+oilTank =
+  [ p [] [ text "The oil tank increases the storage capacity of oil in the colony with each level." ]
+  , resources [ "oil_rig", "ext_oil_rig" ]
+  ]
+
+
 waterRig : List (Html Msg)
 waterRig =
   [ p [] [ text "The water rig is the primary source of the water production of your colony. By water being one of the four elemental materials, this building is crucial for your production and therefore your colony's overall growth. Moreover you will require a decent water supply in order to produce hydrogen later on." ]
   , p [] [ text "The higher your water rig's level, the higher your water production will be." ]
   , resources [ "water_tank", "ext_water_rig", "chemical_factory" ]
+  ]
+
+
+waterTank : List (Html Msg)
+waterTank =
+  [ p [] [ text "The water tank increases the storage capacity of water in the colony with each level." ]
+  , resources [ "water_rig", "ext_water_rig" ]
   ]
 
 
