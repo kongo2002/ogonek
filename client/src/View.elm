@@ -28,6 +28,7 @@ import View.Planet
 import View.Production
 import View.Research
 import View.Ships
+import View.User
 import View.Utils exposing ( loggedIn )
 import View.Weapons
 
@@ -76,6 +77,9 @@ view model =
           -- research
           Types.ResearchRoute ->
             View.Research.research
+          -- user
+          Types.UserRoute ->
+            View.User.user
           -- login
           Types.LoginRoute ->
             View.Login.login

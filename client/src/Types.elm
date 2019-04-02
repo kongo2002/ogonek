@@ -49,6 +49,7 @@ type Route
   | WeaponsRoute String
   | ShipsRoute String
   | BuildingRoute String
+  | UserRoute
   -- auth (code, state, scope, provider)
   | AuthRoute (Maybe String) (Maybe String) (Maybe String) (Maybe String)
   | HelpRoute

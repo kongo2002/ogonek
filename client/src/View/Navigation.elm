@@ -25,13 +25,9 @@ import View.Utils exposing (..)
 navigation : Model -> Html Msg
 navigation model =
   let loggedIn0 = loggedIn model
-      loginRoute =
-        if loggedIn0 then Types.LogoutRoute
-        else Types.LoginRoute
 
       loggedInRoutes =
-        if loggedIn0 then
-          [ Types.ResearchRoute ]
+        if loggedIn0 then [ Types.ResearchRoute ]
         else []
 
       routes =
@@ -47,14 +43,24 @@ navigation model =
             clss = acls ++ args
         in  li clss [ a [ href ref, numbClick (NewUrl route) ] [ text name ] ]
 
+      loginRoute =
+        if loggedIn0 then []
+        else [ link [ toRight ] Types.LoginRoute ]
+
       userInfo =
         case model.user of
-          Just user -> [ li [toRight, class "username"] [ text user.name ] ]
+          Just user ->
+            let path = Routing.routeToPath Types.UserRoute
+                userIcon = span [ class "spaced" ] [ icon "user-circle" ]
+                name = span [ class "large-only" ] [ text user.name ]
+                link =
+                  a [ href path, numbClick (NewUrl Types.UserRoute) ]
+                    [ name, userIcon ]
+            in  [ li [ toRight ] [ link ] ]
           Nothing -> []
 
       routesLinks = List.map (link []) routes
-      loginLink = link [toRight] loginRoute
-      links = routesLinks ++ [loginLink] ++ userInfo
+      links = routesLinks ++ loginRoute ++ userInfo
 
   in div [ class "row" ]
      [ div [ class "four columns" ]

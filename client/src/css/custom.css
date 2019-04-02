@@ -4,6 +4,12 @@
   }
 }
 
+@media (max-width: 750px) {
+  .large-only {
+    display: none!important;
+  }
+}
+
 @media (min-width: 550px) {
   .mobile {
     display: none!important;
@@ -19,12 +25,17 @@ a {
 }
 
 #nav {
-  margin: 13px 0 0 0;
+  padding-top: 13px;
 }
 
 #nav ul li {
   display: inline;
   margin: 0 20px 0 0;
+}
+
+#nav ul li:last-child {
+  display: inline;
+  margin: 0;
 }
 
 #nav a {
@@ -33,10 +44,6 @@ a {
 
 #nav li.active a {
   color: #444;
-}
-
-#nav li.username {
-  color: #888;
 }
 
 .table-resources {
