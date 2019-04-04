@@ -1,0 +1,9 @@
+/.git
+/docs
+/venv
+/utils
+/server/_build
+/server/log
+/client/node_modules
+/client/elm-stuff
+/client/dist
