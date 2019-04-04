@@ -56,13 +56,15 @@ from_doc(Doc) ->
           <<"name">> := Name,
           <<"img">> := Img} ->
             OAuth = oauth_doc(maps:get(<<"oauth">>, Doc, undefined)),
+            Roles = maps:get(<<"roles">>, Doc, []),
             {ok, #user{id=ogonek_mongo:from_id(Id),
                        provider=Provider,
                        provider_id=Pid,
                        email=Email,
                        name=Name,
                        img=Img,
-                       oauth=OAuth}};
+                       oauth=OAuth,
+                       roles=Roles}};
         _Otherwise ->
             {error, invalid}
     end.
