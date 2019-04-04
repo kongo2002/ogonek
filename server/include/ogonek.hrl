@@ -71,7 +71,8 @@
           email :: binary(),
           name :: binary(),
           img :: binary(),
-          oauth :: oauth_access() | undefined
+          oauth :: oauth_access() | undefined,
+          roles :: [atom()]
          }).
 
 -type user() :: #user{}.

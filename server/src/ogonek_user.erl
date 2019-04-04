@@ -27,18 +27,20 @@
 -spec from_json(json_doc()) -> {ok, user()} | {error, invalid}.
 from_json(UserJson) ->
     Keys = [<<"_id">>, <<"provider">>, <<"pid">>, <<"email">>, <<"name">>, <<"img">>,
-            {<<"oauth">>, undefined} % oauth is optional
+            {<<"oauth">>, undefined}, % oauth is optional
+            {<<"roles">>, []}
            ],
 
     case ogonek_util:keys(Keys, UserJson) of
-        [Id, Provider, Pid, Email, Name, Img, OAuth] ->
+        [Id, Provider, Pid, Email, Name, Img, OAuth, Roles] ->
             {ok, #user{id=Id,
                        provider=Provider,
                        provider_id=Pid,
                        email=Email,
                        name=Name,
                        img=Img,
-                       oauth=from_oauth(OAuth)}};
+                       oauth=from_oauth(OAuth),
+                       roles=Roles}};
         _Otherwise ->
             {error, invalid}
     end.
@@ -73,7 +75,8 @@ to_doc(User) ->
             <<"pid">> => User#user.provider_id,
             <<"email">> => User#user.email,
             <<"name">> => User#user.name,
-            <<"img">> => User#user.img},
+            <<"img">> => User#user.img,
+            <<"roles">> => User#user.roles},
 
     ogonek_util:with(<<"oauth">>, User#user.oauth, fun ogonek_oauth:to_doc/1, Doc).
 
@@ -90,7 +93,8 @@ to_json(User, Db) ->
               {<<"pid">>, User#user.provider_id},
               {<<"email">>, User#user.email},
               {<<"name">>, User#user.name},
-              {<<"img">>, User#user.img}
+              {<<"img">>, User#user.img},
+              {<<"roles">>, User#user.roles}
              ],
 
     Values0 = case Db of

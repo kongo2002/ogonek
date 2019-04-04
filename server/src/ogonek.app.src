@@ -20,6 +20,8 @@
   {applications,
    [kernel,
     crypto,
+    public_key,
+    ssl,
     sasl,
     jiffy,
     lager,
