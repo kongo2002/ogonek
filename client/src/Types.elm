@@ -36,6 +36,10 @@ type Msg
   | ApiResponseError String
   | ApiResponse ApiContent
   | ApiRequest Request
+  -- websocket
+  | WebsocketConnected
+  | WebsocketError
+  | WebsocketClosed
 
 
 type Route
@@ -135,7 +139,6 @@ type alias PlanetInfo =
 
 type alias Flags =
   { defaultTimeZone : String
-  , websocketHost : String
   }
 
 
@@ -269,7 +272,6 @@ type alias Model =
   , planets : Dict String ActivePlanet
   , research : ResearchInfo
   , timeZone : Time.TimeZone.TimeZone
-  , websocketHost : String
   , formContents : Dict String String
   , lastTimeStamp : Maybe Time.DateTime.DateTime
   }

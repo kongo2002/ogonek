@@ -38,8 +38,8 @@ init flags location =
       timeZone =
         Time.TimeZones.fromName flags.defaultTimeZone
         |> Maybe.withDefault (Time.TimeZones.etc_utc ())
-      model = Model route Nothing Dict.empty Dict.empty research timeZone flags.websocketHost Dict.empty Nothing
-      actions = routeActions model
+      model = Model route Nothing Dict.empty Dict.empty research timeZone Dict.empty Nothing
+      actions = Api.connect :: routeActions model
   in  model ! actions
 
 
@@ -55,7 +55,7 @@ routeActions model =
           -- against accidential 'reloading' of the site that
           -- might trigger a failing authentication
           resetLocation = Navigation.newUrl (Routing.routeToPath emptyAuth)
-      in  [ Api.send model req, resetLocation ]
+      in  [ Api.send req, resetLocation ]
     _ -> []
 
 
@@ -84,7 +84,7 @@ update msg model =
 
     NewUrl LogoutRoute ->
       let model0 = { model | user = Nothing }
-          logout = Api.send model0 LogoutRequest
+          logout = Api.send LogoutRequest
           toHome = Navigation.newUrl (Routing.routeToPath HomeRoute)
       in  model0 ! [ logout, toHome ]
 
@@ -106,7 +106,7 @@ update msg model =
           code = get "localPasswordInput"
           auth = Authorize user code "" "local"
           req = AuthorizeRequest auth
-      in  model ! [ Api.send model req ]
+      in  model ! [ Api.send req ]
 
     SetBuildingsFilter filter ->
       let model0 =
@@ -118,8 +118,17 @@ update msg model =
               Nothing -> model
       in  model0 ! []
 
+    WebsocketConnected ->
+      model ! []
+
+    WebsocketError ->
+      model ! []
+
+    WebsocketClosed ->
+      model ! []
+
     ApiRequest msg ->
-      model ! [ Api.send model msg ]
+      model ! [ Api.send msg ]
 
     ApiResponseError error ->
       let _ = Debug.log "error with API response" error
@@ -216,7 +225,7 @@ navigationChangeActions : Model -> List (Cmd Msg)
 navigationChangeActions model =
   case model.route of
     ProductionRoute planet ->
-      [ Api.send model (UtilizationRequest planet)]
+      [ Api.send (UtilizationRequest planet)]
     _ -> []
 
 
@@ -241,7 +250,7 @@ afterLogin model =
 requestPlanetInfo : Model -> List (Cmd Msg)
 requestPlanetInfo model =
   if Dict.isEmpty model.planets then
-    [ Api.send model PlanetInfoRequest ]
+    [ Api.send PlanetInfoRequest ]
   else []
 
 
@@ -440,7 +449,7 @@ main =
   let toTick time = Tick (Time.DateTime.fromTimestamp time)
       timeTick = Time.every Time.second toTick
       subs model =
-        Sub.batch [ Api.websocket model, timeTick ]
+        Sub.batch [ Api.listen, timeTick ]
   in Navigation.programWithFlags NavigationChange
       { init = init
       , view = View.view

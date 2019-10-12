@@ -12,34 +12,46 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-module Api exposing ( send, websocket )
+module Api exposing ( send, connect, listen )
 
 import Json.Decode as JD
 import Json.Encode as JE
 import Time.DateTime exposing ( DateTime )
 import Time.Iso8601
-import WebSocket
+import Ports
 
 import Types
 
 
-websocket : Types.Model -> Sub Types.Msg
-websocket model =
-  let ws = model.websocketHost
-  in  WebSocket.listen ws parseWsJson
+listen : Sub Types.Msg
+listen =
+  Ports.fromWebsocket parseWsJson
 
 
-send : Types.Model -> Types.Request -> Cmd Types.Msg
-send model msg =
-  let ws = model.websocketHost
-      req = toRequest msg
-  in  WebSocket.send ws req
+connect : Cmd msg
+connect =
+  let cmd = message "connect" (JE.object [])
+  in  Ports.toWebsocket cmd
 
 
-toRequest : Types.Request -> String
+send : Types.Request -> Cmd Types.Msg
+send msg =
+  let req = toRequest msg
+  in  Ports.toWebsocket req
+
+
+message : String -> JE.Value -> JE.Value
+message msgType msg =
+    JE.object
+        [ ( "type", JE.string msgType )
+        , ( "msg", msg )
+        ]
+
+
+toRequest : Types.Request -> JE.Value
 toRequest request =
   let json = requestEncoder request
-  in  JE.encode 0 json
+  in  message "send" json
 
 
 requestEncoder : Types.Request -> JE.Value
@@ -93,13 +105,31 @@ requestType typ =
   ("t", JE.string typ)
 
 
-parseWsJson : String -> Types.Msg
+parseWebsocket : JD.Decoder Types.Msg
+parseWebsocket =
+  (JD.field "type" JD.string)
+  |> JD.andThen (\t ->
+    case t of
+      "send" -> JD.at ["msg", "data"] (JD.map fromApiContent payloadDecoder)
+      "connected" -> JD.succeed Types.WebsocketConnected
+      "error" -> JD.succeed Types.WebsocketError
+      "closed" -> JD.succeed Types.WebsocketClosed
+      _ -> JD.fail ("unexpected websocket message: " ++ t))
+
+
+fromApiContent : Types.ApiContent -> Types.Msg
+fromApiContent content =
+  case content of
+    Types.Error err -> Types.ApiResponseError err.message
+    content -> Types.ApiResponse content
+
+
+parseWsJson : JD.Value -> Types.Msg
 parseWsJson payload =
-  case JD.decodeString payloadDecoder payload of
+  case JD.decodeValue parseWebsocket payload of
     -- for now we will map the error content into the
     -- generic error response type
-    Ok (Types.Error err) -> Types.ApiResponseError err.message
-    Ok content -> Types.ApiResponse content
+    Ok parsed -> parsed
     Err error -> Types.ApiResponseError error
 
 
@@ -123,7 +153,7 @@ payloadDecoder =
       "authinfo" -> JD.map Types.Auth authInfoDecoder
       "user" -> JD.map Types.User userInfoDecoder
       "error" -> JD.map Types.Error errorDecoder
-      _ -> JD.fail ("unexpected message " ++ t))
+      _ -> JD.fail ("unexpected API message " ++ t))
 
 
 userInfoDecoder : JD.Decoder Types.UserInfo
