@@ -12,47 +12,74 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
+
 module Const exposing (..)
 
 
 building : String
-building = "building"
+building =
+    "building"
+
 
 level : String
-level = "level"
+level =
+    "level"
+
 
 workers : String
-workers = "workers"
+workers =
+    "workers"
+
 
 power : String
-power = "power"
+power =
+    "power"
+
 
 ironOre : String
-ironOre = "iron ore"
+ironOre =
+    "iron ore"
+
 
 gold : String
-gold = "gold"
+gold =
+    "gold"
+
 
 h2o : String
-h2o = "H₂O"
+h2o =
+    "H₂O"
+
 
 oil : String
-oil = "oil"
+oil =
+    "oil"
+
 
 h2 : String
-h2 = "hydrogen"
+h2 =
+    "hydrogen"
+
 
 uranium : String
-uranium = "uranium"
+uranium =
+    "uranium"
+
 
 pvc : String
-pvc = "PVC"
+pvc =
+    "PVC"
+
 
 titan : String
-titan = "titan"
+titan =
+    "titan"
+
 
 kyanite : String
-kyanite = "kyanite"
+kyanite =
+    "kyanite"
+
 
 
 -- vim: et sw=2 sts=2

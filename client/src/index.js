@@ -42,6 +42,7 @@ var elmWebsocket = (function() {
   /* build websocket target host based on current location */
   inst.wsHost = ((window.location.protocol === "https:") ? "wss://" : "ws://") + window.location.host + "/.ws"
   inst.socket = undefined;
+  inst.pending = [];
 
   inst.connect = function(app) {
     var toElm = app.ports.fromWebsocket;
@@ -59,12 +60,18 @@ var elmWebsocket = (function() {
       inst.socket.send(text);
     } else {
       if (console) {
-        console.log('no open socket - cannot send message "' + msg + '"');
+        console.log('no open socket - cannot send message', msg);
+        inst.pending.push(msg);
       }
     }
   }
 
   inst.openHandler = function(toElm, socket, url, event) {
+    for (var idx in inst.pending) {
+      var msg = inst.pending[idx];
+      inst.send(msg);
+    }
+    inst.pending = [];
     toElm.send({
       type: 'connected',
       msg: {
@@ -101,6 +108,7 @@ var elmWebsocket = (function() {
   }
 
   inst.closeHandler = function(toElm, socket, url, event) {
+    inst.socket = undefined;
     toElm.send({
       type: 'closed',
       msg: {
@@ -118,9 +126,11 @@ var elmWebsocket = (function() {
 var timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
 
 
-var elm = require('./Main.elm');
-var app = elm.Main.fullscreen({
-  defaultTimeZone: timeZone,
+var Elm = require('./Main.elm').Elm;
+var app = Elm.Main.init({
+  flags: {
+    defaultTimeZone: timeZone,
+  }
 });
 
 /* port to open notifications */

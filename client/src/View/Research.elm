@@ -12,105 +12,137 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-module View.Research exposing ( duration, progress, research, status, target )
+
+module View.Research exposing (duration, progress, research, status, target)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing ( onClick )
-import Time.DateTime
-
+import Html.Events exposing (onClick)
+import Time
 import Types exposing (..)
-import Utils exposing ( deltaToString, zonedIso8601 )
+import Utils exposing (deltaToString, zonedIso8601)
 import View.Utils exposing (..)
 
 
 research : Model -> List (Html Msg)
 research model =
-  let res = model.research
-      row (name, level) =
-        tr []
-        [ td [] [ text (translateResearch name) ]
-        , td [] [ text (toString level) ]
-        ]
+    let
+        res =
+            model.research
 
-      statusText = status model res
-      status0 =
-        case (res.status, res.duration) of
-          (_, Nothing) ->
-            div []
-            [ p [] [ text statusText ]
-            ]
-          (Just status, _) ->
-            div []
-            [ p [] [ text "research target: ", text (target status) ]
-            , p [] [ text statusText ]
-            ]
-          (Nothing, _) ->
-            div []
-            [ p [] [ text statusText ]
-            , button [ onClick (ApiRequest StartResearchRequest) ] [ text "Research" ]
-            ]
-
-  in  [ h2 [] [ text "Research" ]
-      , status0
-      , h3 [] [ text "Overview"]
-      , div [ class "row" ]
-        [ div [ class "six columns" ]
-          [ table [ class "u-full-width" ]
-            [ thead []
-              [ tr []
-                [ th [] [ text "Research" ]
-                , th [] [ text "Level" ]
+        row ( name, level ) =
+            tr []
+                [ td [] [ text (translateResearch name) ]
+                , td [] [ text (String.fromInt level) ]
                 ]
-              ]
-            , tbody [] (List.map row res.research)
+
+        statusText =
+            status model res
+
+        status0 =
+            case ( res.status, res.duration ) of
+                ( _, Nothing ) ->
+                    div []
+                        [ p [] [ text statusText ]
+                        ]
+
+                ( Just status1, _ ) ->
+                    div []
+                        [ p [] [ text "research target: ", text (target status1) ]
+                        , p [] [ text statusText ]
+                        ]
+
+                ( Nothing, _ ) ->
+                    div []
+                        [ p [] [ text statusText ]
+                        , button [ onClick (ApiRequest StartResearchRequest) ] [ text "Research" ]
+                        ]
+    in
+    [ h2 [] [ text "Research" ]
+    , status0
+    , h3 [] [ text "Overview" ]
+    , div [ class "row" ]
+        [ div [ class "six columns" ]
+            [ table [ class "u-full-width" ]
+                [ thead []
+                    [ tr []
+                        [ th [] [ text "Research" ]
+                        , th [] [ text "Level" ]
+                        ]
+                    ]
+                , tbody [] (List.map row res.research)
+                ]
             ]
-          ]
         ]
-      ]
+    ]
 
 
 target : ResearchStatusInfo -> String
-target status =
-  status.name
-  |> Maybe.map translateResearch
-  |> Maybe.withDefault "still unknown"
+target status0 =
+    status0.name
+        |> Maybe.map translateResearch
+        |> Maybe.withDefault "still unknown"
 
 
 status : Model -> ResearchInfo -> String
-status model research =
-  case research.status of
-    Just status ->
-      case model.lastTimeStamp of
-        Just now ->
-          let duration0 = duration status now
-          in  "research finished in: " ++ duration0
+status model research0 =
+    case research0.status of
+        Just status0 ->
+            case model.lastTimeStamp of
+                Just now ->
+                    let
+                        duration0 =
+                            duration status0 now
+                    in
+                    "research finished in: " ++ duration0
+
+                Nothing ->
+                    "research finished at: " ++ zonedIso8601 model status0.finish
+
         Nothing ->
-          "research finished at: " ++ zonedIso8601 model status.finish
-    Nothing ->
-      case research.duration of
-        Just duration ->
-          "no research in progress - duration (" ++ deltaToString duration ++ ")"
-        Nothing ->
-          "no research possible yet"
+            case research0.duration of
+                Just duration0 ->
+                    "no research in progress - duration (" ++ deltaToString duration0 ++ ")"
+
+                Nothing ->
+                    "no research possible yet"
 
 
-duration : ResearchStatusInfo -> Time.DateTime.DateTime -> String
-duration status now =
-  let prog = progress status now
-      duration = Time.DateTime.delta status.finish now
-      duration0 = Utils.deltaToString duration
-  in  duration0 ++ " (" ++ toString prog ++ " %)"
+duration : ResearchStatusInfo -> Time.Posix -> String
+duration status0 now =
+    let
+        prog =
+            progress status0 now
+
+        duration0 =
+            Utils.posixDelta status0.finish now
+
+        duration1 =
+            Utils.deltaToString duration0
+    in
+    duration1 ++ " (" ++ String.fromInt prog ++ " %)"
 
 
-progress : ResearchStatusInfo -> Time.DateTime.DateTime -> Int
-progress status now =
-  let started = Time.DateTime.toTimestamp status.created
-      finished = Time.DateTime.toTimestamp status.finish
-      now0 = Time.DateTime.toTimestamp now
-      durationMs = finished - started
-      progress = now0 - started
-  in  progress * 100 / durationMs |> round |> Basics.max 0 |> Basics.min 100
+progress : ResearchStatusInfo -> Time.Posix -> Int
+progress status0 now =
+    let
+        started =
+            Time.posixToMillis status0.created
+
+        finished =
+            Time.posixToMillis status0.finish
+
+        now0 =
+            Time.posixToMillis now
+
+        durationMs =
+            finished - started
+
+        progress0 =
+            now0 - started
+    in
+    (toFloat progress0 * 100 / toFloat durationMs) |> round |> Basics.max 0 |> Basics.min 100
+
 
 
 -- vim: et sw=2 sts=2

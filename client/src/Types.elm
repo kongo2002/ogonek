@@ -12,269 +12,277 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
+
 module Types exposing (..)
 
-import Dict exposing ( Dict )
-import Time.DateTime
-import Time.TimeZone
+import Browser
+import Browser.Navigation
+import Dict exposing (Dict)
+import Time
+import Url
 
-import Navigation exposing ( Location )
+
+type alias Duration =
+    Int
 
 
 type Msg
-  = NoOp
-  -- internals
-  | NavigationChange Location
-  | NewUrl Route
-  | Tick Time.DateTime.DateTime
-  -- forms
-  | FormContent String String
-  | LocalLogin
-  -- buildings
-  | SetBuildingsFilter BuildingsFilter
-  -- API
-  | ApiResponseError String
-  | ApiResponse ApiContent
-  | ApiRequest Request
-  -- websocket
-  | WebsocketConnected
-  | WebsocketError
-  | WebsocketClosed
+    = NoOp
+      -- internals
+    | NavigationChange Url.Url
+    | NewUrl Route
+    | ClickedLink Browser.UrlRequest
+    | Tick Time.Posix
+    | TimezoneHere Time.Zone
+      -- forms
+    | FormContent String String
+    | LocalLogin
+      -- buildings
+    | SetBuildingsFilter BuildingsFilter
+      -- API
+    | ApiResponseError String
+    | ApiResponse ApiContent
+    | ApiRequest Request
+      -- websocket
+    | WebsocketConnected String
+    | WebsocketError
+    | WebsocketClosed
 
 
 type Route
-  = HomeRoute
-  | ResearchRoute
-  | LoginRoute
-  | LogoutRoute
-  | PlanetRoute String
-  | BuildingsRoute String
-  | ProductionRoute String
-  | WeaponsRoute String
-  | ShipsRoute String
-  | BuildingRoute String
-  | UserRoute
-  -- auth (code, state, scope, provider)
-  | AuthRoute (Maybe String) (Maybe String) (Maybe String) (Maybe String)
-  | HelpRoute
+    = HomeRoute
+    | ResearchRoute
+    | LoginRoute
+    | LogoutRoute
+    | PlanetRoute String
+    | BuildingsRoute String
+    | ProductionRoute String
+    | WeaponsRoute String
+    | ShipsRoute String
+    | BuildingRoute String
+    | UserRoute
+      -- auth (code, state, scope, provider)
+    | AuthRoute (Maybe String) (Maybe String) (Maybe String) (Maybe String)
+    | HelpRoute
 
 
 type ApiContent
-  = Auth AuthInformation
-  | User UserInfo
-  | Planet PlanetInfo
-  | Building BuildingInfo
-  | Construction ConstructionInfo
-  | Capacity CapacityInfo
-  | Resources ResourceInfo
-  | Weapon WeaponInfo
-  | WeaponOrder WeaponOrderInfo
-  -- w_order_finished (planet, orderId)
-  | WeaponOrderFinished String String
-  | Research ResearchInfo
-  | Production ResourceInfo
-  | Utilization ResourceInfo
-  | Error ApiError
+    = Auth AuthInformation
+    | User UserInfo
+    | Planet PlanetInfo
+    | Building BuildingInfo
+    | Construction ConstructionInfo
+    | Capacity CapacityInfo
+    | Resources ResourceInfo
+    | Weapon WeaponInfo
+    | WeaponOrder WeaponOrderInfo
+      -- w_order_finished (planet, orderId)
+    | WeaponOrderFinished String String
+    | Research ResearchInfo
+    | Production ResourceInfo
+    | Utilization ResourceInfo
+    | Error ApiError
 
 
 type Request
-  = AuthorizeRequest Authorize
-  -- build_building (planet, type, level)
-  | BuildBuildingRequest String String Int
-  -- build_weapon (planet, weapon)
-  | BuildWeaponRequest String String
-  | StartResearchRequest
-  | PlanetInfoRequest
-  -- get_utilization (planet-id)
-  | UtilizationRequest String
-  -- set_utilization (planet-id, resource, value)
-  | SetUtilizationRequest String String Int
-  | LogoutRequest
+    = AuthorizeRequest Authorize
+      -- build_building (planet, type, level)
+    | BuildBuildingRequest String String Int
+      -- build_weapon (planet, weapon)
+    | BuildWeaponRequest String String
+    | StartResearchRequest
+    | PlanetInfoRequest
+      -- get_utilization (planet-id)
+    | UtilizationRequest String
+      -- set_utilization (planet-id, resource, value)
+    | SetUtilizationRequest String String Int
+    | LogoutRequest
 
 
 type alias AuthInformation =
-  { provider : String
-  , loginUrl : String
-  }
+    { provider : String
+    , loginUrl : String
+    }
 
 
 type alias Authorize =
-  { code : String
-  , state : String
-  , scope : String
-  , provider : String
-  }
+    { code : String
+    , state : String
+    , scope : String
+    , provider : String
+    }
 
 
 type alias ApiError =
-  { error : Bool
-  , message: String
-  }
+    { error : Bool
+    , message : String
+    }
 
 
 type alias UserInfo =
-  { id : String
-  , name : String
-  , email : String
-  , provider : String
-  , img : String
-  }
+    { id : String
+    , name : String
+    , email : String
+    , provider : String
+    , img : String
+    }
 
 
 type PlanetType
-  = EarthPlanet
-  | FirePlanet
-  | WaterPlanet
-  | IcePlanet
+    = EarthPlanet
+    | FirePlanet
+    | WaterPlanet
+    | IcePlanet
 
 
 type alias PlanetInfo =
-  { id : String
-  , position : (Int, Int, Int)
-  , size : Int
-  , planetType : PlanetType
-  , index : Int
-  }
+    { id : String
+    , position : ( Int, Int, Int )
+    , size : Int
+    , planetType : PlanetType
+    , index : Int
+    }
 
 
 type alias Flags =
-  { defaultTimeZone : String
-  }
+    {}
 
 
 type alias BuildingInfo =
-  { ironOre : Int
-  , gold : Int
-  , h2o : Int
-  , oil : Int
-  , h2 : Int
-  , uranium : Int
-  , pvc : Int
-  , titan : Int
-  , kyanite : Int
-  , workers : Int
-  , power : Int
-  , name : String
-  , planetId : String
-  , level : Int
-  , duration : Time.DateTime.DateTimeDelta
-  , group : String
-  }
+    { ironOre : Int
+    , gold : Int
+    , h2o : Int
+    , oil : Int
+    , h2 : Int
+    , uranium : Int
+    , pvc : Int
+    , titan : Int
+    , kyanite : Int
+    , workers : Int
+    , power : Int
+    , name : String
+    , planetId : String
+    , level : Int
+    , duration : Duration
+    , group : String
+    }
 
 
 type alias ConstructionInfo =
-  { planetId : String
-  , building : String
-  , level : Int
-  , created : Time.DateTime.DateTime
-  , finish : Time.DateTime.DateTime
-  }
+    { planetId : String
+    , building : String
+    , level : Int
+    , created : Time.Posix
+    , finish : Time.Posix
+    }
 
 
 type alias WeaponOrderInfo =
-  { id : String
-  , planetId : String
-  , weapon : String
-  , created : Time.DateTime.DateTime
-  , finish : Time.DateTime.DateTime
-  }
+    { id : String
+    , planetId : String
+    , weapon : String
+    , created : Time.Posix
+    , finish : Time.Posix
+    }
 
 
 type alias WeaponInfo =
-  { ironOre : Int
-  , gold : Int
-  , h2o : Int
-  , oil : Int
-  , h2 : Int
-  , uranium : Int
-  , pvc : Int
-  , titan : Int
-  , kyanite : Int
-  , name : String
-  , planetId : String
-  , count : Int
-  , duration : Time.DateTime.DateTimeDelta
-  , space : Int
-  , power : Int
-  , damage : Float
-  , load : Int
-  }
+    { ironOre : Int
+    , gold : Int
+    , h2o : Int
+    , oil : Int
+    , h2 : Int
+    , uranium : Int
+    , pvc : Int
+    , titan : Int
+    , kyanite : Int
+    , name : String
+    , planetId : String
+    , count : Int
+    , duration : Duration
+    , space : Int
+    , power : Int
+    , damage : Float
+    , load : Int
+    }
 
 
 type alias ResourceInfo =
-  { ironOre : Int
-  , gold : Int
-  , h2o : Int
-  , oil : Int
-  , h2 : Int
-  , uranium : Int
-  , pvc : Int
-  , titan : Int
-  , kyanite : Int
-  , workers : Int
-  , power : Int
-  , planetId: String
-  }
+    { ironOre : Int
+    , gold : Int
+    , h2o : Int
+    , oil : Int
+    , h2 : Int
+    , uranium : Int
+    , pvc : Int
+    , titan : Int
+    , kyanite : Int
+    , workers : Int
+    , power : Int
+    , planetId : String
+    }
 
 
 type alias CapacityInfo =
-  { ironOre : Int
-  , gold : Int
-  , h2o : Int
-  , oil : Int
-  , h2 : Int
-  , uranium : Int
-  , pvc : Int
-  , titan : Int
-  , kyanite : Int
-  , planetId: String
-  }
+    { ironOre : Int
+    , gold : Int
+    , h2o : Int
+    , oil : Int
+    , h2 : Int
+    , uranium : Int
+    , pvc : Int
+    , titan : Int
+    , kyanite : Int
+    , planetId : String
+    }
 
 
 type alias ResearchStatusInfo =
-  { created : Time.DateTime.DateTime
-  , finish : Time.DateTime.DateTime
-  , name : Maybe String
-  }
+    { created : Time.Posix
+    , finish : Time.Posix
+    , name : Maybe String
+    }
 
 
 type alias ResearchInfo =
-  { research : List (String, Int)
-  , duration : Maybe Time.DateTime.DateTimeDelta
-  , status : Maybe ResearchStatusInfo
-  }
+    { research : List ( String, Int )
+    , duration : Maybe Duration
+    , status : Maybe ResearchStatusInfo
+    }
 
 
 type BuildingsFilter
-  = AllBuildings
-  | AvailableBuildings
-  | InProgressBuildings
+    = AllBuildings
+    | AvailableBuildings
+    | InProgressBuildings
 
 
 type alias ActivePlanet =
-  { planet : PlanetInfo
-  , buildings : Dict String BuildingInfo
-  , constructions : Dict String ConstructionInfo
-  , weapons : Dict String WeaponInfo
-  , weaponOrders : Dict String WeaponOrderInfo
-  , resources : ResourceInfo
-  , capacity : CapacityInfo
-  , production : ResourceInfo
-  , utilization : ResourceInfo
-  , buildingsFilter : BuildingsFilter
-  }
+    { planet : PlanetInfo
+    , buildings : Dict String BuildingInfo
+    , constructions : Dict String ConstructionInfo
+    , weapons : Dict String WeaponInfo
+    , weaponOrders : Dict String WeaponOrderInfo
+    , resources : ResourceInfo
+    , capacity : CapacityInfo
+    , production : ResourceInfo
+    , utilization : ResourceInfo
+    , buildingsFilter : BuildingsFilter
+    }
 
 
 type alias Model =
-  { route : Route
-  , user : Maybe UserInfo
-  , authInfo : Dict String AuthInformation
-  , planets : Dict String ActivePlanet
-  , research : ResearchInfo
-  , timeZone : Time.TimeZone.TimeZone
-  , formContents : Dict String String
-  , lastTimeStamp : Maybe Time.DateTime.DateTime
-  }
+    { route : Route
+    , key : Browser.Navigation.Key
+    , user : Maybe UserInfo
+    , authInfo : Dict String AuthInformation
+    , planets : Dict String ActivePlanet
+    , research : ResearchInfo
+    , timeZone : Time.Zone
+    , formContents : Dict String String
+    , lastTimeStamp : Maybe Time.Posix
+    }
+
 
 
 -- vim: et sw=2 sts=2

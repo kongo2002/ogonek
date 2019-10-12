@@ -5,7 +5,9 @@
   "author": "Gregor Uhlenheuer",
   "license": "Apache-2.0",
   "dependencies": {
-    "elm-webpack-loader": "^4.5.0",
+    "elm": "^0.19.0-no-deps",
+    "elm-format": "^0.8.2",
+    "elm-webpack-loader": "^6.0.0",
     "file-loader": "^1.1.11"
   },
   "devDependencies": {

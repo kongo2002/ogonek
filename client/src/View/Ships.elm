@@ -12,26 +12,31 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-module View.Ships exposing ( ships )
+
+module View.Ships exposing (ships)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
-
 import Types exposing (..)
 import View.Utils exposing (..)
 
 
 ships : ActivePlanet -> Model -> List (Html Msg)
 ships active model =
-  let planet = active.planet
-      name = planetName planet
-  in
+    let
+        planet =
+            active.planet
+
+        name =
+            planetName planet
+    in
     [ h2 [] [ text name ]
     , h3 [] [ text "Ships" ]
     , div [ class "row" ]
-      [ p [] [ text "ship production is not possible yet" ]
-      ]
+        [ p [] [ text "ship production is not possible yet" ]
+        ]
     ]
+
 
 
 -- vim: et sw=2 sts=2

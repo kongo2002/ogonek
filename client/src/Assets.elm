@@ -12,48 +12,66 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
+
 module Assets exposing (..)
 
 import Types
 
 
+
 -- this is basically a preparation to use the 'elm-assets-loader'
 -- at some point when it supports the current version of webpack
-type Asset = Asset String
+
+
+type Asset
+    = Asset String
 
 
 planetAsset : Types.PlanetType -> Asset
 planetAsset ptype =
-  case ptype of
-    Types.EarthPlanet -> earthPlanet
-    Types.FirePlanet -> firePlanet
-    Types.WaterPlanet -> waterPlanet
-    Types.IcePlanet -> icePlanet
+    case ptype of
+        Types.EarthPlanet ->
+            earthPlanet
+
+        Types.FirePlanet ->
+            firePlanet
+
+        Types.WaterPlanet ->
+            waterPlanet
+
+        Types.IcePlanet ->
+            icePlanet
 
 
 waterPlanet : Asset
-waterPlanet = Asset "neptune.png"
+waterPlanet =
+    Asset "neptune.png"
 
 
 earthPlanet : Asset
-earthPlanet = Asset "pluto.png"
+earthPlanet =
+    Asset "pluto.png"
 
 
 icePlanet : Asset
-icePlanet = Asset "uranus.png"
+icePlanet =
+    Asset "uranus.png"
 
 
 firePlanet : Asset
-firePlanet = Asset "mars.png"
+firePlanet =
+    Asset "mars.png"
 
 
 physics : Asset
-physics = Asset "physics.png"
+physics =
+    Asset "physics.png"
 
 
 path : Asset -> String
 path (Asset str) =
     "/static/" ++ str
+
 
 
 -- vim: et sw=2 sts=2

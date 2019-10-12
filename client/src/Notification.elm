@@ -12,31 +12,40 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-module Notification exposing ( init, notify )
+
+module Notification exposing (init, notify)
 
 import Json.Encode as JE
-
 import Ports
 
 
 init : Ports.NotificationPort msg -> Cmd msg
 init notifyPort =
-  -- an empty title indicates to *just* request notification permissions
-  notify notifyPort "" Nothing Nothing
+    -- an empty title indicates to *just* request notification permissions
+    notify notifyPort "" Nothing Nothing
 
 
 notify : Ports.NotificationPort msg -> String -> Maybe String -> Maybe String -> Cmd msg
 notify notifyPort title body imageUrl =
-  let orNull = Maybe.map JE.string >> Maybe.withDefault JE.null
-      body0 = orNull body
-      image = orNull imageUrl
-      value =
-        JE.object
-        [ ( "title", JE.string title )
-        , ( "body", body0 )
-        , ( "image", image )
-        ]
-  in  notifyPort value
+    let
+        orNull =
+            Maybe.map JE.string >> Maybe.withDefault JE.null
+
+        body0 =
+            orNull body
+
+        image =
+            orNull imageUrl
+
+        value =
+            JE.object
+                [ ( "title", JE.string title )
+                , ( "body", body0 )
+                , ( "image", image )
+                ]
+    in
+    notifyPort value
+
 
 
 -- vim: et sw=2 sts=2

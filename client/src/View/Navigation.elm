@@ -12,11 +12,11 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-module View.Navigation exposing ( navigation )
+
+module View.Navigation exposing (navigation)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
-
 import Routing
 import Types exposing (..)
 import View.Utils exposing (..)
@@ -24,54 +24,91 @@ import View.Utils exposing (..)
 
 navigation : Model -> Html Msg
 navigation model =
-  let loggedIn0 = loggedIn model
+    let
+        loggedIn0 =
+            loggedIn model
 
-      loggedInRoutes =
-        if loggedIn0 then [ Types.ResearchRoute ]
-        else []
+        loggedInRoutes =
+            if loggedIn0 then
+                [ Types.ResearchRoute ]
 
-      routes =
-        [ Types.HomeRoute ]
-        ++ loggedInRoutes ++
-        [ Types.HelpRoute ]
+            else
+                []
 
-      link args route =
-        let ref  = Routing.routeToPath route
-            name = Routing.routeToName route
-            active = route == model.route
-            acls = if active then [ class "active" ] else []
-            clss = acls ++ args
-        in  li clss [ a [ href ref, numbClick (NewUrl route) ] [ text name ] ]
+        routes =
+            [ Types.HomeRoute ]
+                ++ loggedInRoutes
+                ++ [ Types.HelpRoute ]
 
-      loginRoute =
-        if loggedIn0 then []
-        else [ link [ toRight ] Types.LoginRoute ]
+        link args route =
+            let
+                ref =
+                    Routing.routeToPath route
 
-      userInfo =
-        case model.user of
-          Just user ->
-            let path = Routing.routeToPath Types.UserRoute
-                userIcon = span [ class "spaced" ] [ icon "user-circle" ]
-                name = span [ class "large-only" ] [ text user.name ]
-                link =
-                  a [ href path, numbClick (NewUrl Types.UserRoute) ]
-                    [ name, userIcon ]
-            in  [ li [ toRight ] [ link ] ]
-          Nothing -> []
+                name =
+                    Routing.routeToName route
 
-      routesLinks = List.map (link []) routes
-      links = routesLinks ++ loginRoute ++ userInfo
+                active =
+                    route == model.route
 
-  in div [ class "row" ]
-     [ div [ class "four columns" ]
-       [ a [ href "/", numbClick (NewUrl HomeRoute) ] [
-         h1 [] [ text "ogonek" ]
-         ]
-       ]
-     , div [ id "nav", class "eight columns" ]
-       [ ul [] links
-       ]
-     ]
+                acls =
+                    if active then
+                        [ class "active" ]
+
+                    else
+                        []
+
+                clss =
+                    acls ++ args
+            in
+            li clss [ a [ href ref, numbClick (NewUrl route) ] [ text name ] ]
+
+        loginRoute =
+            if loggedIn0 then
+                []
+
+            else
+                [ link [ toRight ] Types.LoginRoute ]
+
+        userInfo =
+            case model.user of
+                Just user ->
+                    let
+                        path =
+                            Routing.routeToPath Types.UserRoute
+
+                        userIcon =
+                            span [ class "spaced" ] [ icon "user-circle" ]
+
+                        name =
+                            span [ class "large-only" ] [ text user.name ]
+
+                        link0 =
+                            a [ href path, numbClick (NewUrl Types.UserRoute) ]
+                                [ name, userIcon ]
+                    in
+                    [ li [ toRight ] [ link0 ] ]
+
+                Nothing ->
+                    []
+
+        routesLinks =
+            List.map (link []) routes
+
+        links =
+            routesLinks ++ loginRoute ++ userInfo
+    in
+    div [ class "row" ]
+        [ div [ class "four columns" ]
+            [ a [ href "/", numbClick (NewUrl HomeRoute) ]
+                [ h1 [] [ text "ogonek" ]
+                ]
+            ]
+        , div [ id "nav", class "eight columns" ]
+            [ ul [] links
+            ]
+        ]
+
 
 
 -- vim: et sw=2 sts=2

@@ -12,32 +12,38 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-module Api exposing ( send, connect, listen )
 
+module Api exposing (connect, listen, send)
+
+import Iso8601
 import Json.Decode as JD
 import Json.Encode as JE
-import Time.DateTime exposing ( DateTime )
-import Time.Iso8601
 import Ports
-
+import Time
 import Types
 
 
 listen : Sub Types.Msg
 listen =
-  Ports.fromWebsocket parseWsJson
+    Ports.fromWebsocket parseWsJson
 
 
 connect : Cmd msg
 connect =
-  let cmd = message "connect" (JE.object [])
-  in  Ports.toWebsocket cmd
+    let
+        cmd =
+            message "connect" (JE.object [])
+    in
+    Ports.toWebsocket cmd
 
 
 send : Types.Request -> Cmd Types.Msg
 send msg =
-  let req = toRequest msg
-  in  Ports.toWebsocket req
+    let
+        req =
+            toRequest msg
+    in
+    Ports.toWebsocket req
 
 
 message : String -> JE.Value -> JE.Value
@@ -50,288 +56,369 @@ message msgType msg =
 
 toRequest : Types.Request -> JE.Value
 toRequest request =
-  let json = requestEncoder request
-  in  message "send" json
+    let
+        json =
+            requestEncoder request
+    in
+    message "send" json
 
 
 requestEncoder : Types.Request -> JE.Value
 requestEncoder req =
-  case req of
-    Types.AuthorizeRequest auth ->
-      JE.object
-        [ requestType "authorize"
-        , ("code", JE.string auth.code)
-        , ("state", JE.string auth.state)
-        , ("scope", JE.string auth.scope)
-        , ("provider", JE.string auth.provider)
-        ]
-    Types.BuildBuildingRequest planet building level ->
-      JE.object
-        [ requestType "build_building"
-        , ("planet", JE.string planet)
-        , ("type", JE.string building)
-        , ("level", JE.int level)
-        ]
-    Types.BuildWeaponRequest planet weapon ->
-      JE.object
-        [ requestType "build_weapon"
-        , ("planet", JE.string planet)
-        , ("weapon", JE.string weapon)
-        ]
-    Types.UtilizationRequest planet ->
-      JE.object
-        [ requestType "get_utilization"
-        , ("planet", JE.string planet)
-        ]
-    Types.SetUtilizationRequest planet resource value ->
-      JE.object
-        [ requestType "set_utilization"
-        , ("planet", JE.string planet)
-        , ("resource", JE.string resource)
-        , ("value", JE.int value)
-        ]
-    Types.PlanetInfoRequest ->
-      JE.object [ requestType "planet_info" ]
-    Types.StartResearchRequest ->
-      JE.object [ requestType "start_research" ]
-    Types.LogoutRequest ->
-      JE.object
-        [ requestType "logout"
-        ]
+    case req of
+        Types.AuthorizeRequest auth ->
+            JE.object
+                [ requestType "authorize"
+                , ( "code", JE.string auth.code )
+                , ( "state", JE.string auth.state )
+                , ( "scope", JE.string auth.scope )
+                , ( "provider", JE.string auth.provider )
+                ]
+
+        Types.BuildBuildingRequest planet building level ->
+            JE.object
+                [ requestType "build_building"
+                , ( "planet", JE.string planet )
+                , ( "type", JE.string building )
+                , ( "level", JE.int level )
+                ]
+
+        Types.BuildWeaponRequest planet weapon ->
+            JE.object
+                [ requestType "build_weapon"
+                , ( "planet", JE.string planet )
+                , ( "weapon", JE.string weapon )
+                ]
+
+        Types.UtilizationRequest planet ->
+            JE.object
+                [ requestType "get_utilization"
+                , ( "planet", JE.string planet )
+                ]
+
+        Types.SetUtilizationRequest planet resource value ->
+            JE.object
+                [ requestType "set_utilization"
+                , ( "planet", JE.string planet )
+                , ( "resource", JE.string resource )
+                , ( "value", JE.int value )
+                ]
+
+        Types.PlanetInfoRequest ->
+            JE.object [ requestType "planet_info" ]
+
+        Types.StartResearchRequest ->
+            JE.object [ requestType "start_research" ]
+
+        Types.LogoutRequest ->
+            JE.object
+                [ requestType "logout"
+                ]
 
 
-requestType : String -> (String, JE.Value)
+requestType : String -> ( String, JE.Value )
 requestType typ =
-  ("t", JE.string typ)
+    ( "t", JE.string typ )
 
 
 parseWebsocket : JD.Decoder Types.Msg
 parseWebsocket =
-  (JD.field "type" JD.string)
-  |> JD.andThen (\t ->
-    case t of
-      "send" -> JD.at ["msg", "data"] (JD.map fromApiContent payloadDecoder)
-      "connected" -> JD.succeed Types.WebsocketConnected
-      "error" -> JD.succeed Types.WebsocketError
-      "closed" -> JD.succeed Types.WebsocketClosed
-      _ -> JD.fail ("unexpected websocket message: " ++ t))
+    JD.field "type" JD.string
+        |> JD.andThen
+            (\t ->
+                case t of
+                    "send" ->
+                        JD.at [ "msg", "data" ] (JD.map fromApiContent payloadDecoder)
+
+                    "connected" ->
+                        websocketConnected
+
+                    "error" ->
+                        JD.succeed Types.WebsocketError
+
+                    "closed" ->
+                        JD.succeed Types.WebsocketClosed
+
+                    _ ->
+                        JD.fail ("unexpected websocket message: " ++ t)
+            )
+
+
+websocketConnected : JD.Decoder Types.Msg
+websocketConnected =
+    JD.at [ "msg", "url" ] JD.string |> JD.map Types.WebsocketConnected
 
 
 fromApiContent : Types.ApiContent -> Types.Msg
 fromApiContent content =
-  case content of
-    Types.Error err -> Types.ApiResponseError err.message
-    content -> Types.ApiResponse content
+    case content of
+        Types.Error err ->
+            Types.ApiResponseError err.message
+
+        content0 ->
+            Types.ApiResponse content0
 
 
 parseWsJson : JD.Value -> Types.Msg
 parseWsJson payload =
-  case JD.decodeValue parseWebsocket payload of
-    -- for now we will map the error content into the
-    -- generic error response type
-    Ok parsed -> parsed
-    Err error -> Types.ApiResponseError error
+    case JD.decodeValue parseWebsocket payload of
+        -- for now we will map the error content into the
+        -- generic error response type
+        Ok parsed ->
+            parsed
+
+        Err error0 ->
+            Types.ApiResponseError (JD.errorToString error0)
 
 
 payloadDecoder : JD.Decoder Types.ApiContent
 payloadDecoder =
-  -- use the "t" key to determine which decoder to use
-  (JD.field "t" JD.string)
-  |> JD.andThen (\t ->
-    case t of
-      "resources" -> JD.map Types.Resources resourceInfoDecoder
-      "building" -> JD.map Types.Building buildingInfoDecoder
-      "construction" -> JD.map Types.Construction constructionDecoder
-      "planet" -> JD.map Types.Planet planetDecoder
-      "capacity" -> JD.map Types.Capacity capacityInfoDecoder
-      "production" -> JD.map Types.Production resourceInfoDecoder
-      "utilization" -> JD.map Types.Utilization resourceInfoDecoder
-      "research" -> JD.map Types.Research researchInfoDecoder
-      "weapon" -> JD.map Types.Weapon weaponInfoDecoder
-      "w_order" -> JD.map Types.WeaponOrder weaponOrderInfoDecoder
-      "w_order_finished" -> weaponOrderFinishedDecoder
-      "authinfo" -> JD.map Types.Auth authInfoDecoder
-      "user" -> JD.map Types.User userInfoDecoder
-      "error" -> JD.map Types.Error errorDecoder
-      _ -> JD.fail ("unexpected API message " ++ t))
+    -- use the "t" key to determine which decoder to use
+    JD.field "t" JD.string
+        |> JD.andThen
+            (\t ->
+                case t of
+                    "resources" ->
+                        JD.map Types.Resources resourceInfoDecoder
+
+                    "building" ->
+                        JD.map Types.Building buildingInfoDecoder
+
+                    "construction" ->
+                        JD.map Types.Construction constructionDecoder
+
+                    "planet" ->
+                        JD.map Types.Planet planetDecoder
+
+                    "capacity" ->
+                        JD.map Types.Capacity capacityInfoDecoder
+
+                    "production" ->
+                        JD.map Types.Production resourceInfoDecoder
+
+                    "utilization" ->
+                        JD.map Types.Utilization resourceInfoDecoder
+
+                    "research" ->
+                        JD.map Types.Research researchInfoDecoder
+
+                    "weapon" ->
+                        JD.map Types.Weapon weaponInfoDecoder
+
+                    "w_order" ->
+                        JD.map Types.WeaponOrder weaponOrderInfoDecoder
+
+                    "w_order_finished" ->
+                        weaponOrderFinishedDecoder
+
+                    "authinfo" ->
+                        JD.map Types.Auth authInfoDecoder
+
+                    "user" ->
+                        JD.map Types.User userInfoDecoder
+
+                    "error" ->
+                        JD.map Types.Error errorDecoder
+
+                    _ ->
+                        JD.fail ("unexpected API message " ++ t)
+            )
 
 
 userInfoDecoder : JD.Decoder Types.UserInfo
 userInfoDecoder =
-  JD.map5 Types.UserInfo
-    (JD.field "_id" JD.string)
-    (JD.field "name" JD.string)
-    (JD.field "email" JD.string)
-    (JD.field "provider" JD.string)
-    (JD.field "img" JD.string)
+    JD.map5 Types.UserInfo
+        (JD.field "_id" JD.string)
+        (JD.field "name" JD.string)
+        (JD.field "email" JD.string)
+        (JD.field "provider" JD.string)
+        (JD.field "img" JD.string)
 
 
 planetDecoder : JD.Decoder Types.PlanetInfo
 planetDecoder =
-  JD.map5 Types.PlanetInfo
-    (JD.field "_id" JD.string)
-    (JD.field "pos" coordDecoder)
-    (JD.field "size" JD.int)
-    (JD.field "type" planetTypeDecoder)
-    (JD.field "idx" JD.int)
+    JD.map5 Types.PlanetInfo
+        (JD.field "_id" JD.string)
+        (JD.field "pos" coordDecoder)
+        (JD.field "size" JD.int)
+        (JD.field "type" planetTypeDecoder)
+        (JD.field "idx" JD.int)
 
 
 constructionDecoder : JD.Decoder Types.ConstructionInfo
 constructionDecoder =
-  JD.map5 Types.ConstructionInfo
-    (JD.field "planet" JD.string)
-    (JD.field "building" JD.string)
-    (JD.field "level" JD.int)
-    (JD.field "created" dateTimeDecoder)
-    (JD.field "finish" dateTimeDecoder)
+    JD.map5 Types.ConstructionInfo
+        (JD.field "planet" JD.string)
+        (JD.field "building" JD.string)
+        (JD.field "level" JD.int)
+        (JD.field "created" dateTimeDecoder)
+        (JD.field "finish" dateTimeDecoder)
 
 
 weaponOrderInfoDecoder : JD.Decoder Types.WeaponOrderInfo
 weaponOrderInfoDecoder =
-  JD.map5 Types.WeaponOrderInfo
-    (JD.field "_id" JD.string)
-    (JD.field "planet" JD.string)
-    (JD.field "weapon" JD.string)
-    (JD.field "created" dateTimeDecoder)
-    (JD.field "finish" dateTimeDecoder)
+    JD.map5 Types.WeaponOrderInfo
+        (JD.field "_id" JD.string)
+        (JD.field "planet" JD.string)
+        (JD.field "weapon" JD.string)
+        (JD.field "created" dateTimeDecoder)
+        (JD.field "finish" dateTimeDecoder)
 
 
 weaponOrderFinishedDecoder : JD.Decoder Types.ApiContent
 weaponOrderFinishedDecoder =
-  JD.map2 Types.WeaponOrderFinished
-    (JD.field "planet" JD.string)
-    (JD.field "_id" JD.string)
+    JD.map2 Types.WeaponOrderFinished
+        (JD.field "planet" JD.string)
+        (JD.field "_id" JD.string)
 
 
 buildingInfoDecoder : JD.Decoder Types.BuildingInfo
 buildingInfoDecoder =
-  resources Types.BuildingInfo
-    |: (JD.field "workers" JD.int)
-    |: (JD.field "power" JD.int)
-    |: (JD.field "type" JD.string)
-    |: (JD.field "planet" JD.string)
-    |: (JD.field "level" JD.int)
-    |: (JD.field "duration" dateTimeDeltaDecoder)
-    |: (JD.field "group" JD.string)
+    resources Types.BuildingInfo
+        |> andMap (JD.field "workers" JD.int)
+        |> andMap (JD.field "power" JD.int)
+        |> andMap (JD.field "type" JD.string)
+        |> andMap (JD.field "planet" JD.string)
+        |> andMap (JD.field "level" JD.int)
+        |> andMap (JD.field "duration" dateTimeDeltaDecoder)
+        |> andMap (JD.field "group" JD.string)
 
 
 weaponInfoDecoder : JD.Decoder Types.WeaponInfo
 weaponInfoDecoder =
-  resources Types.WeaponInfo
-    |: (JD.field "name" JD.string)
-    |: (JD.field "planet" JD.string)
-    |: (JD.field "count" JD.int)
-    |: (JD.field "duration" dateTimeDeltaDecoder)
-    |: (JD.field "space" JD.int)
-    |: (JD.field "power" JD.int)
-    |: (JD.field "dmg" JD.float)
-    |: (JD.field "load" JD.int)
+    resources Types.WeaponInfo
+        |> andMap (JD.field "name" JD.string)
+        |> andMap (JD.field "planet" JD.string)
+        |> andMap (JD.field "count" JD.int)
+        |> andMap (JD.field "duration" dateTimeDeltaDecoder)
+        |> andMap (JD.field "space" JD.int)
+        |> andMap (JD.field "power" JD.int)
+        |> andMap (JD.field "dmg" JD.float)
+        |> andMap (JD.field "load" JD.int)
 
 
 resourceInfoDecoder : JD.Decoder Types.ResourceInfo
 resourceInfoDecoder =
-  resources Types.ResourceInfo
-    |: (JD.field "workers" JD.int)
-    |: (JD.field "power" JD.int)
-    |: (JD.field "planet" JD.string)
+    resources Types.ResourceInfo
+        |> andMap (JD.field "workers" JD.int)
+        |> andMap (JD.field "power" JD.int)
+        |> andMap (JD.field "planet" JD.string)
 
 
 capacityInfoDecoder : JD.Decoder Types.CapacityInfo
 capacityInfoDecoder =
-  resources Types.CapacityInfo
-    |: (JD.field "planet" JD.string)
+    resources Types.CapacityInfo
+        |> andMap (JD.field "planet" JD.string)
 
 
 researchInfoDecoder : JD.Decoder Types.ResearchInfo
 researchInfoDecoder =
-  let research =
-        JD.map2 (,)
-          (JD.field "name" JD.string)
-          (JD.field "level" JD.int)
-      status =
-        JD.map3 Types.ResearchStatusInfo
-          (JD.field "created" dateTimeDecoder)
-          (JD.field "finish" dateTimeDecoder)
-          (JD.maybe (JD.field "name" JD.string))
-  in JD.map3 Types.ResearchInfo
-       (JD.field "research" (JD.list research))
-       (JD.maybe (JD.field "duration" dateTimeDeltaDecoder))
-       (JD.maybe (JD.field "status" status))
+    let
+        research =
+            JD.map2 (\a b -> ( a, b ))
+                (JD.field "name" JD.string)
+                (JD.field "level" JD.int)
+
+        status =
+            JD.map3 Types.ResearchStatusInfo
+                (JD.field "created" dateTimeDecoder)
+                (JD.field "finish" dateTimeDecoder)
+                (JD.maybe (JD.field "name" JD.string))
+    in
+    JD.map3 Types.ResearchInfo
+        (JD.field "research" (JD.list research))
+        (JD.maybe (JD.field "duration" dateTimeDeltaDecoder))
+        (JD.maybe (JD.field "status" status))
 
 
 resources : (Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> a) -> JD.Decoder a
 resources f =
-  JD.map f (JD.field "iron_ore" JD.int)
-  |: (JD.field "gold" JD.int)
-  |: (JD.field "h2o" JD.int)
-  |: (JD.field "oil" JD.int)
-  |: (JD.field "h2" JD.int)
-  |: (JD.field "uranium" JD.int)
-  |: (JD.field "pvc" JD.int)
-  |: (JD.field "titan" JD.int)
-  |: (JD.field "kyanite" JD.int)
+    JD.succeed f
+        |> andMap (JD.field "iron_ore" JD.int)
+        |> andMap (JD.field "gold" JD.int)
+        |> andMap (JD.field "h2o" JD.int)
+        |> andMap (JD.field "oil" JD.int)
+        |> andMap (JD.field "h2" JD.int)
+        |> andMap (JD.field "uranium" JD.int)
+        |> andMap (JD.field "pvc" JD.int)
+        |> andMap (JD.field "titan" JD.int)
+        |> andMap (JD.field "kyanite" JD.int)
 
 
-dateTimeDeltaDecoder : JD.Decoder Time.DateTime.DateTimeDelta
+dateTimeDeltaDecoder : JD.Decoder Int
 dateTimeDeltaDecoder =
-  let toDelta sec =
-        let epoch = Time.DateTime.epoch
-            dt = Time.DateTime.addSeconds sec epoch
-        in  Time.DateTime.delta dt epoch
-  in JD.int |> JD.map toDelta
+    let
+        toMillis =
+            (*) 1000
+    in
+    JD.int |> JD.map toMillis
 
 
-coordDecoder : JD.Decoder (Int, Int, Int)
+coordDecoder : JD.Decoder ( Int, Int, Int )
 coordDecoder =
-  let toCoord input =
-        case input of
-          [x, y, z] -> JD.succeed (x, y, z)
-          _ -> JD.fail "expecting triple of integers"
-  in JD.list JD.int |> JD.andThen toCoord
+    let
+        toCoord input =
+            case input of
+                [ x, y, z ] ->
+                    JD.succeed ( x, y, z )
+
+                _ ->
+                    JD.fail "expecting triple of integers"
+    in
+    JD.list JD.int |> JD.andThen toCoord
 
 
 planetTypeDecoder : JD.Decoder Types.PlanetType
 planetTypeDecoder =
-  let mapper input =
-    case input of
-      "earth" -> JD.succeed Types.EarthPlanet
-      "fire" -> JD.succeed Types.FirePlanet
-      "water" -> JD.succeed Types.WaterPlanet
-      "ice" -> JD.succeed Types.IcePlanet
-      invalid -> JD.fail ("invalid planet type: " ++ invalid)
-  in JD.string |> JD.andThen mapper
+    let
+        mapper input =
+            case input of
+                "earth" ->
+                    JD.succeed Types.EarthPlanet
+
+                "fire" ->
+                    JD.succeed Types.FirePlanet
+
+                "water" ->
+                    JD.succeed Types.WaterPlanet
+
+                "ice" ->
+                    JD.succeed Types.IcePlanet
+
+                invalid ->
+                    JD.fail ("invalid planet type: " ++ invalid)
+    in
+    JD.string |> JD.andThen mapper
 
 
 authInfoDecoder : JD.Decoder Types.AuthInformation
 authInfoDecoder =
-  JD.map2 Types.AuthInformation
-    (JD.field "provider" JD.string)
-    (JD.field "loginUrl" JD.string)
+    JD.map2 Types.AuthInformation
+        (JD.field "provider" JD.string)
+        (JD.field "loginUrl" JD.string)
 
 
 errorDecoder : JD.Decoder Types.ApiError
 errorDecoder =
-  JD.map2 Types.ApiError
-    (JD.field "error" JD.bool)
-    (JD.field "message" JD.string)
+    JD.map2 Types.ApiError
+        (JD.field "error" JD.bool)
+        (JD.field "message" JD.string)
 
 
-dateTimeDecoder : JD.Decoder DateTime
+dateTimeDecoder : JD.Decoder Time.Posix
 dateTimeDecoder =
-  let iso8601 input =
-      case Time.Iso8601.toDateTime input of
-        Ok dt -> JD.succeed dt
-        _ -> JD.fail "invalid ISO8601 datetime given"
-  in JD.string |> JD.andThen iso8601
+    Iso8601.decoder
 
 
 apply : JD.Decoder (a -> b) -> JD.Decoder a -> JD.Decoder b
 apply f aDecoder =
-  f |> JD.andThen (\f0 -> JD.map f0 aDecoder)
+    f |> JD.andThen (\f0 -> JD.map f0 aDecoder)
 
 
-(|:) : JD.Decoder (a -> b) -> JD.Decoder a -> JD.Decoder b
-(|:) = apply
+andMap : JD.Decoder a -> JD.Decoder (a -> b) -> JD.Decoder b
+andMap =
+    JD.map2 (|>)
+
 
 
 -- vim: et sw=2 sts=2

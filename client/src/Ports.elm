@@ -12,18 +12,24 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-port module Ports exposing ( notification, NotificationPort, toWebsocket, fromWebsocket )
 
-import Json.Encode exposing ( Value )
+port module Ports exposing (NotificationPort, fromWebsocket, notification, toWebsocket)
+
+import Json.Encode exposing (Value)
 
 
-type alias NotificationPort msg = Value -> Cmd msg
+type alias NotificationPort msg =
+    Value -> Cmd msg
+
 
 port notification : NotificationPort msg
 
+
 port toWebsocket : Value -> Cmd msg
 
+
 port fromWebsocket : (Value -> a) -> Sub a
+
 
 
 -- vim: et sw=2 sts=2
