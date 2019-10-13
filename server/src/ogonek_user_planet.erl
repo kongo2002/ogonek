@@ -943,7 +943,7 @@ calculate_resources(State, Buildings, RelativeTo, Force) ->
            SimulatedHours = ogonek_util:to_hours(SecondsSince, ?OGONEK_DEFAULT_ACCELERATION),
 
            Produced = ogonek_resources:with_factor(SimulatedHours, Production),
-           lager:debug("user ~s - produced since ~s: ~p", [UserId, Resources#resources.updated, Produced]),
+           lager:debug("user ~s - produced since ~s: ~p", [UserId, iso8601:format(Resources#resources.updated), Produced]),
 
            Summed = ogonek_resources:sum(Resources, Produced),
            AfterConsumption = ogonek_buildings:calculate_building_consumption(Summed, Utilization, Buildings, SimulatedHours),
