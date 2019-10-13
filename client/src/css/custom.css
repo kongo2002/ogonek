@@ -144,11 +144,11 @@ img.planet {
 
 /* websocket connection */
 .websocket.connected {
-  color: green;
+  color: #4a4;
 }
 
 .websocket.disconnected {
-  color: red;
+  color: #c44;
 }
 
 .websocket.connecting {

@@ -133,7 +133,7 @@ connectionIcon model =
         title0 =
             "server: " ++ status
     in
-    span [ class "spaced", class "websocket", statusClass, title title0 ] [ icon "wifi" ]
+    span [ class "spaced", class "websocket", statusClass, title title0 ] [ icon "plug" ]
 
 
 
