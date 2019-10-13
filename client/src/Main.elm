@@ -45,7 +45,7 @@ init flags location key =
             Task.perform TimezoneHere Time.here
 
         model =
-            Model route key Nothing Dict.empty Dict.empty research Time.utc Dict.empty Nothing
+            Model route key Nothing Dict.empty Dict.empty research Time.utc Dict.empty Nothing Disconnected
 
         actions =
             Api.connect :: getTimezone :: routeActions model
@@ -232,10 +232,13 @@ update msg model =
 
         WebsocketConnected url ->
             let
+                model0 =
+                    { model | websocket = Connected url }
+
                 _ =
                     Debug.log "connected to API via websocket at " url
             in
-            ( model
+            ( model0
             , Cmd.none
             )
 
@@ -244,8 +247,21 @@ update msg model =
             , Cmd.none
             )
 
+        WebsocketConnecting ->
+            let
+                model0 =
+                    { model | websocket = Connecting }
+            in
+            ( model0
+            , Cmd.none
+            )
+
         WebsocketClosed ->
-            ( model
+            let
+                model0 =
+                    { model | websocket = Disconnected }
+            in
+            ( model0
             , Cmd.none
             )
 

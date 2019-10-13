@@ -43,9 +43,28 @@ var elmWebsocket = (function() {
   inst.wsHost = ((window.location.protocol === "https:") ? "wss://" : "ws://") + window.location.host + "/.ws"
   inst.socket = undefined;
   inst.pending = [];
+  inst.connectAttempt = 0;
+  inst.reconnect = undefined;
 
   inst.connect = function(app) {
+    if (inst.socket) {
+      return;
+    }
+
+    if (inst.reconnect) {
+      window.clearTimeout(inst.reconnect);
+      inst.reconnect = undefined;
+    }
+
     var toElm = app.ports.fromWebsocket;
+
+    toElm.send({
+      type: 'connecting',
+      msg: {
+        url: inst.wsHost
+      }
+    });
+
     inst.socket = new WebSocket(inst.wsHost);
 
     inst.socket.onopen = inst.openHandler.bind(null, toElm, inst.socket, inst.wsHost);
@@ -71,7 +90,10 @@ var elmWebsocket = (function() {
       var msg = inst.pending[idx];
       inst.send(msg);
     }
+
     inst.pending = [];
+    inst.connectAttempt = 0;
+
     toElm.send({
       type: 'connected',
       msg: {
@@ -109,6 +131,8 @@ var elmWebsocket = (function() {
 
   inst.closeHandler = function(toElm, socket, url, event) {
     inst.socket = undefined;
+    inst.connectAttempt++;
+
     toElm.send({
       type: 'closed',
       msg: {
@@ -116,6 +140,16 @@ var elmWebsocket = (function() {
         unsentBytes: socket.bufferedAmount
       }
     });
+
+    /* trigger exponential reconnect */
+    if (inst.reconnect) {
+      window.clearTimeout(inst.reconnect);
+    }
+
+    var delay = Math.pow(2, inst.connectAttempt) * 500;
+    inst.reconnect = window.setTimeout(function() {
+      inst.connect(app);
+    }, delay);
   }
 
   return inst;

@@ -92,11 +92,14 @@ navigation model =
                 Nothing ->
                     []
 
+        connection =
+            [ li [ toRight ] [ connectionIcon model ] ]
+
         routesLinks =
             List.map (link []) routes
 
         links =
-            routesLinks ++ loginRoute ++ userInfo
+            routesLinks ++ loginRoute ++ connection ++ userInfo
     in
     div [ class "row" ]
         [ div [ class "four columns" ]
@@ -108,6 +111,29 @@ navigation model =
             [ ul [] links
             ]
         ]
+
+
+connectionIcon : Model -> Html Msg
+connectionIcon model =
+    let
+        status =
+            case model.websocket of
+                Disconnected ->
+                    "disconnected"
+
+                Connecting ->
+                    "connecting"
+
+                Connected _ ->
+                    "connected"
+
+        statusClass =
+            class status
+
+        title0 =
+            "server: " ++ status
+    in
+    span [ class "spaced", class "websocket", statusClass, title title0 ] [ icon "wifi" ]
 
 
 

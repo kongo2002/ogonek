@@ -132,6 +132,9 @@ parseWebsocket =
                     "connected" ->
                         websocketConnected
 
+                    "connecting" ->
+                        JD.succeed Types.WebsocketConnecting
+
                     "error" ->
                         JD.succeed Types.WebsocketError
 

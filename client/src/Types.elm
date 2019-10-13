@@ -44,6 +44,7 @@ type Msg
     | ApiResponse ApiContent
     | ApiRequest Request
       -- websocket
+    | WebsocketConnecting
     | WebsocketConnected String
     | WebsocketError
     | WebsocketClosed
@@ -271,6 +272,12 @@ type alias ActivePlanet =
     }
 
 
+type WebsocketStatus
+    = Disconnected
+    | Connecting
+    | Connected String
+
+
 type alias Model =
     { route : Route
     , key : Browser.Navigation.Key
@@ -281,6 +288,7 @@ type alias Model =
     , timeZone : Time.Zone
     , formContents : Dict String String
     , lastTimeStamp : Maybe Time.Posix
+    , websocket : WebsocketStatus
     }
 
 

@@ -142,6 +142,19 @@ img.planet {
   padding-bottom: 3ex;
 }
 
+/* websocket connection */
+.websocket.connected {
+  color: green;
+}
+
+.websocket.disconnected {
+  color: red;
+}
+
+.websocket.connecting {
+  color: #ccc;
+}
+
 /* mobile-first table layout */
 
 .table-responsive {
