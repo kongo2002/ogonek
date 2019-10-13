@@ -19,7 +19,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Routing
 import Types exposing (..)
-import View.Utils exposing (icon, numbClick, toRight)
+import View.Utils exposing (icon, toRight)
 
 
 user : Model -> List (Html Msg)
@@ -34,7 +34,7 @@ user model =
             Routing.routeToPath LogoutRoute
 
         logout =
-            a [ href route, numbClick (NewUrl LogoutRoute) ] [ icon "sign-out-alt" ]
+            a [ href route ] [ icon "sign-out-alt" ]
     in
     [ h2 [] [ text "User" ]
     , h3 []

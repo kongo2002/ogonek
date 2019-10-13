@@ -19,7 +19,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Routing
 import Types exposing (..)
-import View.Utils exposing (numbClick, translateBuildingName)
+import View.Utils exposing (translateBuildingName)
 
 
 building : String -> Model -> List (Html Msg)
@@ -252,11 +252,8 @@ resources rss =
 
                 link =
                     Routing.routeToPath route
-
-                click =
-                    numbClick (NewUrl route)
             in
-            li [ class "compact" ] [ a [ href link, click ] [ text translated ] ]
+            li [ class "compact" ] [ a [ href link ] [ text translated ] ]
 
         elems =
             List.map buildLink rss

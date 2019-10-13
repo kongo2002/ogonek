@@ -219,14 +219,11 @@ buildings active model =
                 link =
                     Routing.routeToPath route
 
-                click =
-                    numbClick (NewUrl route)
-
                 title0 =
                     title "Production"
             in
             span [ class "spaced", toRight, title0 ]
-                [ a [ href link, click ] [ icon "sliders-h" ] ]
+                [ a [ href link ] [ icon "sliders-h" ] ]
     in
     [ h2 [] [ text name ]
     , h3 [] [ text "Resources", productionLink ]
@@ -343,11 +340,8 @@ buildingRow model planet constrPossible binfo =
 
                 link =
                     Routing.routeToPath route
-
-                click =
-                    numbClick (NewUrl route)
             in
-            a [ href link, click ] [ text translated ]
+            a [ href link ] [ text translated ]
     in
     tr []
         ([ td [ class "header" ] [ name ]

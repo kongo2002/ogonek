@@ -53,9 +53,6 @@ research model =
         link =
             Routing.routeToPath ResearchRoute
 
-        click =
-            numbClick (NewUrl ResearchRoute)
-
         status =
             View.Research.status model res
 
@@ -64,7 +61,7 @@ research model =
                 [ div [ class "twelve columns" ]
                     [ h3 []
                         [ text "Research "
-                        , a [ href link, click ]
+                        , a [ href link ]
                             [ span [ class "spaced" ] [ icon "flask" ]
                             ]
                         ]
@@ -194,7 +191,7 @@ planetView model info =
                     span [ class "mobile" ] [ text (" " ++ name0) ]
             in
             div [ class "three columns" ]
-                [ a [ href link, numbClick (NewUrl route0), title name0 ]
+                [ a [ href link, title name0 ]
                     [ h3 [ class "text-centered" ] [ icon icon0, desc ] ]
                 ]
     in

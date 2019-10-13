@@ -61,7 +61,7 @@ navigation model =
                 clss =
                     acls ++ args
             in
-            li clss [ a [ href ref, numbClick (NewUrl route) ] [ text name ] ]
+            li clss [ a [ href ref ] [ text name ] ]
 
         loginRoute =
             if loggedIn0 then
@@ -84,7 +84,7 @@ navigation model =
                             span [ class "large-only" ] [ text user.name ]
 
                         link0 =
-                            a [ href path, numbClick (NewUrl Types.UserRoute) ]
+                            a [ href path ]
                                 [ name, userIcon ]
                     in
                     [ li [ toRight ] [ link0 ] ]
