@@ -223,6 +223,7 @@ table td.header {
   background-color: #ddd;
   position: relative;
   overflow: hidden;
+  min-width: 15px;
 }
 
 .meter > h6 {
