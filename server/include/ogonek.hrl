@@ -24,14 +24,12 @@
 
 -type maybe_unset_id() :: binary() | undefined.
 
--type timestamp() :: binary().
-
 
 -record(session, {
           id :: maybe_unset_id(),
           ip :: binary(),
-          created :: timestamp(),
-          updated :: timestamp(),
+          created :: erlang:timestamp(),
+          updated :: erlang:timestamp(),
           headers :: [kvalue()],
           user_id :: maybe_unset_id()
          }).
@@ -101,7 +99,7 @@
           pvc :: integer(),
           titan :: integer(),
           kyanite :: integer(),
-          updated :: timestamp() | undefined
+          updated :: erlang:timestamp() | undefined
          }).
 
 -type resources() :: #resources{}.
@@ -173,7 +171,7 @@
           planet :: binary(),
           type :: atom(),
           level :: integer(),
-          created :: timestamp()
+          created :: erlang:timestamp()
          }).
 
 -type building() :: #building{}.
@@ -184,8 +182,8 @@
           building :: atom(),
           level :: integer(),
           planet :: binary(),
-          created :: timestamp(),
-          finish :: timestamp()
+          created :: erlang:timestamp(),
+          finish :: erlang:timestamp()
          }).
 
 -type construction() :: #construction{}.
@@ -204,8 +202,8 @@
           user :: binary(),
           research :: atom(),
           level :: integer(),
-          created :: timestamp(),
-          finish :: timestamp(),
+          created :: erlang:timestamp(),
+          finish :: erlang:timestamp(),
           progress :: boolean()
          }).
 
@@ -237,8 +235,8 @@
           id :: maybe_unset_id(),
           weapon :: atom(),
           planet :: binary(),
-          created :: timestamp(),
-          finish :: timestamp()
+          created :: erlang:timestamp(),
+          finish :: erlang:timestamp()
          }).
 
 -type weapon_order() :: #weapon_order{}.
@@ -276,8 +274,8 @@
           id :: maybe_unset_id(),
           ship :: atom(),
           planet :: binary(),
-          created :: timestamp(),
-          finish :: timestamp()
+          created :: erlang:timestamp(),
+          finish :: erlang:timestamp()
          }).
 
 -type ship_order() :: #ship_order{}.

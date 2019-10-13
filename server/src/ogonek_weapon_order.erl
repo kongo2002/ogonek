@@ -75,8 +75,8 @@ to_json(WOrder) ->
 to_json(WOrder, _Db) ->
     Values = [{<<"weapon">>, WOrder#weapon_order.weapon},
               {<<"planet">>, WOrder#weapon_order.planet},
-              {<<"created">>, WOrder#weapon_order.created},
-              {<<"finish">>, WOrder#weapon_order.finish}
+              {<<"created">>, ogonek_util:unixtime_to_millis(WOrder#weapon_order.created)},
+              {<<"finish">>, ogonek_util:unixtime_to_millis(WOrder#weapon_order.finish)}
              ]
     ++ ogonek_util:if_defined(<<"_id">>, WOrder#weapon_order.id),
 

@@ -75,8 +75,8 @@ to_json(Session) ->
 -spec to_json(session(), boolean()) -> tuple().
 to_json(Session, _Db) ->
     Values = [{<<"ip">>, Session#session.ip},
-              {<<"created">>, Session#session.created},
-              {<<"updated">>, Session#session.updated},
+              {<<"created">>, ogonek_util:unixtime_to_millis(Session#session.created)},
+              {<<"updated">>, ogonek_util:unixtime_to_millis(Session#session.updated)},
               {<<"headers">>, {Session#session.headers}}
              ]
     ++ ogonek_util:if_defined(<<"user_id">>, Session#session.user_id)
@@ -97,7 +97,7 @@ has_user_id(#session{user_id=_UserId}) -> true.
 -ifdef(TEST).
 
 from_doc_test_() ->
-    Now = ogonek_util:now8601(),
+    Now = erlang:timestamp(),
     Id = <<"id">>,
     Ip = <<"127.0.0.1">>,
 

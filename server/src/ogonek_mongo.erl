@@ -115,7 +115,7 @@ start_link() ->
     {error, missing_rev}.
 new_session(RemoteIP, Headers) ->
     Info = get_info(),
-    Now = ogonek_util:now8601(),
+    Now = erlang:timestamp(),
     Result = mongo_api:insert(Info, <<"session">>,
                               #{<<"headers">> => Headers,
                                 <<"updated">> => Now,
@@ -362,13 +362,13 @@ planets_of_user(UserId) ->
 
 -spec planet_update_resources(PlanetId :: binary(), resources()) -> ok.
 planet_update_resources(PlanetId, Resources) ->
-    Res = Resources#resources{updated=ogonek_util:now8601()},
+    Res = Resources#resources{updated=erlang:timestamp()},
     gen_server:cast(?MODULE, {planet_update_resources, PlanetId, Res}).
 
 
 -spec planet_update_utilization(PlanetId :: binary(), Utilization :: resources()) -> ok.
 planet_update_utilization(PlanetId, Utilization) ->
-    Util = Utilization#resources{updated=ogonek_util:now8601()},
+    Util = Utilization#resources{updated=erlang:timestamp()},
     gen_server:cast(?MODULE, {planet_update_utilization, PlanetId, Util}).
 
 
@@ -436,7 +436,7 @@ handle_cast(prepare, State) ->
     {noreply, State#state{topology=Topology}};
 
 handle_cast({remove_user_from_session, SessionId}, #state{topology=T}=State) ->
-    Now = ogonek_util:now8601(),
+    Now = erlang:timestamp(),
     Update = #{<<"$set">> => #{<<"updated">> => Now},
                <<"$unset">> => #{<<"user_id">> => 1}},
     mongo_api:update(T, <<"session">>, id_query(SessionId), Update, #{}),
@@ -444,14 +444,14 @@ handle_cast({remove_user_from_session, SessionId}, #state{topology=T}=State) ->
     {noreply, State};
 
 handle_cast({add_user_to_session, UserId, SessionId}, #state{topology=T}=State) ->
-    Now = ogonek_util:now8601(),
+    Now = erlang:timestamp(),
     Update = #{<<"$set">> => #{<<"updated">> => Now, <<"user_id">> => to_id(UserId)}},
     mongo_api:update(T, <<"session">>, id_query(SessionId), Update, #{}),
 
     {noreply, State};
 
 handle_cast({refresh_session, SessionId}, #state{topology=T}=State) ->
-    Now = ogonek_util:now8601(),
+    Now = erlang:timestamp(),
     Update = #{<<"$set">> => #{<<"updated">> => Now}},
     mongo_api:update(T, <<"session">>, id_query(SessionId), Update, #{}),
 
@@ -475,7 +475,7 @@ handle_cast({building_finish, #building{id=undefined}=B, Sender}, #state{topolog
     {noreply, State};
 
 handle_cast({building_finish, Building, Sender}, #state{topology=T}=State) ->
-    Now = ogonek_util:now8601(),
+    Now = erlang:timestamp(),
     Update = #{<<"$set">> => #{<<"updated">> => Now, <<"level">> => Building#building.level}},
     case mongo_api:update(T, <<"building">>, id_query(Building#building.id), Update, #{}) of
         {true, #{<<"n">> := 1}} ->

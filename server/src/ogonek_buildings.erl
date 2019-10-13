@@ -121,7 +121,7 @@ has_requirements(Buildings, Requirements) ->
 
 -spec finish(bdef(), PlanetId :: binary(), Level :: integer()) -> ok.
 finish(#bdef{name=Def}, PlanetId, Level) ->
-    Now = ogonek_util:now8601(),
+    Now = erlang:timestamp(),
     Building = #building{planet=PlanetId,
                          type=Def,
                          level=Level,
@@ -401,7 +401,7 @@ calculate_building_costs(Definition, Level) ->
 
 calculate_building_consumption_test_() ->
     PId = <<"planet">>,
-    Now = ogonek_util:now8601(),
+    Now = erlang:timestamp(),
     Empty = ogonek_resources:empty(),
     Hour = 1.0,
     ThreeHours = 3.0,
@@ -443,7 +443,7 @@ calculate_building_consumption_test_() ->
 
 has_requirements_test_() ->
     PId = <<"planet">>,
-    Now = ogonek_util:now8601(),
+    Now = erlang:timestamp(),
     Smelting1 = #building{planet=PId, type=smelting_plant, level=1, created=Now},
     Plastic1 = #building{planet=PId, type=plastic_factory, level=1, created=Now},
     Chemic1 = #building{planet=PId, type=chemical_factory, level=1, created=Now},

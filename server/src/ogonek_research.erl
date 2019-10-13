@@ -150,8 +150,8 @@ to_json(Research, _Db) ->
     Values = [{<<"user">>, Research#research.user},
               {<<"research">>, Research#research.research},
               {<<"level">>, Research#research.level},
-              {<<"created">>, Research#research.created},
-              {<<"finish">>, Research#research.finish},
+              {<<"created">>, ogonek_util:unixtime_to_millis(Research#research.created)},
+              {<<"finish">>, ogonek_util:unixtime_to_millis(Research#research.finish)},
               {<<"progress">>, Research#research.progress}
              ]
     ++ ogonek_util:if_defined(<<"_id">>, Research#research.id),
@@ -171,8 +171,8 @@ research_info_json(Running, Finished, Duration) ->
                                      true -> []
                                   end,
 
-                     Status0 = {[{<<"finish">>, Finish},
-                                 {<<"created">>, Created}
+                     Status0 = {[{<<"finish">>, ogonek_util:unixtime_to_millis(Finish)},
+                                 {<<"created">>, ogonek_util:unixtime_to_millis(Created)}
                                 ] ++ InProgress},
                      [{<<"status">>, Status0}]
              end,
@@ -200,7 +200,7 @@ progress(#research{created=Started, finish=Finished}) ->
     progress(Started, Finished).
 
 
--spec progress(timestamp(), timestamp()) -> integer().
+-spec progress(erlang:timestamp(), erlang:timestamp()) -> integer().
 progress(Started, Finished) ->
     Total = ogonek_util:seconds_since(Started, Finished),
     Progress = ogonek_util:seconds_since(Started),

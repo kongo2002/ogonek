@@ -186,7 +186,7 @@ handle_info(start_research, State) ->
                     % update research
                     Res0#research{
                       level=Res0#research.level+1,
-                      created=ogonek_util:now8601(),
+                      created=erlang:timestamp(),
                       finish=FinishedAt,
                       progress=true};
                 _Otherwise ->
@@ -195,7 +195,7 @@ handle_info(start_research, State) ->
                        user=State#state.id,
                        research=Pick#rdef.name,
                        level=1,
-                       created=ogonek_util:now8601(),
+                       created=erlang:timestamp(),
                        finish=FinishedAt,
                        progress=true
                       }
@@ -258,7 +258,7 @@ handle_info({set_utilization, PlanetId, Resource, Value}, State) ->
     {noreply, State};
 
 handle_info(get_research, State) ->
-    Now = ogonek_util:now8601(),
+    Now = erlang:timestamp(),
     Research = fetch_research(State),
 
     {Pending, Finished, Research0} =
@@ -501,7 +501,7 @@ bootstrap_free_planet(Planet) ->
                   h2o=10000,
                   oil=10000,
                   planet=PlanetId,
-                  updated=ogonek_util:now8601()},
+                  updated=erlang:timestamp()},
 
     Build = fun({B, Level}) ->
                     case ogonek_buildings:get_definition(B) of

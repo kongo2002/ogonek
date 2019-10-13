@@ -141,7 +141,7 @@ to_json(Resources, Db) ->
               {<<"pvc">>, Resources#resources.pvc},
               {<<"titan">>, Resources#resources.titan},
               {<<"kyanite">>, Resources#resources.kyanite}
-             ] ++ ogonek_util:if_defined(<<"updated">>, Resources#resources.updated),
+             ] ++ ogonek_util:if_defined(<<"updated">>, ogonek_util:unixtime_to_millis(Resources#resources.updated)),
 
     case Db of
         true -> {Values};

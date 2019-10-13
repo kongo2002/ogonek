@@ -80,8 +80,8 @@ to_json(Construction, _Db) ->
     Values = [{<<"building">>, Construction#construction.building},
               {<<"level">>, Construction#construction.level},
               {<<"planet">>, Construction#construction.planet},
-              {<<"created">>, Construction#construction.created},
-              {<<"finish">>, Construction#construction.finish}
+              {<<"created">>, ogonek_util:unixtime_to_millis(Construction#construction.created)},
+              {<<"finish">>, ogonek_util:unixtime_to_millis(Construction#construction.finish)}
              ]
     ++ ogonek_util:if_defined(<<"_id">>, Construction#construction.id),
 

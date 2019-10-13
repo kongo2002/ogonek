@@ -76,7 +76,7 @@ to_json(Building, Db) ->
     Values = [{<<"planet">>, Building#building.planet},
               {<<"type">>, Building#building.type},
               {<<"level">>, Building#building.level},
-              {<<"created">>, Building#building.created}
+              {<<"created">>, ogonek_util:unixtime_to_millis(Building#building.created)}
              ]
     ++ ogonek_util:if_defined(<<"_id">>, Building#building.id),
 

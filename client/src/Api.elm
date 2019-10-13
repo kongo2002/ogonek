@@ -15,7 +15,6 @@
 
 module Api exposing (connect, listen, send)
 
-import Iso8601
 import Json.Decode as JD
 import Json.Encode as JE
 import Ports
@@ -407,7 +406,7 @@ errorDecoder =
 
 dateTimeDecoder : JD.Decoder Time.Posix
 dateTimeDecoder =
-    Iso8601.decoder
+    JD.int |> JD.map Time.millisToPosix
 
 
 apply : JD.Decoder (a -> b) -> JD.Decoder a -> JD.Decoder b

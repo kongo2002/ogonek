@@ -53,7 +53,7 @@
          finished_at/1,
          seconds_since/1,
          seconds_since/2,
-         now8601/0
+         unixtime_to_millis/1
         ]).
 
 
@@ -61,11 +61,6 @@
 trim(Binary) ->
     % TODO: replace with 'string:trim' for OTP >= 20
     re:replace(Binary, "^\\s+|\\s+$", "", [{return, binary}, global]).
-
-
--spec now8601() -> timestamp().
-now8601() ->
-    iso8601:format(calendar:universal_time()).
 
 
 -spec lowercase(string() | binary()) -> string() | binary().
@@ -276,12 +271,17 @@ doc(DocType, Values) when is_list(Values) ->
     {[{?MSG_TYPE, DocType} | Values]}.
 
 
--spec finished_at(DurationSeconds :: integer()) -> timestamp().
+-spec finished_at(DurationSeconds :: integer()) -> erlang:timestamp().
 finished_at(DurationSeconds) ->
-    Now = calendar:universal_time(),
-    GregorianNow = calendar:datetime_to_gregorian_seconds(Now),
-    FinishedAt = GregorianNow + DurationSeconds,
-    iso8601:format(calendar:gregorian_seconds_to_datetime(FinishedAt)).
+    NowSeconds = bson:unixtime_to_secs(erlang:timestamp()),
+    FinishedAt = NowSeconds + DurationSeconds,
+    bson:secs_to_unixtime(FinishedAt).
+
+
+-spec unixtime_to_millis(bson:unixtime() | undefined) -> integer() | undefined.
+unixtime_to_millis(undefined) -> undefined;
+unixtime_to_millis(Ts) ->
+    bson:unixtime_to_secs(Ts) * 1000.
 
 
 -spec to_hours(Seconds :: integer()) -> float().
@@ -294,18 +294,18 @@ to_hours(Seconds, Acceleration) ->
     Seconds / 3600 * Acceleration.
 
 
--spec seconds_since(Timestamp :: timestamp() | undefined) -> integer().
+-spec seconds_since(Timestamp :: erlang:timestamp() | undefined) -> integer().
 seconds_since(undefined) -> 0;
 seconds_since(Timestamp) ->
-    seconds_since(Timestamp, ogonek_util:now8601()).
+    seconds_since(Timestamp, erlang:timestamp()).
 
 
--spec seconds_since(Timestamp :: timestamp() | undefined, RelativeTo :: timestamp()) -> integer().
+-spec seconds_since(Timestamp :: erlang:timestamp() | undefined, RelativeTo :: erlang:timestamp()) -> integer().
 seconds_since(undefined, _RelativeTo) -> 0;
 seconds_since(Timestamp, RelativeTo) ->
-    RelativeTime = iso8601:parse(RelativeTo),
-    Since = iso8601:parse(Timestamp),
-    abs(calendar:datetime_to_gregorian_seconds(RelativeTime) - calendar:datetime_to_gregorian_seconds(Since)).
+    RelativeSeconds = bson:unixtime_to_secs(RelativeTo),
+    Since = bson:unixtime_to_secs(Timestamp),
+    abs(RelativeSeconds - Since).
 
 
 -spec choose_random(nonempty_list()) -> term().

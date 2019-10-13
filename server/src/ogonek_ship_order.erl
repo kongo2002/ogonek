@@ -75,8 +75,8 @@ to_json(SOrder) ->
 to_json(SOrder, _Db) ->
     Values = [{<<"ship">>, SOrder#ship_order.ship},
               {<<"planet">>, SOrder#ship_order.planet},
-              {<<"created">>, SOrder#ship_order.created},
-              {<<"finish">>, SOrder#ship_order.finish}
+              {<<"created">>, ogonek_util:unixtime_to_millis(SOrder#ship_order.created)},
+              {<<"finish">>, ogonek_util:unixtime_to_millis(SOrder#ship_order.finish)}
              ]
     ++ ogonek_util:if_defined(<<"_id">>, SOrder#ship_order.id),
 

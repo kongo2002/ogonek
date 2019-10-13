@@ -333,7 +333,7 @@ handle_info({build_building, Research, Type, Level}=Req, State) ->
                                             planet=PlanetId,
                                             building=Type,
                                             level=Level,
-                                            created=ogonek_util:now8601(),
+                                            created=erlang:timestamp(),
                                             finish=FinishedAt
                                            },
                           ogonek_mongo:construction_create(Construction),
@@ -521,7 +521,7 @@ handle_info({build_weapon, WDef}, State) ->
             Order = #weapon_order{
                        weapon=WDef#wdef.name,
                        planet=PlanetId,
-                       created=ogonek_util:now8601(),
+                       created=erlang:timestamp(),
                        finish=FinishedAt
                       },
 
@@ -548,7 +548,7 @@ handle_info({build_ship, SDef}, State) ->
             Order = #ship_order{
                        ship=SDef#sdef.name,
                        planet=PlanetId,
-                       created=ogonek_util:now8601(),
+                       created=erlang:timestamp(),
                        finish=FinishedAt
                       },
 
@@ -902,10 +902,10 @@ ships_info(PlanetId, Ships) ->
 
 -spec calc_resources(state()) -> state().
 calc_resources(State) ->
-    calc_resources(State, ogonek_util:now8601()).
+    calc_resources(State, erlang:timestamp()).
 
 
--spec calc_resources(state(), timestamp()) -> state().
+-spec calc_resources(state(), erlang:timestamp()) -> state().
 calc_resources(State, RelativeTo) ->
     Planet = State#state.planet,
     Buildings = State#state.buildings,
@@ -921,12 +921,12 @@ calc_resources(State, RelativeTo) ->
     end.
 
 
--spec calculate_resources(state(), [building()], timestamp()) -> resources() | skipped.
+-spec calculate_resources(state(), [building()], erlang:timestamp()) -> resources() | skipped.
 calculate_resources(State, Buildings, RelativeTo) ->
     calculate_resources(State, Buildings, RelativeTo, false).
 
 
--spec calculate_resources(state(), [building()], timestamp(), boolean()) -> resources() | skipped.
+-spec calculate_resources(state(), [building()], erlang:timestamp(), boolean()) -> resources() | skipped.
 calculate_resources(State, Buildings, RelativeTo, Force) ->
     UserId = user_id(State),
     Planet = State#state.planet,
@@ -1105,7 +1105,7 @@ process_constructions(State, Constructions) ->
     PState0#state{constructions=Running}.
 
 
--spec process_construction({construction(), timestamp()}, state()) -> state().
+-spec process_construction({construction(), erlang:timestamp()}, state()) -> state().
 process_construction({Construction, UpTo}, State) ->
     Planet = State#state.planet,
     Buildings = State#state.buildings,
@@ -1146,13 +1146,13 @@ process_construction({Construction, UpTo}, State) ->
 
 
 -spec split_constructions([construction()]) ->
-    {[{construction(), timestamp()}], [construction()]}.
+    {[{construction(), erlang:timestamp()}], [construction()]}.
 split_constructions(Constructions) ->
-    split_constructions(Constructions, ogonek_util:now8601()).
+    split_constructions(Constructions, erlang:timestamp()).
 
 
--spec split_constructions([construction()], RelativeTo :: timestamp()) ->
-    {[{construction(), timestamp()}], [construction()]}.
+-spec split_constructions([construction()], RelativeTo :: erlang:timestamp()) ->
+    {[{construction(), erlang:timestamp()}], [construction()]}.
 split_constructions(Constructions, RelativeTo) ->
     % divide the list of constructions into finished and running ones
     {Finished, StillRunning} = lists:partition(fun(#construction{finish=F}) ->
@@ -1175,7 +1175,7 @@ split_constructions(Constructions, RelativeTo) ->
 -spec process_weapon_orders(state(), [weapon_order()]) -> state().
 process_weapon_orders(State, []) -> State;
 process_weapon_orders(State, WOrders) ->
-    Now = ogonek_util:now8601(),
+    Now = erlang:timestamp(),
     {Finished, Running} = lists:partition(fun(#weapon_order{finish=F}) ->
                                                   F =< Now
                                           end, WOrders),
@@ -1212,7 +1212,7 @@ finish_weapon_order(Weapons, WOrder) ->
 -spec process_ship_orders(state(), [ship_order()]) -> state().
 process_ship_orders(State, []) -> State;
 process_ship_orders(State, SOrders) ->
-    Now = ogonek_util:now8601(),
+    Now = erlang:timestamp(),
     {Finished, Running} = lists:partition(fun(#ship_order{finish=F}) ->
                                                   F =< Now
                                           end, SOrders),
@@ -1269,7 +1269,7 @@ resources(#state{planet=#planet{resources=Resources}}) ->
 
 update_building_test_() ->
     P = <<"p1">>,
-    Now = ogonek_util:now8601(),
+    Now = erlang:timestamp(),
     B1 = #building{type=gold_depot, level=1, planet=P, created=Now},
     B2 = #building{type=gold_depot, level=2, planet=P, created=Now},
 
@@ -1280,7 +1280,7 @@ update_building_test_() ->
 
 update_construction_test_() ->
     P = <<"p1">>,
-    Now = ogonek_util:now8601(),
+    Now = erlang:timestamp(),
     C1 = #construction{building=gold_depot, level=1, planet=P, created=Now, finish=Now},
     C2 = #construction{building=gold_depot, level=2, planet=P, created=Now, finish=Now},
 
@@ -1291,7 +1291,7 @@ update_construction_test_() ->
 
 remove_construction_test_() ->
     P = <<"p1">>,
-    Now = ogonek_util:now8601(),
+    Now = erlang:timestamp(),
     C1 = #construction{building=gold_depot, level=1, planet=P, created=Now, finish=Now},
     C2 = #construction{building=gold_depot, level=2, planet=P, created=Now, finish=Now},
 
@@ -1303,9 +1303,9 @@ remove_construction_test_() ->
 
 split_constructions_test_() ->
     P = <<"p1">>,
-    Past = <<"2000-08-19T06:49:04Z">>,
-    Between = <<"2010-08-09T16:49:04Z">>,
-    Now = ogonek_util:now8601(),
+    Past = {1330, 855737, 0}, % Sun 04 Mar 2012 11:08:57 AM CET
+    Between = {1442, 855737, 0}, % Mon 21 Sep 2015 07:15:37 PM CEST
+    Now = erlang:timestamp(),
     C1 = #construction{building=gold_depot, level=1, planet=P, created=Past, finish=Now},
     C2 = #construction{building=gold_depot, level=2, planet=P, created=Past, finish=Past},
     C3 = #construction{building=gold_depot, level=3, planet=P, created=Past, finish=Between},
