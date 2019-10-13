@@ -242,6 +242,50 @@ translateResource name =
             Const.kyanite
 
 
+resourceIcon : Types.ResourceType -> Html Types.Msg
+resourceIcon typ =
+    let
+        title0 =
+            translateResource typ
+
+        ( iconName, color0 ) =
+            case typ of
+                Types.Workers ->
+                    ( "male", "#333" )
+
+                Types.Power ->
+                    ( "bolt", "#333" )
+
+                Types.IronOre ->
+                    ( "cube", "#ae5900" )
+
+                Types.Gold ->
+                    ( "cube", "#ffd819" )
+
+                Types.H2O ->
+                    ( "tint", "#1eaedb" )
+
+                Types.Oil ->
+                    ( "tint", "#333" )
+
+                Types.H2 ->
+                    ( "atom", "#333" )
+
+                Types.Uranium ->
+                    ( "radiation", "#333" )
+
+                Types.PVC ->
+                    ( "recycle", "#4a4" )
+
+                Types.Titan ->
+                    ( "cube", "#aaa" )
+
+                Types.Kyanite ->
+                    ( "gem", "#1eaedb" )
+    in
+    span [ style "color" color0, title title0 ] [ icon iconName ]
+
+
 planetImg : Types.PlanetInfo -> Html Types.Msg
 planetImg planet =
     let

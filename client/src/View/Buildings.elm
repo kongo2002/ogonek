@@ -53,7 +53,7 @@ buildings active model =
             th [] [ text name0 ]
 
         rHeader resource =
-            header (translateResource resource)
+            th [ class "text-centered" ] [ resourceIcon resource ]
 
         buildings0 =
             Dict.values active.buildings
@@ -102,9 +102,8 @@ buildings active model =
             div ([ class "resource four columns" ] ++ prodTitle)
                 [ div [ class "meter" ]
                     [ h6 [ class "description" ]
-                        ([ text (translateResource rowDesc.name)
-                         , text ": "
-                         , numberSpan rowDesc.resources
+                        ([ resourceIcon rowDesc.name
+                         , span [ class "spaced" ] [ numberSpan rowDesc.resources ]
                          ]
                             ++ prodSpan
                         )

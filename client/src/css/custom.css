@@ -230,6 +230,7 @@ table td.header {
   position: absolute;
   z-index: 1;
   padding-left: 1ex;
+  font-size: 1.3rem;
 }
 
 .resource {
@@ -264,6 +265,10 @@ button.u-full-width {
   .table-responsive td {
     display: table-cell;
     padding: 0.8em 0.3em;
+    text-align: center;
+  }
+
+  .table-responsive .subheader > td {
     text-align: left;
   }
 
@@ -279,6 +284,7 @@ button.u-full-width {
   table td.header {
     font-weight: inherit;
     text-transform: none;
+    text-align: left;
   }
 
   a.icon span.description {
