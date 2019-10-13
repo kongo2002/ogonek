@@ -18,6 +18,7 @@ module Api exposing (connect, listen, send)
 import Json.Decode as JD
 import Json.Encode as JE
 import Ports
+import Resources
 import Time
 import Types
 
@@ -99,7 +100,7 @@ requestEncoder req =
             JE.object
                 [ requestType "set_utilization"
                 , ( "planet", JE.string planet )
-                , ( "resource", JE.string resource )
+                , ( "resource", JE.string (Resources.resourceKey resource) )
                 , ( "value", JE.int value )
                 ]
 

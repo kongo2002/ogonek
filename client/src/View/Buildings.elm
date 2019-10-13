@@ -27,7 +27,7 @@ import View.Utils exposing (..)
 
 
 type alias ResourceRow =
-    { name : String
+    { name : ResourceType
     , resources : Int
     , capacity : Int
     , production : Int
@@ -51,6 +51,9 @@ buildings active model =
 
         header name0 =
             th [] [ text name0 ]
+
+        rHeader resource =
+            header (translateResource resource)
 
         buildings0 =
             Dict.values active.buildings
@@ -99,7 +102,7 @@ buildings active model =
             div ([ class "resource four columns" ] ++ prodTitle)
                 [ div [ class "meter" ]
                     [ h6 [ class "description" ]
-                        ([ text rowDesc.name
+                        ([ text (translateResource rowDesc.name)
                          , text ": "
                          , numberSpan rowDesc.resources
                          ]
@@ -189,26 +192,26 @@ buildings active model =
             header0 :: rows
 
         energies =
-            [ ResourceRow Const.workers res.workers 0 0
-            , ResourceRow Const.power res.power 0 0
+            [ ResourceRow Workers res.workers 0 0
+            , ResourceRow Power res.power 0 0
             ]
 
         resourceRow1 =
-            [ ResourceRow Const.ironOre res.ironOre cap.ironOre prod.ironOre
-            , ResourceRow Const.gold res.gold cap.gold prod.gold
-            , ResourceRow Const.h2o res.h2o cap.h2o prod.h2o
+            [ ResourceRow IronOre res.ironOre cap.ironOre prod.ironOre
+            , ResourceRow Gold res.gold cap.gold prod.gold
+            , ResourceRow H2O res.h2o cap.h2o prod.h2o
             ]
 
         resourceRow2 =
-            [ ResourceRow Const.oil res.oil cap.oil prod.oil
-            , ResourceRow Const.h2 res.h2 cap.h2 prod.h2
-            , ResourceRow Const.uranium res.uranium cap.uranium prod.uranium
+            [ ResourceRow Oil res.oil cap.oil prod.oil
+            , ResourceRow H2 res.h2 cap.h2 prod.h2
+            , ResourceRow Uranium res.uranium cap.uranium prod.uranium
             ]
 
         resourceRow3 =
-            [ ResourceRow Const.pvc res.pvc cap.pvc prod.pvc
-            , ResourceRow Const.titan res.titan cap.titan prod.titan
-            , ResourceRow Const.kyanite res.kyanite cap.kyanite prod.kyanite
+            [ ResourceRow PVC res.pvc cap.pvc prod.pvc
+            , ResourceRow Titan res.titan cap.titan prod.titan
+            , ResourceRow Kyanite res.kyanite cap.kyanite prod.kyanite
             ]
 
         productionLink =
@@ -242,17 +245,17 @@ buildings active model =
                 [ tr []
                     [ header Const.building
                     , header Const.level
-                    , header Const.workers
-                    , header Const.power
-                    , header Const.ironOre
-                    , header Const.gold
-                    , header Const.h2o
-                    , header Const.oil
-                    , header Const.h2
-                    , header Const.uranium
-                    , header Const.pvc
-                    , header Const.titan
-                    , header Const.kyanite
+                    , rHeader Workers
+                    , rHeader Power
+                    , rHeader IronOre
+                    , rHeader Gold
+                    , rHeader H2O
+                    , rHeader Oil
+                    , rHeader H2
+                    , rHeader Uranium
+                    , rHeader PVC
+                    , rHeader Titan
+                    , rHeader Kyanite
                     , header ""
                     ]
                 ]
@@ -301,6 +304,9 @@ buildingRow model planet constrPossible binfo =
             in
             td attrs [ numberSpanTo relative val ]
 
+        rCol resource =
+            col (translateResource resource)
+
         res =
             planet.resources
 
@@ -308,17 +314,17 @@ buildingRow model planet constrPossible binfo =
             Dict.get binfo.name planet.constructions
 
         buildColumns =
-            [ col Const.workers binfo.workers res.workers
-            , col Const.power binfo.power res.power
-            , col Const.ironOre binfo.ironOre res.ironOre
-            , col Const.gold binfo.gold res.gold
-            , col Const.h2o binfo.h2o res.h2o
-            , col Const.oil binfo.oil res.oil
-            , col Const.h2 binfo.h2 res.h2
-            , col Const.uranium binfo.uranium res.uranium
-            , col Const.pvc binfo.pvc res.pvc
-            , col Const.titan binfo.titan res.titan
-            , col Const.kyanite binfo.kyanite res.kyanite
+            [ rCol Workers binfo.workers res.workers
+            , rCol Power binfo.power res.power
+            , rCol IronOre binfo.ironOre res.ironOre
+            , rCol Gold binfo.gold res.gold
+            , rCol H2O binfo.h2o res.h2o
+            , rCol Oil binfo.oil res.oil
+            , rCol H2 binfo.h2 res.h2
+            , rCol Uranium binfo.uranium res.uranium
+            , rCol PVC binfo.pvc res.pvc
+            , rCol Titan binfo.titan res.titan
+            , rCol Kyanite binfo.kyanite res.kyanite
             ]
 
         columns =

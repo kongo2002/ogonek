@@ -96,7 +96,7 @@ type Request
       -- get_utilization (planet-id)
     | UtilizationRequest String
       -- set_utilization (planet-id, resource, value)
-    | SetUtilizationRequest String String Int
+    | SetUtilizationRequest String ResourceType Int
     | LogoutRequest
 
 
@@ -206,6 +206,20 @@ type alias WeaponInfo =
     , damage : Float
     , load : Int
     }
+
+
+type ResourceType
+    = IronOre
+    | Gold
+    | H2O
+    | Oil
+    | H2
+    | Uranium
+    | PVC
+    | Titan
+    | Kyanite
+    | Workers
+    | Power
 
 
 type alias ResourceInfo =

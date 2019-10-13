@@ -205,44 +205,41 @@ translateWeaponName name =
     "weapon " ++ upper
 
 
-translateResource : String -> String
+translateResource : Types.ResourceType -> String
 translateResource name =
     case name of
-        "workers" ->
+        Types.Workers ->
             Const.workers
 
-        "power" ->
+        Types.Power ->
             Const.power
 
-        "iron_ore" ->
+        Types.IronOre ->
             Const.ironOre
 
-        "gold" ->
+        Types.Gold ->
             Const.gold
 
-        "h2o" ->
+        Types.H2O ->
             Const.h2o
 
-        "oil" ->
+        Types.Oil ->
             Const.oil
 
-        "h2" ->
+        Types.H2 ->
             Const.h2
 
-        "uranium" ->
+        Types.Uranium ->
             Const.uranium
 
-        "pvc" ->
+        Types.PVC ->
             Const.pvc
 
-        "titan" ->
+        Types.Titan ->
             Const.titan
 
-        "kyanite" ->
+        Types.Kyanite ->
             Const.kyanite
-
-        unknown ->
-            unknown
 
 
 planetImg : Types.PlanetInfo -> Html Types.Msg

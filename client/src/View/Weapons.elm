@@ -60,6 +60,9 @@ weaponsTable active model =
         header name =
             th [] [ text name ]
 
+        rHeader resource =
+            header (translateResource resource)
+
         col0 label content =
             let
                 attr =
@@ -73,6 +76,9 @@ weaponsTable active model =
                     numberSpanTo relative value
             in
             col0 label val
+
+        rCol resource value relative =
+            col (translateResource resource) value relative
 
         ordersPossible =
             maxOrders active > Dict.size active.weaponOrders
@@ -88,15 +94,15 @@ weaponsTable active model =
                 , col "Power" info.power -1
                 , col0 "Damage" (text (String.fromFloat info.damage))
                 , col "Load" info.load -1
-                , col Const.ironOre info.ironOre res.ironOre
-                , col Const.gold info.gold res.gold
-                , col Const.h2o info.h2o res.h2o
-                , col Const.oil info.oil res.oil
-                , col Const.h2 info.h2 res.h2
-                , col Const.uranium info.uranium res.uranium
-                , col Const.pvc info.pvc res.pvc
-                , col Const.titan info.titan res.titan
-                , col Const.kyanite info.kyanite res.kyanite
+                , rCol IronOre info.ironOre res.ironOre
+                , rCol Gold info.gold res.gold
+                , rCol H2O info.h2o res.h2o
+                , rCol Oil info.oil res.oil
+                , rCol H2 info.h2 res.h2
+                , rCol Uranium info.uranium res.uranium
+                , rCol PVC info.pvc res.pvc
+                , rCol Titan info.titan res.titan
+                , rCol Kyanite info.kyanite res.kyanite
                 , td [] [ operation info ]
                 ]
 
@@ -115,15 +121,15 @@ weaponsTable active model =
                 , header "Power"
                 , header "Damage"
                 , header "Load"
-                , header Const.ironOre
-                , header Const.gold
-                , header Const.h2o
-                , header Const.oil
-                , header Const.h2
-                , header Const.uranium
-                , header Const.pvc
-                , header Const.titan
-                , header Const.kyanite
+                , rHeader IronOre
+                , rHeader Gold
+                , rHeader H2O
+                , rHeader Oil
+                , rHeader H2
+                , rHeader Uranium
+                , rHeader PVC
+                , rHeader Titan
+                , rHeader Kyanite
                 , header ""
                 ]
             ]

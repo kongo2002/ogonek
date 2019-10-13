@@ -138,15 +138,15 @@ production active model =
                 ]
 
         rows =
-            [ gatherRow "iron_ore" prod.ironOre res.ironOre cap.ironOre
-            , gatherRow "h2o" prod.h2o res.h2o cap.h2o
-            , gatherRow "gold" prod.gold res.gold cap.gold
-            , gatherRow "oil" prod.oil res.oil cap.oil
-            , prodRow "h2" prod.h2 res.h2 cap.h2 util.h2
-            , gatherRow "uranium" prod.uranium res.uranium cap.uranium
-            , prodRow "pvc" prod.pvc res.pvc cap.pvc util.pvc
-            , prodRow "titan" prod.titan res.titan cap.titan util.titan
-            , gatherRow "kyanite" prod.kyanite res.kyanite cap.kyanite
+            [ gatherRow IronOre prod.ironOre res.ironOre cap.ironOre
+            , gatherRow H2O prod.h2o res.h2o cap.h2o
+            , gatherRow Gold prod.gold res.gold cap.gold
+            , gatherRow Oil prod.oil res.oil cap.oil
+            , prodRow H2 prod.h2 res.h2 cap.h2 util.h2
+            , gatherRow Uranium prod.uranium res.uranium cap.uranium
+            , prodRow PVC prod.pvc res.pvc cap.pvc util.pvc
+            , prodRow Titan prod.titan res.titan cap.titan util.titan
+            , gatherRow Kyanite prod.kyanite res.kyanite cap.kyanite
             ]
     in
     [ h2 [] [ text "Production" ]

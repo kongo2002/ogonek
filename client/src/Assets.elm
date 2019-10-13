@@ -27,6 +27,98 @@ type Asset
     = Asset String
 
 
+resourceAsset : Types.ResourceType -> Asset
+resourceAsset res =
+    case res of
+        Types.IronOre ->
+            ironOreAsset
+
+        Types.Gold ->
+            goldAsset
+
+        Types.H2O ->
+            waterAsset
+
+        Types.Oil ->
+            oilAsset
+
+        Types.H2 ->
+            hydrogenAsset
+
+        Types.Uranium ->
+            uraniumAsset
+
+        Types.PVC ->
+            pvcAsset
+
+        Types.Titan ->
+            titanAsset
+
+        Types.Kyanite ->
+            kyaniteAsset
+
+        Types.Workers ->
+            workerAsset
+
+        Types.Power ->
+            powerAsset
+
+
+ironOreAsset : Asset
+ironOreAsset =
+    Asset "iron_ore.png"
+
+
+goldAsset : Asset
+goldAsset =
+    Asset "gold.png"
+
+
+waterAsset : Asset
+waterAsset =
+    Asset "water.png"
+
+
+oilAsset : Asset
+oilAsset =
+    Asset "oil.png"
+
+
+hydrogenAsset : Asset
+hydrogenAsset =
+    Asset "h2.png"
+
+
+uraniumAsset : Asset
+uraniumAsset =
+    Asset "uranium.png"
+
+
+pvcAsset : Asset
+pvcAsset =
+    Asset "pvc.png"
+
+
+titanAsset : Asset
+titanAsset =
+    Asset "titan.png"
+
+
+kyaniteAsset : Asset
+kyaniteAsset =
+    Asset "kyanite.png"
+
+
+workerAsset : Asset
+workerAsset =
+    Asset "worker.png"
+
+
+powerAsset : Asset
+powerAsset =
+    Asset "power.png"
+
+
 planetAsset : Types.PlanetType -> Asset
 planetAsset ptype =
     case ptype of
