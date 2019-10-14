@@ -70,13 +70,15 @@ li.compact {
   font-size: 85%;
 }
 
-a.icon {
-  border: solid 1px;
-  border-radius: 4px;
+button.icon {
   padding: 3px 5px;
+  height: initial;
+  line-height: initial;
+  text-transform: none;
+  margin-bottom: 0;
 }
 
-a.icon.inactive {
+button.icon.inactive {
   color: #bfbfbf;
   cursor: not-allowed;
 }
@@ -287,7 +289,7 @@ button.u-full-width {
     text-align: left;
   }
 
-  a.icon span.description {
+  button.icon span.description {
     display: none;
   }
 }

@@ -368,12 +368,12 @@ constructionOperation model constr =
         durationDesc =
             case model.lastTimeStamp of
                 Just now ->
-                    "finished in " ++ Utils.deltaToString (Utils.posixDelta constr.finish now)
+                    "finished in " ++ Utils.deltaToString (Utils.posixDelta constr.finish now) ++ " "
 
                 Nothing ->
                     "in construction "
     in
-    a [ class "icon inactive construction", finish ]
+    button [ class "icon inactive construction", finish ]
         [ span [] [ text durationDesc ]
         , span [] [ icon "gavel" ]
         ]
@@ -396,7 +396,7 @@ buildOperation constrPossible res binfo =
 
         buildCls =
             if possible then
-                [ href "#", numbClick request ]
+                [ numbClick request, class "button-primary" ]
 
             else
                 [ class "inactive" ]
@@ -405,7 +405,7 @@ buildOperation constrPossible res binfo =
             span [ class "description" ]
                 [ text <| "Build (" ++ duration ++ ") " ]
     in
-    a (title duration :: class "icon" :: buildCls) [ desc, icon "cog" ]
+    button (title duration :: class "icon" :: buildCls) [ desc, icon "cog" ]
 
 
 buildPossible : ResourceInfo -> BuildingInfo -> Bool
