@@ -41,7 +41,7 @@ matrix:
         - wget https://s3.amazonaws.com/rebar3/rebar3 && chmod +x rebar3
 
       otp_release:
-        - 20.2
+        - 20.3
 
       script:
         - ./rebar3 compile
