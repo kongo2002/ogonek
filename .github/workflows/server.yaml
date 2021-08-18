@@ -1,0 +1,30 @@
+name: server
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    paths:
+      - 'server/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    name: OTP ${{matrix.otp}}
+    strategy:
+      matrix:
+        otp: ["22.3.4.9", "23.3.1", "24.0"]
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: gleam-lang/setup-erlang@v1.1.2
+      with:
+        otp-version: ${{matrix.otp}}
+    - name: Build
+      run: make server
+    - name: Tests
+      run: make -C server test
+
+# vim: set et sw=2 sts=2:
